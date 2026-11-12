@@ -2,6 +2,8 @@
 
 A production-oriented Jetpack Compose health dashboard inspired by the supplied visual reference. The UI is original native Android code: no screenshot or embedded web view is used.
 
+> Current stage: local-first MVP foundation. Authentication, backend/cloud sync, notifications and production compliance work are planned but not yet implemented. Start with [AGENTS.md](AGENTS.md) when using a coding agent and [docs/README.md](docs/README.md) for the complete product and engineering documentation.
+
 ## Included
 
 - Responsive Summary dashboard with day, week, and month ranges
@@ -31,6 +33,15 @@ A production-oriented Jetpack Compose health dashboard inspired by the supplied 
 4. For real metrics, open Profile and connect Health Connect. Without permission, the app intentionally shows polished demo data.
 
 Health Connect permissions must also be declared in the Google Play Console before a production release. Replace the debug/demo identity, configure a private release keystore outside source control, add a privacy policy, and complete the Health Apps declaration before publishing.
+
+## Documentation
+
+- [Product requirements](docs/PRD.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Data model](docs/DATA_MODEL.md)
+- [Security and privacy](docs/SECURITY_PRIVACY.md)
+- [Development workflow](docs/DEVELOPMENT.md)
+- [Production roadmap](docs/ROADMAP.md)
 
 ## Data handling
 
