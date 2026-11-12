@@ -9,6 +9,20 @@ android {
     namespace = "com.pulsehealth.app"
     compileSdk = 37
 
+    val releaseStorePath = providers.environmentVariable("RELEASE_STORE_FILE").orNull
+    val hasReleaseSigning = !releaseStorePath.isNullOrBlank()
+
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = file(requireNotNull(releaseStorePath))
+                storePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.pulsehealth.app"
         minSdk = 26
@@ -28,6 +42,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
