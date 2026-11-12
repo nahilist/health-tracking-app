@@ -35,3 +35,20 @@ Health Connect permissions must also be declared in the Google Play Console befo
 ## Data handling
 
 The app stores only presentation preferences and water progress locally. Health records are read through Health Connect after explicit user consent; they are not uploaded by this project.
+
+## CI/CD
+
+`Android CI` runs unit tests, Android lint, and a debug APK build for every pull request and every push to `main`. APKs and reports are retained as workflow artifacts.
+
+`Android Release` runs for semantic version tags such as `v1.0.0`. It builds signed APK and AAB files, uploads them as workflow artifacts, and creates a GitHub release. Configure these encrypted secrets in the GitHub `production` environment before creating a release tag:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_STORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+On PowerShell, create the base64 value without line breaks with:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\release.jks"))
+```
