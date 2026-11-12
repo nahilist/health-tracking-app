@@ -5,9 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
+import com.pulsehealth.app.data.HealthDataRepository
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.UserPreferencesRepository
+import com.pulsehealth.app.data.local.PulseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -16,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
     private val preferences = UserPreferencesRepository(application)
+    private val healthData = HealthDataRepository(PulseDatabase.get(application).hydrationDao())
     val healthRepository = HealthConnectRepository(application)
     private val runtimeState = MutableStateFlow(
         DashboardUiState(healthConnectAvailable = healthRepository.isAvailable())
@@ -23,7 +26,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     val uiState = combine(
         runtimeState,
-        preferences.waterLiters,
+        healthData.todayWaterLiters,
         preferences.hiddenCards
     ) { state, water, hidden ->
         state.copy(
@@ -39,7 +42,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         sync()
     }
 
-    fun addWater() = viewModelScope.launch { preferences.addWater(0.25) }
+    fun addWater() = viewModelScope.launch { healthData.addWater() }
 
     fun toggleCard(id: String) = viewModelScope.launch { preferences.toggleCard(id) }
 
