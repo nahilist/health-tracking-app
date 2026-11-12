@@ -6,7 +6,7 @@ A production-oriented Jetpack Compose health dashboard inspired by the supplied 
 
 - Responsive Summary dashboard with day, week, and month ranges
 - Animated activity rings and metric visualizations
-- Persistent water tracking and editable favorites via DataStore
+- Persistent hydration history in Room and editable favorites via DataStore
 - Activity, steps, heart-rate, sleep, and hydration detail views
 - Summary, Sharing, and Browse navigation
 - Health Connect availability, permission, and data-reading flow
@@ -20,6 +20,7 @@ A production-oriented Jetpack Compose health dashboard inspired by the supplied 
 - Jetpack Compose + Material 3
 - Lifecycle ViewModel and StateFlow
 - Preferences DataStore
+- Room database with exported schemas
 - Android Health Connect 1.1 stable
 
 ## Run
