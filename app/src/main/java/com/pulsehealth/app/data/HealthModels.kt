@@ -15,6 +15,12 @@ enum class DataSource(val label: String) {
     DEMO("Demo sample")
 }
 
+enum class HealthConnectAvailability {
+    AVAILABLE,
+    UPDATE_REQUIRED,
+    NOT_SUPPORTED
+}
+
 data class DashboardMetrics(
     val steps: Long? = null,
     val stepGoal: Long = 10_000,
@@ -29,7 +35,8 @@ data class DashboardMetrics(
     val standHours: Long? = null,
     val standGoalHours: Long = 12,
     val source: DataSource = DataSource.NONE,
-    val lastUpdatedEpochMillis: Long? = null
+    val lastUpdatedEpochMillis: Long? = null,
+    val contributingApps: Set<String> = emptySet()
 ) {
     val hasAnyData: Boolean
         get() = steps != null || heartRate != null || sleepMinutes != null ||
@@ -51,7 +58,8 @@ data class DashboardMetrics(
             standHours = 8,
             standGoalHours = 12,
             source = DataSource.DEMO,
-            lastUpdatedEpochMillis = clockMillis
+            lastUpdatedEpochMillis = clockMillis,
+            contributingApps = setOf("Pulse Health", "Google Fit")
         )
     }
 }
@@ -59,8 +67,11 @@ data class DashboardMetrics(
 data class DashboardUiState(
     val metrics: DashboardMetrics = DashboardMetrics(),
     val selectedRange: TimeRange = TimeRange.TODAY,
-    val healthConnectAvailable: Boolean = false,
+    val healthConnectAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
     val hasHealthPermissions: Boolean = false,
+    val hasWriteHydrationPermission: Boolean = false,
+    val syncWaterToHealthConnect: Boolean = false,
+    val onboardingCompleted: Boolean = true,
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
     val errorMessage: String? = null,
@@ -68,6 +79,9 @@ data class DashboardUiState(
     val isDemoMode: Boolean = false,
     val lastSyncedEpochMillis: Long? = null
 ) {
+    val healthConnectAvailable: Boolean
+        get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE
+
     val message: String? get() = errorMessage
 
     val isEmpty: Boolean

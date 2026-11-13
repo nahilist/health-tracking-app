@@ -22,4 +22,10 @@ interface DailyHealthSummaryDao {
         """
     )
     fun observeRange(startEpochDay: Long, endEpochDay: Long): Flow<List<DailyHealthSummaryEntity>>
+
+    @Query("SELECT * FROM daily_health_summaries ORDER BY epochDay DESC")
+    suspend fun getAllSummaries(): List<DailyHealthSummaryEntity>
+
+    @Query("DELETE FROM daily_health_summaries")
+    suspend fun deleteAll(): Int
 }

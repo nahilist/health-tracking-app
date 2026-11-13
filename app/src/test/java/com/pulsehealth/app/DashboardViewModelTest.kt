@@ -4,6 +4,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.lifecycle.SavedStateHandle
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DataSource
+import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
@@ -83,17 +84,36 @@ class DashboardViewModelTest {
             _entries.value = current.filterNot { it.id == id }
             return true
         }
+
+        override suspend fun getAllEntries(): List<HydrationEntryEntity> = _entries.value
+
+        override suspend fun clearAllData() {
+            _water.value = 0.0
+            _weeklyWater.value = 0.0
+            _entries.value = emptyList()
+        }
+
+        override suspend fun exportDataJson(): String =
+            "{\"app\":\"Pulse Health\",\"hydrationEntriesCount\":${_entries.value.size}}"
     }
 
     private class FakePreferencesRepository(
         initialHidden: Set<String> = emptySet(),
-        initialGoal: Double = 2.0
+        initialGoal: Double = 2.0,
+        initialSyncWater: Boolean = false,
+        initialOnboardingCompleted: Boolean = true
     ) : PreferencesRepository {
         private val _hidden = MutableStateFlow(initialHidden)
         override val hiddenCards: Flow<Set<String>> = _hidden.asStateFlow()
 
         private val _goal = MutableStateFlow(initialGoal)
         override val waterGoalLiters: Flow<Double> = _goal.asStateFlow()
+
+        private val _syncWater = MutableStateFlow(initialSyncWater)
+        override val syncWaterToHealthConnect: Flow<Boolean> = _syncWater.asStateFlow()
+
+        private val _onboardingCompleted = MutableStateFlow(initialOnboardingCompleted)
+        override val onboardingCompleted: Flow<Boolean> = _onboardingCompleted.asStateFlow()
 
         override suspend fun toggleCard(id: String) {
             val current = _hidden.value.toMutableSet()
@@ -104,22 +124,51 @@ class DashboardViewModelTest {
         override suspend fun setWaterGoalLiters(goalLiters: Double) {
             _goal.value = goalLiters
         }
+
+        override suspend fun setSyncWaterToHealthConnect(enabled: Boolean) {
+            _syncWater.value = enabled
+        }
+
+        override suspend fun setOnboardingCompleted(completed: Boolean) {
+            _onboardingCompleted.value = completed
+        }
+
+        override suspend fun clearAllPreferences() {
+            _hidden.value = emptySet()
+            _goal.value = 2.0
+            _syncWater.value = false
+            _onboardingCompleted.value = false
+        }
     }
 
     private class FakeHealthConnectRepository(
-        var available: Boolean = true,
+        var currentAvailability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
         var hasPermissions: Boolean = false,
+        var hasWriteHydrationPermission: Boolean = false,
         var shouldThrowOnRead: Boolean = false
     ) : HealthConnectRepository {
-        override val permissions: Set<String> = emptySet()
-        override fun isAvailable(): Boolean = available
+        override val readPermissions: Set<String> = setOf("READ_TEST")
+        override val writePermissions: Set<String> = setOf("WRITE_TEST")
+        override val allPermissions: Set<String> = readPermissions + writePermissions
+        override val permissions: Set<String> get() = readPermissions
+
+        val writtenHydration = mutableListOf<Pair<Int, Long>>()
+
+        override fun getAvailability(): HealthConnectAvailability = currentAvailability
+        override fun isAvailable(): Boolean = currentAvailability == HealthConnectAvailability.AVAILABLE
         override fun permissionContract(): ActivityResultContract<Set<String>, Set<String>> {
             throw UnsupportedOperationException("Not needed in unit test")
         }
         override suspend fun hasPermissions(): Boolean = hasPermissions
+        override suspend fun hasWriteHydrationPermission(): Boolean = hasWriteHydrationPermission
         override suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics {
             if (shouldThrowOnRead) throw IllegalStateException("Health Connect disconnected")
-            return current.copy(steps = 5_000, source = DataSource.HEALTH_CONNECT)
+            return current.copy(steps = 5_000, source = DataSource.HEALTH_CONNECT, contributingApps = setOf("Google Fit"))
+        }
+
+        override suspend fun writeHydration(amountMilliliters: Int, recordedAtEpochMillis: Long): Boolean {
+            writtenHydration.add(amountMilliliters to recordedAtEpochMillis)
+            return true
         }
     }
 
@@ -298,5 +347,135 @@ class DashboardViewModelTest {
 
         val clearedState = viewModel.uiState.value
         assertNull(clearedState.errorMessage)
+    }
+
+    @Test
+    fun syncWaterToHealthConnectWritesToHealthConnectWhenEnabledAndPermitted() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository(initialSyncWater = true)
+        val healthRepo = FakeHealthConnectRepository(hasPermissions = true, hasWriteHydrationPermission = true)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.addWater(350)
+        advanceUntilIdle()
+
+        assertEquals(1, healthRepo.writtenHydration.size)
+        assertEquals(350, healthRepo.writtenHydration.first().first)
+    }
+
+    @Test
+    fun syncWaterToHealthConnectDoesNotWriteWhenNotPermitted() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository(initialSyncWater = true)
+        val healthRepo = FakeHealthConnectRepository(hasPermissions = true, hasWriteHydrationPermission = false)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.addWater(350)
+        advanceUntilIdle()
+
+        assertTrue(healthRepo.writtenHydration.isEmpty())
+    }
+
+    @Test
+    fun healthConnectAvailabilityStatesReflectedInUiState() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository(currentAvailability = HealthConnectAvailability.UPDATE_REQUIRED)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(HealthConnectAvailability.UPDATE_REQUIRED, viewModel.uiState.value.healthConnectAvailability)
+        assertFalse(viewModel.uiState.value.healthConnectAvailable)
+    }
+
+    @Test
+    fun togglingSyncWaterPreferencesSavesToRepository() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository(initialSyncWater = false)
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.syncWaterToHealthConnect)
+
+        viewModel.setSyncWaterToHealthConnect(true)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.syncWaterToHealthConnect)
+    }
+
+    @Test
+    fun onboardingFlowSavesStateAndCompletes() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository(initialOnboardingCompleted = false)
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.onboardingCompleted)
+
+        viewModel.setOnboardingCompleted(true)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.onboardingCompleted)
+    }
+
+    @Test
+    fun deleteAllLocalDataClearsRepositoryAndState() = runTest {
+        val hydrationRepo = FakeHydrationRepository(initialWater = 1.5)
+        val prefRepo = FakePreferencesRepository(initialHidden = setOf("Sleep"), initialSyncWater = true)
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(1.5, viewModel.uiState.value.metrics.waterLiters, 0.001)
+
+        var deletedCallbackCalled = false
+        viewModel.deleteAllLocalData { deletedCallbackCalled = true }
+        advanceUntilIdle()
+
+        assertTrue(deletedCallbackCalled)
+        assertEquals(0.0, viewModel.uiState.value.metrics.waterLiters, 0.001)
+        assertTrue(viewModel.uiState.value.hiddenCards.isEmpty())
+        assertFalse(viewModel.uiState.value.syncWaterToHealthConnect)
+        assertEquals(0, hydrationRepo.getAllEntries().size)
+    }
+
+    @Test
+    fun exportDataJsonProducesValidJsonFromRepository() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        val json = viewModel.exportDataJson()
+
+        assertTrue(json.contains("\"app\":\"Pulse Health\""))
     }
 }

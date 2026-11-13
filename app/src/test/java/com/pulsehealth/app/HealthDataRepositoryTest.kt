@@ -123,4 +123,29 @@ class HealthDataRepositoryTest {
             runTest { repository.addWater(5001) }
         }
     }
+
+    @Test
+    fun clearAllDataRemovesAllHydrationEntries() = runTest {
+        repository.addWater(250)
+        repository.addWater(500)
+        assertEquals(2, repository.getAllEntries().size)
+
+        repository.clearAllData()
+
+        assertEquals(0, repository.getAllEntries().size)
+        assertEquals(0.0, repository.todayWaterLiters.first(), 0.0)
+    }
+
+    @Test
+    fun exportDataJsonProducesValidStructuredJson() = runTest {
+        repository.addWater(250)
+        repository.addWater(500)
+
+        val json = repository.exportDataJson()
+
+        assertTrue(json.contains("\"app\": \"Pulse Health\""))
+        assertTrue(json.contains("\"hydrationEntriesCount\": 2"))
+        assertTrue(json.contains("\"amountMilliliters\": 250"))
+        assertTrue(json.contains("\"amountMilliliters\": 500"))
+    }
 }

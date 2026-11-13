@@ -43,12 +43,12 @@ Each item below should normally be one focused pull request. Do not begin a depe
 - [x] Add daily/weekly totals and goal editing.
 - [x] Add DAO paging/bounded queries and tests.
 
-### PR 5: complete Health Connect integration
+### PR 5: complete Health Connect integration (Completed)
 
-- Aggregate all displayed period ranges correctly.
-- Read exercise sessions and source metadata.
-- Optionally write manual hydration after explicit permission.
-- Handle revoked and update-required states.
+- [x] Aggregate all displayed period ranges correctly.
+- [x] Read exercise sessions and source metadata.
+- [x] Optionally write manual hydration after explicit permission.
+- [x] Handle revoked and update-required states.
 
 ### PR 6: onboarding and privacy controls
 

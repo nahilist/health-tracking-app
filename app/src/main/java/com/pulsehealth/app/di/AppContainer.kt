@@ -34,6 +34,7 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
     override val hydrationRepository: HydrationRepository by lazy {
         HealthDataRepository(
             hydrationDao = database.hydrationDao(),
+            dailyHealthSummaryDao = database.dailyHealthSummaryDao(),
             clock = clock,
             zoneId = zoneId,
             ioDispatcher = ioDispatcher
@@ -50,6 +51,8 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
     override val healthConnectRepository: HealthConnectRepository by lazy {
         DefaultHealthConnectRepository(
             context = applicationContext,
+            clock = clock,
+            zoneId = zoneId,
             ioDispatcher = ioDispatcher
         )
     }
