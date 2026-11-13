@@ -1,6 +1,7 @@
 package com.pulsehealth.app
 
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.lifecycle.SavedStateHandle
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectRepository
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -53,14 +55,21 @@ class DashboardViewModelTest {
         }
     }
 
-    private class FakeHealthConnectRepository : HealthConnectRepository {
+    private class FakeHealthConnectRepository(
+        var available: Boolean = true,
+        var hasPermissions: Boolean = false,
+        var shouldThrowOnRead: Boolean = false
+    ) : HealthConnectRepository {
         override val permissions: Set<String> = emptySet()
-        override fun isAvailable(): Boolean = true
+        override fun isAvailable(): Boolean = available
         override fun permissionContract(): ActivityResultContract<Set<String>, Set<String>> {
             throw UnsupportedOperationException("Not needed in unit test")
         }
-        override suspend fun hasPermissions(): Boolean = false
-        override suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics = current
+        override suspend fun hasPermissions(): Boolean = hasPermissions
+        override suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics {
+            if (shouldThrowOnRead) throw IllegalStateException("Health Connect disconnected")
+            return current.copy(steps = 5_000, source = DataSource.HEALTH_CONNECT)
+        }
     }
 
     @Before
@@ -79,7 +88,7 @@ class DashboardViewModelTest {
         val prefRepo = FakePreferencesRepository(initialHidden = setOf("Sleep"))
         val healthRepo = FakeHealthConnectRepository()
 
-        val viewModel = DashboardViewModel(hydrationRepo, prefRepo, healthRepo)
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
         }
@@ -89,6 +98,31 @@ class DashboardViewModelTest {
         assertEquals(1.0, state.metrics.waterLiters, 0.0)
         assertTrue(state.hiddenCards.contains("Sleep"))
         assertFalse(state.isDemoMode)
+        assertEquals(TimeRange.TODAY, state.selectedRange)
+    }
+
+    @Test
+    fun statePreservedAcrossRecreationViaSavedStateHandle() = runTest {
+        val savedState = SavedStateHandle(
+            mapOf(
+                DashboardViewModel.KEY_SELECTED_RANGE to TimeRange.WEEK.name,
+                DashboardViewModel.KEY_IS_DEMO_MODE to true
+            )
+        )
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(savedState, hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TimeRange.WEEK, state.selectedRange)
+        assertTrue(state.isDemoMode)
+        assertEquals(DataSource.DEMO, state.metrics.source)
     }
 
     @Test
@@ -97,7 +131,7 @@ class DashboardViewModelTest {
         val prefRepo = FakePreferencesRepository()
         val healthRepo = FakeHealthConnectRepository()
 
-        val viewModel = DashboardViewModel(hydrationRepo, prefRepo, healthRepo)
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
         }
@@ -116,7 +150,7 @@ class DashboardViewModelTest {
         val prefRepo = FakePreferencesRepository()
         val healthRepo = FakeHealthConnectRepository()
 
-        val viewModel = DashboardViewModel(hydrationRepo, prefRepo, healthRepo)
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
         }
@@ -135,5 +169,27 @@ class DashboardViewModelTest {
         val regularState = viewModel.uiState.value
         assertFalse(regularState.isDemoMode)
         assertEquals(DataSource.NONE, regularState.metrics.source)
+    }
+
+    @Test
+    fun syncFailureSurfacesErrorMessageAndAllowsClearing() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository(hasPermissions = true, shouldThrowOnRead = true)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val errorState = viewModel.uiState.value
+        assertEquals("Health data could not be refreshed. Your saved data is still available.", errorState.errorMessage)
+
+        viewModel.clearError()
+        advanceUntilIdle()
+
+        val clearedState = viewModel.uiState.value
+        assertNull(clearedState.errorMessage)
     }
 }
