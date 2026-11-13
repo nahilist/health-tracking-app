@@ -1,6 +1,7 @@
 package com.pulsehealth.app.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -21,6 +22,7 @@ class UserPreferencesRepository(
     private object Keys {
         val hiddenCards = stringSetPreferencesKey("hidden_cards")
         val waterGoalLiters = doublePreferencesKey("water_goal_liters")
+        val syncWaterToHealthConnect = booleanPreferencesKey("sync_water_to_health_connect")
     }
 
     override val hiddenCards: Flow<Set<String>> =
@@ -28,6 +30,9 @@ class UserPreferencesRepository(
 
     override val waterGoalLiters: Flow<Double> =
         context.userDataStore.data.map { it[Keys.waterGoalLiters] ?: 2.0 }
+
+    override val syncWaterToHealthConnect: Flow<Boolean> =
+        context.userDataStore.data.map { it[Keys.syncWaterToHealthConnect] ?: false }
 
     override suspend fun toggleCard(id: String): Unit = withContext(ioDispatcher) {
         context.userDataStore.edit { preferences ->
@@ -41,6 +46,12 @@ class UserPreferencesRepository(
         require(goalLiters in 0.5..10.0) { "Water goal must be between 0.5 and 10.0 liters" }
         context.userDataStore.edit { preferences ->
             preferences[Keys.waterGoalLiters] = goalLiters
+        }
+    }
+
+    override suspend fun setSyncWaterToHealthConnect(enabled: Boolean): Unit = withContext(ioDispatcher) {
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.syncWaterToHealthConnect] = enabled
         }
     }
 }

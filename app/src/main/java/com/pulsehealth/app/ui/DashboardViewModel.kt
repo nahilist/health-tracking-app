@@ -11,6 +11,7 @@ import com.pulsehealth.app.PulseHealthApplication
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
+import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
@@ -50,8 +51,9 @@ class DashboardViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0.0)
 
     private data class SyncState(
-        val healthConnectAvailable: Boolean,
+        val healthConnectAvailability: HealthConnectAvailability,
         val hasHealthPermissions: Boolean,
+        val hasWriteHydrationPermission: Boolean,
         val isLoading: Boolean,
         val isSyncing: Boolean,
         val errorMessage: String?,
@@ -61,8 +63,9 @@ class DashboardViewModel(
 
     private val syncStateFlow = MutableStateFlow(
         SyncState(
-            healthConnectAvailable = healthRepository.isAvailable(),
+            healthConnectAvailability = healthRepository.getAvailability(),
             hasHealthPermissions = false,
+            hasWriteHydrationPermission = false,
             isLoading = false,
             isSyncing = false,
             errorMessage = null,
@@ -71,12 +74,25 @@ class DashboardViewModel(
         )
     )
 
+    private data class PreferencesState(
+        val hiddenCards: Set<String>,
+        val waterGoalLiters: Double,
+        val syncWaterToHealthConnect: Boolean,
+        val isDemoMode: Boolean
+    )
+
     private val preferencesFlow = combine(
         preferencesRepository.hiddenCards,
         preferencesRepository.waterGoalLiters,
+        preferencesRepository.syncWaterToHealthConnect,
         isDemoModeFlow
-    ) { hidden, goal, isDemo ->
-        Triple(hidden, goal, isDemo)
+    ) { hidden, goal, syncWater, isDemo ->
+        PreferencesState(
+            hiddenCards = hidden,
+            waterGoalLiters = goal,
+            syncWaterToHealthConnect = syncWater,
+            isDemoMode = isDemo
+        )
     }
 
     val uiState: StateFlow<DashboardUiState> = combine(
@@ -84,12 +100,12 @@ class DashboardViewModel(
         hydrationRepository.todayWaterLiters,
         selectedRangeFlow,
         preferencesFlow
-    ) { sync, water, rangeName, (hidden, goal, isDemo) ->
+    ) { sync, water, rangeName, pref ->
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
-        val effectiveMetrics = if (isDemo) {
+        val effectiveMetrics = if (pref.isDemoMode) {
             DashboardMetrics.demo().copy(
                 waterLiters = if (water > 0.0) water else 1.5,
-                waterGoalLiters = goal
+                waterGoalLiters = pref.waterGoalLiters
             )
         } else {
             val source = if (sync.metrics.source == DataSource.NONE && water > 0.0) {
@@ -99,7 +115,7 @@ class DashboardViewModel(
             }
             sync.metrics.copy(
                 waterLiters = water,
-                waterGoalLiters = goal,
+                waterGoalLiters = pref.waterGoalLiters,
                 source = source
             )
         }
@@ -107,20 +123,22 @@ class DashboardViewModel(
         DashboardUiState(
             metrics = effectiveMetrics,
             selectedRange = range,
-            healthConnectAvailable = sync.healthConnectAvailable,
+            healthConnectAvailability = sync.healthConnectAvailability,
             hasHealthPermissions = sync.hasHealthPermissions,
+            hasWriteHydrationPermission = sync.hasWriteHydrationPermission,
+            syncWaterToHealthConnect = pref.syncWaterToHealthConnect,
             isLoading = sync.isLoading,
             isSyncing = sync.isSyncing,
             errorMessage = sync.errorMessage,
-            hiddenCards = hidden,
-            isDemoMode = isDemo,
+            hiddenCards = pref.hiddenCards,
+            isDemoMode = pref.isDemoMode,
             lastSyncedEpochMillis = sync.lastSyncedEpochMillis
         )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         DashboardUiState(
-            healthConnectAvailable = healthRepository.isAvailable(),
+            healthConnectAvailability = healthRepository.getAvailability(),
             selectedRange = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY),
             isDemoMode = isDemoModeFlow.value
         )
@@ -137,6 +155,11 @@ class DashboardViewModel(
 
     fun addWater(amountMilliliters: Int = 250) = viewModelScope.launch {
         hydrationRepository.addWater(amountMilliliters)
+        if (uiState.value.syncWaterToHealthConnect && syncStateFlow.value.hasWriteHydrationPermission) {
+            runCatching {
+                healthRepository.writeHydration(amountMilliliters, System.currentTimeMillis())
+            }
+        }
     }
 
     fun editWater(id: String, amountMilliliters: Int) = viewModelScope.launch {
@@ -149,6 +172,10 @@ class DashboardViewModel(
 
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
+    }
+
+    fun setSyncWaterToHealthConnect(enabled: Boolean) = viewModelScope.launch {
+        preferencesRepository.setSyncWaterToHealthConnect(enabled)
     }
 
     fun toggleCard(id: String) = viewModelScope.launch {
@@ -169,14 +196,18 @@ class DashboardViewModel(
 
     fun refreshPermissionsAndSync() = viewModelScope.launch {
         syncStateFlow.update { it.copy(isLoading = true) }
-        val granted = runCatching { healthRepository.hasPermissions() }.getOrDefault(false)
+        val availability = healthRepository.getAvailability()
+        val readGranted = runCatching { healthRepository.hasPermissions() }.getOrDefault(false)
+        val writeGranted = runCatching { healthRepository.hasWriteHydrationPermission() }.getOrDefault(false)
         syncStateFlow.update {
             it.copy(
-                hasHealthPermissions = granted,
+                healthConnectAvailability = availability,
+                hasHealthPermissions = readGranted,
+                hasWriteHydrationPermission = writeGranted,
                 isLoading = false
             )
         }
-        if (granted) sync()
+        if (readGranted) sync()
     }
 
     fun sync() = viewModelScope.launch {

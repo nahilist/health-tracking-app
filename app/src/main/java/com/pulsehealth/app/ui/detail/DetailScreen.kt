@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
@@ -311,11 +312,38 @@ fun DetailScreen(
                 }
             }
 
-            items(listOf("7-day trend", "Goal progress", "Data sources")) { label ->
+            items(listOf("7-day trend", "Goal progress")) { label ->
                 HealthCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(label, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                         Icon(Icons.Default.ChevronRight, null, tint = Muted)
+                    }
+                }
+            }
+
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Text("DATA SOURCES", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    if (metrics.contributingApps.isNotEmpty()) {
+                        metrics.contributingApps.forEach { appName ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Apps, null, tint = color, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(appName, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = if (isDemo) "Demo sample data" else "No connected data sources for this range",
+                            color = Muted,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }

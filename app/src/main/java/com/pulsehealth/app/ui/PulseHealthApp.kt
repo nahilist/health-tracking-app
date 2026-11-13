@@ -66,6 +66,10 @@ fun PulseHealthApp(
         contract = viewModel.healthRepository.permissionContract()
     ) { viewModel.refreshPermissionsAndSync() }
 
+    val writePermissionLauncher = rememberLauncherForActivityResult(
+        contract = viewModel.healthRepository.permissionContract()
+    ) { viewModel.refreshPermissionsAndSync() }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -150,9 +154,11 @@ fun PulseHealthApp(
                 ProfileScreen(
                     state = state,
                     onBack = { navController.navigateUp() },
-                    onConnect = { permissionLauncher.launch(viewModel.healthRepository.permissions) },
+                    onConnect = { permissionLauncher.launch(viewModel.healthRepository.readPermissions) },
                     onSync = viewModel::sync,
-                    onToggleDemo = viewModel::toggleDemoMode
+                    onToggleDemo = viewModel::toggleDemoMode,
+                    onToggleSyncWater = viewModel::setSyncWaterToHealthConnect,
+                    onRequestWritePermissions = { writePermissionLauncher.launch(viewModel.healthRepository.writePermissions) }
                 )
             }
         }

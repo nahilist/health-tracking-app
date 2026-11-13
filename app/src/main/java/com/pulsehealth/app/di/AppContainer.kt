@@ -50,6 +50,8 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
     override val healthConnectRepository: HealthConnectRepository by lazy {
         DefaultHealthConnectRepository(
             context = applicationContext,
+            clock = clock,
+            zoneId = zoneId,
             ioDispatcher = ioDispatcher
         )
     }
