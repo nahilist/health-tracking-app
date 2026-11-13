@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -13,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,76 +29,123 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.EmptyStateScreen
 import com.pulsehealth.app.ui.detail.DetailScreen
+import com.pulsehealth.app.ui.navigation.PulseDestination
+import com.pulsehealth.app.ui.navigation.TopLevelDestination
 import com.pulsehealth.app.ui.profile.ProfileScreen
 import com.pulsehealth.app.ui.summary.FavoritesSheet
 import com.pulsehealth.app.ui.summary.SummaryScreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 
-enum class AppTab(val label: String, val icon: ImageVector) {
-    SUMMARY("Summary", Icons.Default.Favorite),
-    SHARING("Sharing", Icons.Default.Groups),
-    BROWSE("Browse", Icons.Default.GridView)
-}
-
 @Composable
-fun PulseHealthApp(viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)) {
+fun PulseHealthApp(
+    navController: NavHostController = rememberNavController(),
+    viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var tab by remember { mutableStateOf(AppTab.SUMMARY) }
-    var detail by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf(false) }
-    var profile by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = viewModel.healthRepository.permissionContract()
     ) { viewModel.refreshPermissionsAndSync() }
 
-    when {
-        profile -> ProfileScreen(
-            state = state,
-            onBack = { profile = false },
-            onConnect = { permissionLauncher.launch(viewModel.healthRepository.permissions) },
-            onSync = viewModel::sync,
-            onToggleDemo = viewModel::toggleDemoMode
-        )
-        detail != null -> DetailScreen(
-            type = detail.orEmpty(),
-            metrics = state.metrics,
-            isDemo = state.isDemoMode,
-            onBack = { detail = null }
-        )
-        else -> Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            bottomBar = {
-                PulseBottomBar(selected = tab, onSelected = { tab = it })
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val isTopLevelDestination = TopLevelDestination.entries.any { it.route == currentRoute }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            if (isTopLevelDestination) {
+                PulseBottomBar(
+                    currentRoute = currentRoute,
+                    onNavigateToDestination = { destination ->
+                        navController.navigate(destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
-        ) { padding ->
-            when (tab) {
-                AppTab.SUMMARY -> SummaryScreen(
+        }
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = PulseDestination.Summary.route,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            composable(PulseDestination.Summary.route) {
+                SummaryScreen(
                     state = state,
                     contentPadding = padding,
                     onRange = viewModel::selectRange,
                     onWater = viewModel::addWater,
                     onEdit = { editing = true },
-                    onProfile = { profile = true },
-                    onDetail = { detail = it },
-                    onExitDemo = { viewModel.setDemoMode(false) }
+                    onProfile = { navController.navigate(PulseDestination.Profile.route) },
+                    onDetail = { type ->
+                        navController.navigate(PulseDestination.Detail.createRoute(type))
+                    },
+                    onExitDemo = { viewModel.setDemoMode(false) },
+                    onRetry = viewModel::sync,
+                    onDismissError = viewModel::clearError
                 )
-                AppTab.SHARING -> EmptyStateScreen(
+            }
+            composable(PulseDestination.Sharing.route) {
+                EmptyStateScreen(
                     padding = padding,
                     icon = Icons.Default.Groups,
                     title = "Health sharing",
                     body = "Share selected trends with people you trust. Your health data stays private until you choose otherwise."
                 )
-                AppTab.BROWSE -> BrowseScreen(padding) { detail = it }
+            }
+            composable(PulseDestination.Browse.route) {
+                BrowseScreen(padding) { type ->
+                    navController.navigate(PulseDestination.Detail.createRoute(type))
+                }
+            }
+            composable(
+                route = PulseDestination.Detail.route,
+                arguments = listOf(
+                    navArgument(PulseDestination.Detail.ARG_METRIC_TYPE) {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val metricType = backStackEntry.arguments?.getString(PulseDestination.Detail.ARG_METRIC_TYPE).orEmpty()
+                DetailScreen(
+                    type = metricType,
+                    metrics = state.metrics,
+                    isDemo = state.isDemoMode,
+                    onBack = { navController.navigateUp() }
+                )
+            }
+            composable(PulseDestination.Profile.route) {
+                ProfileScreen(
+                    state = state,
+                    onBack = { navController.navigateUp() },
+                    onConnect = { permissionLauncher.launch(viewModel.healthRepository.permissions) },
+                    onSync = viewModel::sync,
+                    onToggleDemo = viewModel::toggleDemoMode
+                )
             }
         }
     }
@@ -110,7 +156,10 @@ fun PulseHealthApp(viewModel: DashboardViewModel = viewModel(factory = Dashboard
 }
 
 @Composable
-fun PulseBottomBar(selected: AppTab, onSelected: (AppTab) -> Unit) {
+fun PulseBottomBar(
+    currentRoute: String?,
+    onNavigateToDestination: (TopLevelDestination) -> Unit
+) {
     Surface(
         tonalElevation = 4.dp,
         shadowElevation = 12.dp,
@@ -125,18 +174,23 @@ fun PulseBottomBar(selected: AppTab, onSelected: (AppTab) -> Unit) {
                 .padding(horizontal = 18.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            AppTab.entries.forEach { item ->
-                val active = selected == item
+            TopLevelDestination.entries.forEach { item ->
+                val active = currentRoute == item.route
                 Column(
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(24.dp))
-                        .clickable { onSelected(item) }
+                        .clickable { onNavigateToDestination(item) }
                         .background(if (active) PulsePink.copy(alpha = 0.11f) else Color.Transparent)
                         .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(item.icon, item.label, tint = if (active) PulsePink else Muted, modifier = Modifier.size(22.dp))
+                    Icon(
+                        item.icon,
+                        contentDescription = item.label,
+                        tint = if (active) PulsePink else Muted,
+                        modifier = Modifier.size(22.dp)
+                    )
                     Text(
                         item.label,
                         color = if (active) PulsePink else Muted,

@@ -20,12 +20,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +53,7 @@ import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.theme.Muted
+import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.PulseTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -59,7 +67,9 @@ fun SummaryScreen(
     onEdit: () -> Unit,
     onProfile: () -> Unit,
     onDetail: (String) -> Unit,
-    onExitDemo: () -> Unit
+    onExitDemo: () -> Unit,
+    onRetry: () -> Unit,
+    onDismissError: () -> Unit
 ) {
     val locale = LocalLocale.current.platformLocale
     LazyColumn(
@@ -98,38 +108,132 @@ fun SummaryScreen(
                 DemoModeBanner(onExit = onExitDemo)
             }
         }
-        item { RangeSelector(state.selectedRange, onRange) }
-        item { ActivityCard(state.metrics) { onDetail("Activity") } }
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Favorites", Modifier.weight(1f), fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                Text("Edit", Modifier.clickable(onClick = onEdit).padding(8.dp), color = Color(0xFF087CF0), fontSize = 14.sp)
+        if (state.errorMessage != null) {
+            item {
+                ErrorBanner(
+                    message = state.errorMessage,
+                    onRetry = onRetry,
+                    onDismiss = onDismissError
+                )
             }
         }
-        item {
-            val visible = listOf("Steps", "Heart rate", "Sleep", "Water").filterNot { it in state.hiddenCards }
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                visible.chunked(2).forEach { rowCards ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        rowCards.forEach { id ->
-                            Box(Modifier.weight(1f)) {
-                                when (id) {
-                                    "Steps" -> StepsCard(state.metrics) { onDetail(id) }
-                                    "Heart rate" -> HeartCard(state.metrics) { onDetail(id) }
-                                    "Sleep" -> SleepCard(state.metrics) { onDetail(id) }
-                                    "Water" -> WaterCard(state.metrics, onWater) { onDetail(id) }
+        item { RangeSelector(state.selectedRange, onRange) }
+
+        if (state.isLoading && state.isEmpty) {
+            item {
+                LoadingStateCard()
+            }
+        } else {
+            item { ActivityCard(state.metrics) { onDetail("Activity") } }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Favorites", Modifier.weight(1f), fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                    Text("Edit", Modifier.clickable(onClick = onEdit).padding(8.dp), color = Color(0xFF087CF0), fontSize = 14.sp)
+                }
+            }
+            item {
+                val visible = listOf("Steps", "Heart rate", "Sleep", "Water").filterNot { it in state.hiddenCards }
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    visible.chunked(2).forEach { rowCards ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            rowCards.forEach { id ->
+                                Box(Modifier.weight(1f)) {
+                                    when (id) {
+                                        "Steps" -> StepsCard(state.metrics) { onDetail(id) }
+                                        "Heart rate" -> HeartCard(state.metrics) { onDetail(id) }
+                                        "Sleep" -> SleepCard(state.metrics) { onDetail(id) }
+                                        "Water" -> WaterCard(state.metrics, onWater) { onDetail(id) }
+                                    }
                                 }
                             }
+                            if (rowCards.size == 1) Spacer(Modifier.weight(1f))
                         }
-                        if (rowCards.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
+            item { InsightCard(state) }
         }
-        item { InsightCard(state) }
-        item {
-            AnimatedVisibility(state.message != null) {
-                Text(state.message.orEmpty(), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+    }
+}
+
+@Composable
+fun LoadingStateCard() {
+    HealthCard(Modifier.fillMaxWidth().height(160.dp)) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    color = PulsePink,
+                    strokeWidth = 3.dp
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Loading health metrics...",
+                    color = Muted,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ErrorBanner(
+    message: String,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Sync error",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onRetry, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "Retry",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -291,21 +395,20 @@ private fun SummaryScreenEmptyPreview() {
             onEdit = {},
             onProfile = {},
             onDetail = {},
-            onExitDemo = {}
+            onExitDemo = {},
+            onRetry = {},
+            onDismissError = {}
         )
     }
 }
 
-@Preview(name = "Dashboard Demo Mode State", showBackground = true)
+@Preview(name = "Dashboard Error State", showBackground = true)
 @Composable
-private fun SummaryScreenDemoPreview() {
+private fun SummaryScreenErrorPreview() {
     PulseTheme {
         SummaryScreen(
             state = DashboardUiState(
-                metrics = DashboardMetrics.demo(),
-                isDemoMode = true,
-                hasHealthPermissions = true,
-                healthConnectAvailable = true
+                errorMessage = "Could not connect to Health Connect"
             ),
             contentPadding = PaddingValues(),
             onRange = {},
@@ -313,7 +416,9 @@ private fun SummaryScreenDemoPreview() {
             onEdit = {},
             onProfile = {},
             onDetail = {},
-            onExitDemo = {}
+            onExitDemo = {},
+            onRetry = {},
+            onDismissError = {}
         )
     }
 }

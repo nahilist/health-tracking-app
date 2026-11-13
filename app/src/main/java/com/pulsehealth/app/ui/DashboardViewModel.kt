@@ -1,7 +1,9 @@
 package com.pulsehealth.app.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -15,51 +17,98 @@ import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class DashboardViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val hydrationRepository: HydrationRepository,
     private val preferencesRepository: PreferencesRepository,
     val healthRepository: HealthConnectRepository
 ) : ViewModel() {
 
-    private val isDemoModeFlow = MutableStateFlow(false)
-    private val runtimeState = MutableStateFlow(
-        DashboardUiState(healthConnectAvailable = healthRepository.isAvailable())
+    private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
+        KEY_SELECTED_RANGE,
+        TimeRange.TODAY.name
     )
 
-    val uiState = combine(
-        runtimeState,
+    private val isDemoModeFlow: StateFlow<Boolean> = savedStateHandle.getStateFlow(
+        KEY_IS_DEMO_MODE,
+        false
+    )
+
+    private data class SyncState(
+        val healthConnectAvailable: Boolean,
+        val hasHealthPermissions: Boolean,
+        val isLoading: Boolean,
+        val isSyncing: Boolean,
+        val errorMessage: String?,
+        val metrics: DashboardMetrics,
+        val lastSyncedEpochMillis: Long?
+    )
+
+    private val syncStateFlow = MutableStateFlow(
+        SyncState(
+            healthConnectAvailable = healthRepository.isAvailable(),
+            hasHealthPermissions = false,
+            isLoading = false,
+            isSyncing = false,
+            errorMessage = null,
+            metrics = DashboardMetrics(),
+            lastSyncedEpochMillis = null
+        )
+    )
+
+    val uiState: StateFlow<DashboardUiState> = combine(
+        syncStateFlow,
         hydrationRepository.todayWaterLiters,
         preferencesRepository.hiddenCards,
+        selectedRangeFlow,
         isDemoModeFlow
-    ) { state, water, hidden, isDemo ->
+    ) { sync, water, hidden, rangeName, isDemo ->
+        val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
         val effectiveMetrics = if (isDemo) {
             DashboardMetrics.demo().copy(waterLiters = if (water > 0.0) water else 1.5)
         } else {
-            val source = if (state.metrics.source == DataSource.NONE && water > 0.0) {
+            val source = if (sync.metrics.source == DataSource.NONE && water > 0.0) {
                 DataSource.LOCAL
             } else {
-                state.metrics.source
+                sync.metrics.source
             }
-            state.metrics.copy(waterLiters = water, source = source)
+            sync.metrics.copy(waterLiters = water, source = source)
         }
 
-        state.copy(
+        DashboardUiState(
             metrics = effectiveMetrics,
+            selectedRange = range,
+            healthConnectAvailable = sync.healthConnectAvailable,
+            hasHealthPermissions = sync.hasHealthPermissions,
+            isLoading = sync.isLoading,
+            isSyncing = sync.isSyncing,
+            errorMessage = sync.errorMessage,
             hiddenCards = hidden,
-            isDemoMode = isDemo
+            isDemoMode = isDemo,
+            lastSyncedEpochMillis = sync.lastSyncedEpochMillis
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), runtimeState.value)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        DashboardUiState(
+            healthConnectAvailable = healthRepository.isAvailable(),
+            selectedRange = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY),
+            isDemoMode = isDemoModeFlow.value
+        )
+    )
 
     init {
         refreshPermissionsAndSync()
     }
 
     fun selectRange(range: TimeRange) {
-        runtimeState.value = runtimeState.value.copy(selectedRange = range)
+        savedStateHandle[KEY_SELECTED_RANGE] = range.name
         sync()
     }
 
@@ -72,44 +121,64 @@ class DashboardViewModel(
     }
 
     fun setDemoMode(enabled: Boolean) {
-        isDemoModeFlow.value = enabled
+        savedStateHandle[KEY_IS_DEMO_MODE] = enabled
     }
 
     fun toggleDemoMode() {
-        isDemoModeFlow.value = !isDemoModeFlow.value
+        savedStateHandle[KEY_IS_DEMO_MODE] = !isDemoModeFlow.value
+    }
+
+    fun clearError() {
+        syncStateFlow.update { it.copy(errorMessage = null) }
     }
 
     fun refreshPermissionsAndSync() = viewModelScope.launch {
+        syncStateFlow.update { it.copy(isLoading = true) }
         val granted = runCatching { healthRepository.hasPermissions() }.getOrDefault(false)
-        runtimeState.value = runtimeState.value.copy(hasHealthPermissions = granted)
+        syncStateFlow.update {
+            it.copy(
+                hasHealthPermissions = granted,
+                isLoading = false
+            )
+        }
         if (granted) sync()
     }
 
     fun sync() = viewModelScope.launch {
-        val current = runtimeState.value
+        val current = syncStateFlow.value
         if (!current.hasHealthPermissions) return@launch
-        runtimeState.value = current.copy(isSyncing = true, message = null)
-        runCatching { healthRepository.read(current.selectedRange, current.metrics) }
+        syncStateFlow.update { it.copy(isSyncing = true, errorMessage = null) }
+        val range = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY)
+        runCatching { healthRepository.read(range, current.metrics) }
             .onSuccess { metrics ->
-                runtimeState.value = runtimeState.value.copy(
-                    metrics = metrics,
-                    isSyncing = false,
-                    lastSyncedEpochMillis = System.currentTimeMillis()
-                )
+                syncStateFlow.update {
+                    it.copy(
+                        metrics = metrics,
+                        isSyncing = false,
+                        lastSyncedEpochMillis = System.currentTimeMillis()
+                    )
+                }
             }
             .onFailure {
-                runtimeState.value = runtimeState.value.copy(
-                    isSyncing = false,
-                    message = "Health data could not be refreshed. Your saved data is still available."
-                )
+                syncStateFlow.update {
+                    it.copy(
+                        isSyncing = false,
+                        errorMessage = "Health data could not be refreshed. Your saved data is still available."
+                    )
+                }
             }
     }
 
     companion object {
+        const val KEY_SELECTED_RANGE = "selected_range"
+        const val KEY_IS_DEMO_MODE = "is_demo_mode"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as PulseHealthApplication
+                val savedStateHandle = createSavedStateHandle()
                 DashboardViewModel(
+                    savedStateHandle = savedStateHandle,
                     hydrationRepository = app.container.hydrationRepository,
                     preferencesRepository = app.container.preferencesRepository,
                     healthRepository = app.container.healthConnectRepository

@@ -61,12 +61,18 @@ data class DashboardUiState(
     val selectedRange: TimeRange = TimeRange.TODAY,
     val healthConnectAvailable: Boolean = false,
     val hasHealthPermissions: Boolean = false,
+    val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
+    val errorMessage: String? = null,
     val hiddenCards: Set<String> = emptySet(),
-    val message: String? = null,
     val isDemoMode: Boolean = false,
     val lastSyncedEpochMillis: Long? = null
 ) {
+    val message: String? get() = errorMessage
+
+    val isEmpty: Boolean
+        get() = !metrics.hasAnyData
+
     val freshnessLabel: String?
         get() {
             val millis = lastSyncedEpochMillis ?: metrics.lastUpdatedEpochMillis ?: return null

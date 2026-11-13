@@ -31,11 +31,11 @@ Each item below should normally be one focused pull request. Do not begin a depe
 - [x] Split the oversized UI file by feature/component.
 - [x] Acceptance: ViewModels do not instantiate concrete data stores.
 
-### PR 3: typed navigation and screen state
+### PR 3: typed navigation and screen state (Completed)
 
-- Add a real navigation graph and typed routes.
-- Preserve state across process recreation.
-- Add loading/empty/error states.
+- [x] Add a real navigation graph and typed routes.
+- [x] Preserve state across process recreation.
+- [x] Add loading/empty/error states.
 
 ### PR 4: hydration history
 
@@ -127,4 +127,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “typed navigation and screen state” (PR 3). Add real Navigation Compose routes with type-safe arguments, state preservation across process recreation, and comprehensive loading/empty/error states.
+Implement “hydration history” (PR 4). Add hydration history entry listing, editing and deletion, daily and weekly aggregation, user goal customization, and bounded DAO queries with unit tests.
