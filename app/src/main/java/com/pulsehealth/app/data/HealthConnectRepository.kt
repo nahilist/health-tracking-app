@@ -1,6 +1,7 @@
 package com.pulsehealth.app.data
 
 import android.content.Context
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -11,31 +12,47 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 
-class HealthConnectRepository(private val context: Context) {
-    val permissions: Set<String> = setOf(
+interface HealthConnectRepository {
+    val permissions: Set<String>
+    fun isAvailable(): Boolean
+    fun permissionContract(): ActivityResultContract<Set<String>, Set<String>>
+    suspend fun hasPermissions(): Boolean
+    suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics
+}
+
+class DefaultHealthConnectRepository(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : HealthConnectRepository {
+
+    override val permissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
     )
 
-    fun isAvailable(): Boolean =
+    override fun isAvailable(): Boolean =
         HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
-    fun permissionContract() = PermissionController.createRequestPermissionResultContract()
+    override fun permissionContract(): ActivityResultContract<Set<String>, Set<String>> =
+        PermissionController.createRequestPermissionResultContract()
 
-    suspend fun hasPermissions(): Boolean {
-        if (!isAvailable()) return false
-        return HealthConnectClient.getOrCreate(context)
+    override suspend fun hasPermissions(): Boolean = withContext(ioDispatcher) {
+        if (!isAvailable()) return@withContext false
+        HealthConnectClient.getOrCreate(context)
             .permissionController.getGrantedPermissions().containsAll(permissions)
     }
 
-    suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics {
+    override suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics = withContext(ioDispatcher) {
         if (!hasPermissions()) {
-            return current.copy(
+            return@withContext current.copy(
                 source = if (current.waterLiters > 0.0) DataSource.LOCAL else DataSource.NONE
             )
         }
@@ -83,7 +100,7 @@ class HealthConnectRepository(private val context: Context) {
             DataSource.NONE
         }
 
-        return current.copy(
+        current.copy(
             steps = steps,
             activeCalories = activeCalories,
             heartRate = heartRate,

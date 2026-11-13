@@ -24,12 +24,12 @@ Each item below should normally be one focused pull request. Do not begin a depe
 - [x] Add source and freshness to UI state.
 - [x] Acceptance: production build never presents demo values as user records.
 
-### PR 2: repository and dependency boundaries
+### PR 2: repository and dependency boundaries (Completed)
 
-- Introduce repository interfaces and an application container or Hilt through an ADR.
-- Inject clock and dispatchers.
-- Split the oversized UI file by feature/component.
-- Acceptance: ViewModels do not instantiate concrete data stores.
+- [x] Introduce repository interfaces and an application container through ADR 0001.
+- [x] Inject clock and dispatchers.
+- [x] Split the oversized UI file by feature/component.
+- [x] Acceptance: ViewModels do not instantiate concrete data stores.
 
 ### PR 3: typed navigation and screen state
 
@@ -117,8 +117,8 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Item | Risk | Priority |
 |---|---|---|
 | Demo and real values coexist | Resolved in PR 1 | Resolved |
-| Monolithic `PulseHealthApp.kt` | Slower changes and testing | High |
-| Manual dependency construction | Hard-to-test coupling | High |
+| Monolithic `PulseHealthApp.kt` | Resolved in PR 2 | Resolved |
+| Manual dependency construction | Resolved in PR 2 | Resolved |
 | Display labels used as favorite IDs | Breaks localization/migrations | High |
 | No Room migration beyond v1 | Future update risk | High before schema change |
 | No secure session layer | Blocks authentication | High for Phase 2 |
@@ -127,4 +127,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “repository and dependency boundaries” (PR 2). Introduce repository interfaces and an application container or Hilt, inject clock and dispatchers, and split the oversized UI file into focused feature components.
+Implement “typed navigation and screen state” (PR 3). Add real Navigation Compose routes with type-safe arguments, state preservation across process recreation, and comprehensive loading/empty/error states.

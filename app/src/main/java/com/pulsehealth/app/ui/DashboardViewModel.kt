@@ -1,26 +1,30 @@
 package com.pulsehealth.app.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.pulsehealth.app.PulseHealthApplication
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectRepository
-import com.pulsehealth.app.data.HealthDataRepository
+import com.pulsehealth.app.data.HydrationRepository
+import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
-import com.pulsehealth.app.data.UserPreferencesRepository
-import com.pulsehealth.app.data.local.PulseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class DashboardViewModel(application: Application) : AndroidViewModel(application) {
-    private val preferences = UserPreferencesRepository(application)
-    private val healthData = HealthDataRepository(PulseDatabase.get(application).hydrationDao())
-    val healthRepository = HealthConnectRepository(application)
+class DashboardViewModel(
+    private val hydrationRepository: HydrationRepository,
+    private val preferencesRepository: PreferencesRepository,
+    val healthRepository: HealthConnectRepository
+) : ViewModel() {
+
     private val isDemoModeFlow = MutableStateFlow(false)
     private val runtimeState = MutableStateFlow(
         DashboardUiState(healthConnectAvailable = healthRepository.isAvailable())
@@ -28,8 +32,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     val uiState = combine(
         runtimeState,
-        healthData.todayWaterLiters,
-        preferences.hiddenCards,
+        hydrationRepository.todayWaterLiters,
+        preferencesRepository.hiddenCards,
         isDemoModeFlow
     ) { state, water, hidden, isDemo ->
         val effectiveMetrics = if (isDemo) {
@@ -50,16 +54,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), runtimeState.value)
 
-    init { refreshPermissionsAndSync() }
+    init {
+        refreshPermissionsAndSync()
+    }
 
     fun selectRange(range: TimeRange) {
         runtimeState.value = runtimeState.value.copy(selectedRange = range)
         sync()
     }
 
-    fun addWater() = viewModelScope.launch { healthData.addWater() }
+    fun addWater() = viewModelScope.launch {
+        hydrationRepository.addWater()
+    }
 
-    fun toggleCard(id: String) = viewModelScope.launch { preferences.toggleCard(id) }
+    fun toggleCard(id: String) = viewModelScope.launch {
+        preferencesRepository.toggleCard(id)
+    }
 
     fun setDemoMode(enabled: Boolean) {
         isDemoModeFlow.value = enabled
@@ -93,5 +103,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                     message = "Health data could not be refreshed. Your saved data is still available."
                 )
             }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as PulseHealthApplication
+                DashboardViewModel(
+                    hydrationRepository = app.container.hydrationRepository,
+                    preferencesRepository = app.container.preferencesRepository,
+                    healthRepository = app.container.healthConnectRepository
+                )
+            }
+        }
     }
 }
