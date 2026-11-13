@@ -37,11 +37,11 @@ Each item below should normally be one focused pull request. Do not begin a depe
 - [x] Preserve state across process recreation.
 - [x] Add loading/empty/error states.
 
-### PR 4: hydration history
+### PR 4: hydration history (Completed)
 
-- List, edit and delete entries.
-- Add daily/weekly totals and goal editing.
-- Add DAO paging/bounded queries and tests.
+- [x] List, edit and delete entries.
+- [x] Add daily/weekly totals and goal editing.
+- [x] Add DAO paging/bounded queries and tests.
 
 ### PR 5: complete Health Connect integration
 
@@ -127,4 +127,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “hydration history” (PR 4). Add hydration history entry listing, editing and deletion, daily and weekly aggregation, user goal customization, and bounded DAO queries with unit tests.
+Implement “complete Health Connect integration” (PR 5). Aggregate all displayed period ranges (Week, Month) correctly, read exercise sessions and source metadata, optionally write manual hydration after explicit permission, and handle revoked and update-required states.
