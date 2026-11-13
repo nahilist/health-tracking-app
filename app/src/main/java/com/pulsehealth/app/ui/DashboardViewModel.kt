@@ -15,6 +15,7 @@ import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.local.HydrationEntryEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +41,14 @@ class DashboardViewModel(
         false
     )
 
+    val todayHydrationEntries: StateFlow<List<HydrationEntryEntity>> =
+        hydrationRepository.observeTodayEntries()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val weeklyWaterLiters: StateFlow<Double> =
+        hydrationRepository.weeklyWaterLiters
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0.0)
+
     private data class SyncState(
         val healthConnectAvailable: Boolean,
         val hasHealthPermissions: Boolean,
@@ -62,23 +71,37 @@ class DashboardViewModel(
         )
     )
 
+    private val preferencesFlow = combine(
+        preferencesRepository.hiddenCards,
+        preferencesRepository.waterGoalLiters,
+        isDemoModeFlow
+    ) { hidden, goal, isDemo ->
+        Triple(hidden, goal, isDemo)
+    }
+
     val uiState: StateFlow<DashboardUiState> = combine(
         syncStateFlow,
         hydrationRepository.todayWaterLiters,
-        preferencesRepository.hiddenCards,
         selectedRangeFlow,
-        isDemoModeFlow
-    ) { sync, water, hidden, rangeName, isDemo ->
+        preferencesFlow
+    ) { sync, water, rangeName, (hidden, goal, isDemo) ->
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
         val effectiveMetrics = if (isDemo) {
-            DashboardMetrics.demo().copy(waterLiters = if (water > 0.0) water else 1.5)
+            DashboardMetrics.demo().copy(
+                waterLiters = if (water > 0.0) water else 1.5,
+                waterGoalLiters = goal
+            )
         } else {
             val source = if (sync.metrics.source == DataSource.NONE && water > 0.0) {
                 DataSource.LOCAL
             } else {
                 sync.metrics.source
             }
-            sync.metrics.copy(waterLiters = water, source = source)
+            sync.metrics.copy(
+                waterLiters = water,
+                waterGoalLiters = goal,
+                source = source
+            )
         }
 
         DashboardUiState(
@@ -112,8 +135,20 @@ class DashboardViewModel(
         sync()
     }
 
-    fun addWater() = viewModelScope.launch {
-        hydrationRepository.addWater()
+    fun addWater(amountMilliliters: Int = 250) = viewModelScope.launch {
+        hydrationRepository.addWater(amountMilliliters)
+    }
+
+    fun editWater(id: String, amountMilliliters: Int) = viewModelScope.launch {
+        hydrationRepository.updateWater(id, amountMilliliters)
+    }
+
+    fun deleteWater(id: String) = viewModelScope.launch {
+        hydrationRepository.deleteWater(id)
+    }
+
+    fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
+        preferencesRepository.setWaterGoalLiters(goalLiters)
     }
 
     fun toggleCard(id: String) = viewModelScope.launch {

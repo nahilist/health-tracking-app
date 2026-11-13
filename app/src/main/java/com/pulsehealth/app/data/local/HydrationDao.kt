@@ -15,6 +15,12 @@ interface HydrationDao {
     @Delete
     suspend fun delete(entry: HydrationEntryEntity)
 
+    @Query("DELETE FROM hydration_entries WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+
+    @Query("UPDATE hydration_entries SET amountMilliliters = :amountMilliliters WHERE id = :id")
+    suspend fun updateAmount(id: String, amountMilliliters: Int): Int
+
     @Query(
         """
         SELECT COALESCE(SUM(amountMilliliters), 0)
@@ -34,6 +40,18 @@ interface HydrationDao {
         """
     )
     fun observeEntries(startInclusive: Long, endExclusive: Long): Flow<List<HydrationEntryEntity>>
+
+    @Query(
+        """
+        SELECT * FROM hydration_entries
+        ORDER BY recordedAtEpochMillis DESC
+        LIMIT :limit OFFSET :offset
+        """
+    )
+    fun observeRecentEntries(limit: Int = 50, offset: Int = 0): Flow<List<HydrationEntryEntity>>
+
+    @Query("SELECT * FROM hydration_entries WHERE id = :id")
+    suspend fun getEntryById(id: String): HydrationEntryEntity?
 
     @Query("DELETE FROM hydration_entries WHERE recordedAtEpochMillis < :cutoffEpochMillis")
     suspend fun deleteOlderThan(cutoffEpochMillis: Long): Int

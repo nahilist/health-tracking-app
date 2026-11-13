@@ -59,6 +59,8 @@ fun PulseHealthApp(
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val todayHydration by viewModel.todayHydrationEntries.collectAsStateWithLifecycle()
+    val weeklyWater by viewModel.weeklyWaterLiters.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = viewModel.healthRepository.permissionContract()
@@ -135,6 +137,12 @@ fun PulseHealthApp(
                     type = metricType,
                     metrics = state.metrics,
                     isDemo = state.isDemoMode,
+                    todayHydrationEntries = todayHydration,
+                    weeklyWaterLiters = weeklyWater,
+                    onAddWater = viewModel::addWater,
+                    onEditWater = viewModel::editWater,
+                    onDeleteWater = viewModel::deleteWater,
+                    onSetWaterGoal = viewModel::setWaterGoal,
                     onBack = { navController.navigateUp() }
                 )
             }
