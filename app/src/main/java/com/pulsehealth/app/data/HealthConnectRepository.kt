@@ -3,7 +3,6 @@ package com.pulsehealth.app.data
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -34,36 +33,63 @@ class HealthConnectRepository(private val context: Context) {
             .permissionController.getGrantedPermissions().containsAll(permissions)
     }
 
-    suspend fun read(range: TimeRange, fallback: DashboardMetrics): DashboardMetrics {
-        if (!hasPermissions()) return fallback
+    suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics {
+        if (!hasPermissions()) {
+            return current.copy(
+                source = if (current.waterLiters > 0.0) DataSource.LOCAL else DataSource.NONE
+            )
+        }
         val client = HealthConnectClient.getOrCreate(context)
         val end = Instant.now()
         val start = end.minus(Duration.ofDays(range.days))
         val filter = TimeRangeFilter.between(start, end)
 
-        val totals = client.aggregate(
-            AggregateRequest(
-                metrics = setOf(
-                    StepsRecord.COUNT_TOTAL,
-                    ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL
-                ),
-                timeRangeFilter = filter
+        val totals = runCatching {
+            client.aggregate(
+                AggregateRequest(
+                    metrics = setOf(
+                        StepsRecord.COUNT_TOTAL,
+                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL
+                    ),
+                    timeRangeFilter = filter
+                )
             )
-        )
-        val heartRates = client.readRecords(
-            ReadRecordsRequest(HeartRateRecord::class, filter, ascendingOrder = false, pageSize = 20)
-        ).records.flatMap { it.samples }
-        val sleep = client.readRecords(
-            ReadRecordsRequest(SleepSessionRecord::class, filter, pageSize = 100)
-        ).records.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+        }.getOrNull()
 
-        return fallback.copy(
-            steps = totals[StepsRecord.COUNT_TOTAL] ?: fallback.steps,
-            activeCalories = totals[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
-                ?.inKilocalories?.toLong() ?: fallback.activeCalories,
-            heartRate = heartRates.firstOrNull()?.beatsPerMinute ?: fallback.heartRate,
-            sleepMinutes = sleep.takeIf { it > 0 } ?: fallback.sleepMinutes,
-            source = DataSource.HEALTH_CONNECT
+        val heartRates = runCatching {
+            client.readRecords(
+                ReadRecordsRequest(HeartRateRecord::class, filter, ascendingOrder = false, pageSize = 20)
+            ).records.flatMap { it.samples }
+        }.getOrDefault(emptyList())
+
+        val sleep = runCatching {
+            client.readRecords(
+                ReadRecordsRequest(SleepSessionRecord::class, filter, pageSize = 100)
+            ).records.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+        }.getOrDefault(0L)
+
+        val steps = totals?.get(StepsRecord.COUNT_TOTAL)
+        val activeCalories = totals?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            ?.inKilocalories?.toLong()
+        val heartRate = heartRates.firstOrNull()?.beatsPerMinute
+        val sleepMinutes = sleep.takeIf { it > 0 }
+
+        val hasHcData = steps != null || activeCalories != null || heartRate != null || sleepMinutes != null
+        val source = if (hasHcData) {
+            DataSource.HEALTH_CONNECT
+        } else if (current.waterLiters > 0.0) {
+            DataSource.LOCAL
+        } else {
+            DataSource.NONE
+        }
+
+        return current.copy(
+            steps = steps,
+            activeCalories = activeCalories,
+            heartRate = heartRate,
+            sleepMinutes = sleepMinutes,
+            source = source,
+            lastUpdatedEpochMillis = end.toEpochMilli()
         )
     }
 }
