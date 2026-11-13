@@ -9,6 +9,7 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ class SupabaseAuthRepository(
                     supabaseKey = supabaseKey
                 ) {
                     install(Auth)
+                    install(Postgrest)
                 }
             } catch (_: Exception) {
                 null

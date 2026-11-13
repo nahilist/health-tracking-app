@@ -37,6 +37,8 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
     override val authRepository: AuthRepository by lazy {
         SupabaseAuthRepository(
             context = applicationContext,
+            supabaseUrl = com.pulsehealth.app.BuildConfig.SUPABASE_URL,
+            supabaseKey = com.pulsehealth.app.BuildConfig.SUPABASE_KEY,
             ioDispatcher = ioDispatcher
         )
     }
