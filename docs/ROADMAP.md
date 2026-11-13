@@ -17,12 +17,12 @@ Each item below should normally be one focused pull request. Do not begin a depe
 
 ## 3. Phase 1: honest local MVP
 
-### PR 1: remove demo/real ambiguity
+### PR 1: remove demo/real ambiguity (Completed)
 
-- Represent unknown metrics explicitly.
-- Label demo mode in debug/previews only.
-- Add source and freshness to UI state.
-- Acceptance: production build never presents demo values as user records.
+- [x] Represent unknown metrics explicitly.
+- [x] Label demo mode in debug/previews only.
+- [x] Add source and freshness to UI state.
+- [x] Acceptance: production build never presents demo values as user records.
 
 ### PR 2: repository and dependency boundaries
 
@@ -116,7 +116,7 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 | Item | Risk | Priority |
 |---|---|---|
-| Demo and real values coexist | Misleading health information | Critical |
+| Demo and real values coexist | Resolved in PR 1 | Resolved |
 | Monolithic `PulseHealthApp.kt` | Slower changes and testing | High |
 | Manual dependency construction | Hard-to-test coupling | High |
 | Display labels used as favorite IDs | Breaks localization/migrations | High |
@@ -127,4 +127,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “remove demo/real ambiguity” first. It is the highest safety and trust issue and creates correct state models for later history, authentication and synchronization work.
+Implement “repository and dependency boundaries” (PR 2). Introduce repository interfaces and an application container or Hilt, inject clock and dispatchers, and split the oversized UI file into focused feature components.

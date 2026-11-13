@@ -5,6 +5,7 @@ package com.pulsehealth.app.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,18 +33,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -57,10 +57,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -78,16 +79,19 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
+import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
+import com.pulsehealth.app.ui.theme.PulseTheme
 import com.pulsehealth.app.ui.theme.SleepPurple
 import com.pulsehealth.app.ui.theme.StandCyan
 import com.pulsehealth.app.ui.theme.WarmOrange
@@ -117,9 +121,15 @@ fun PulseHealthApp(viewModel: DashboardViewModel = viewModel()) {
             state = state,
             onBack = { profile = false },
             onConnect = { permissionLauncher.launch(viewModel.healthRepository.permissions) },
-            onSync = viewModel::sync
+            onSync = viewModel::sync,
+            onToggleDemo = viewModel::toggleDemoMode
         )
-        detail != null -> DetailScreen(detail.orEmpty(), state.metrics) { detail = null }
+        detail != null -> DetailScreen(
+            type = detail.orEmpty(),
+            metrics = state.metrics,
+            isDemo = state.isDemoMode,
+            onBack = { detail = null }
+        )
         else -> Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
@@ -134,7 +144,8 @@ fun PulseHealthApp(viewModel: DashboardViewModel = viewModel()) {
                     onWater = viewModel::addWater,
                     onEdit = { editing = true },
                     onProfile = { profile = true },
-                    onDetail = { detail = it }
+                    onDetail = { detail = it },
+                    onExitDemo = { viewModel.setDemoMode(false) }
                 )
                 AppTab.SHARING -> EmptyStateScreen(
                     padding, Icons.Default.Groups, "Health sharing",
@@ -158,7 +169,8 @@ private fun SummaryScreen(
     onWater: () -> Unit,
     onEdit: () -> Unit,
     onProfile: () -> Unit,
-    onDetail: (String) -> Unit
+    onDetail: (String) -> Unit,
+    onExitDemo: () -> Unit
 ) {
     val locale = LocalLocale.current.platformLocale
     LazyColumn(
@@ -183,6 +195,14 @@ private fun SummaryScreen(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surface
                 ) { Icon(Icons.Default.Person, "Profile", Modifier.padding(11.dp), tint = Muted) }
+            }
+        }
+        item {
+            SourceAndFreshnessBadge(state)
+        }
+        if (state.isDemoMode) {
+            item {
+                DemoModeBanner(onExit = onExitDemo)
             }
         }
         item { RangeSelector(state.selectedRange, onRange) }
@@ -213,11 +233,72 @@ private fun SummaryScreen(
                 }
             }
         }
-        item { InsightCard() }
+        item { InsightCard(state) }
         item {
             AnimatedVisibility(state.message != null) {
                 Text(state.message.orEmpty(), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun SourceAndFreshnessBadge(state: DashboardUiState) {
+    val sourceLabel = when (state.metrics.source) {
+        DataSource.HEALTH_CONNECT -> "Health Connect"
+        DataSource.LOCAL -> "Local records"
+        DataSource.DEMO -> "Demo sample data"
+        DataSource.NONE -> if (state.hasHealthPermissions) "Health Connect connected" else "No sources connected"
+    }
+    val freshness = state.freshnessLabel
+    val statusText = if (freshness != null && state.metrics.source != DataSource.NONE) {
+        "$sourceLabel · $freshness"
+    } else {
+        sourceLabel
+    }
+
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    ) {
+        Text(
+            text = statusText,
+            color = Muted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun DemoModeBanner(onExit: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
+        border = BorderStroke(1.dp, Color(0xFFFFEEBA))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF856404), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("DEMO MODE", color = Color(0xFF856404), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Showing sample health data for preview. Not real records.", color = Color(0xFF856404), fontSize = 12.sp)
+            }
+            Text(
+                "Exit",
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onExit)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                color = Color(0xFF856404),
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
         }
     }
 }
@@ -234,8 +315,11 @@ private fun RangeSelector(selected: TimeRange, onRange: (TimeRange) -> Unit) {
                 color = if (selected == range) MaterialTheme.colorScheme.surface else Color.Transparent,
                 shadowElevation = if (selected == range) 1.dp else 0.dp
             ) {
-                Text(range.label, Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center, fontSize = 13.sp,
-                    fontWeight = if (selected == range) FontWeight.SemiBold else FontWeight.Normal, color = if (selected == range) MaterialTheme.colorScheme.onSurface else Muted)
+                Text(
+                    range.label, Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center, fontSize = 13.sp,
+                    fontWeight = if (selected == range) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (selected == range) MaterialTheme.colorScheme.onSurface else Muted
+                )
             }
         }
     }
@@ -247,7 +331,15 @@ private fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("Activity", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("A little more. A lot better.", color = Muted, fontSize = 12.sp)
+                Text(
+                    if (metrics.activeCalories != null || metrics.exerciseMinutes != null || metrics.standHours != null) {
+                        "Daily movement and exercise"
+                    } else {
+                        "No activity recorded today"
+                    },
+                    color = Muted,
+                    fontSize = 12.sp
+                )
             }
             Icon(Icons.Default.ChevronRight, "Open activity", tint = Muted)
         }
@@ -256,10 +348,26 @@ private fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             ActivityRings(metrics, Modifier.size(112.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                ActivityValue("Move", "${metrics.activeCalories} / ${metrics.calorieGoal} kcal", PulsePink)
+                ActivityValue(
+                    "Move",
+                    metrics.activeCalories?.let { "$it / ${metrics.calorieGoal} kcal" } ?: "— / ${metrics.calorieGoal} kcal",
+                    PulsePink
+                )
                 Row {
-                    Box(Modifier.weight(1f)) { ActivityValue("Exercise", "${metrics.exerciseMinutes} / ${metrics.exerciseGoalMinutes} min", ExerciseGreen) }
-                    Box(Modifier.weight(1f)) { ActivityValue("Stand", "${metrics.standHours} / ${metrics.standGoalHours} hr", StandCyan) }
+                    Box(Modifier.weight(1f)) {
+                        ActivityValue(
+                            "Exercise",
+                            metrics.exerciseMinutes?.let { "$it / ${metrics.exerciseGoalMinutes} min" } ?: "— / ${metrics.exerciseGoalMinutes} min",
+                            ExerciseGreen
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                        ActivityValue(
+                            "Stand",
+                            metrics.standHours?.let { "$it / ${metrics.standGoalHours} hr" } ?: "— / ${metrics.standGoalHours} hr",
+                            StandCyan
+                        )
+                    }
                 }
             }
         }
@@ -269,16 +377,34 @@ private fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 @Composable
 private fun ActivityRings(metrics: DashboardMetrics, modifier: Modifier = Modifier) {
     val progresses = listOf(
-        metrics.activeCalories.toFloat() / metrics.calorieGoal to PulsePink,
-        metrics.exerciseMinutes.toFloat() / metrics.exerciseGoalMinutes to ExerciseGreen,
-        metrics.standHours.toFloat() / metrics.standGoalHours to StandCyan
+        (metrics.activeCalories?.toFloat()?.div(metrics.calorieGoal) ?: 0f) to PulsePink,
+        (metrics.exerciseMinutes?.toFloat()?.div(metrics.exerciseGoalMinutes) ?: 0f) to ExerciseGreen,
+        (metrics.standHours?.toFloat()?.div(metrics.standGoalHours) ?: 0f) to StandCyan
     )
     Canvas(modifier.semantics { contentDescription = "Activity progress rings" }) {
         val stroke = size.minDimension * .105f
         progresses.forEachIndexed { index, pair ->
             val inset = stroke / 2 + index * stroke * 1.35f
-            drawArc(pair.second.copy(alpha = .16f), -90f, 360f, false, Offset(inset, inset), Size(size.width - inset * 2, size.height - inset * 2), style = Stroke(stroke, cap = StrokeCap.Round))
-            drawArc(pair.second, -90f, pair.first.coerceIn(0f, 1f) * 360f, false, Offset(inset, inset), Size(size.width - inset * 2, size.height - inset * 2), style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(
+                pair.second.copy(alpha = .16f),
+                -90f,
+                360f,
+                false,
+                Offset(inset, inset),
+                Size(size.width - inset * 2, size.height - inset * 2),
+                style = Stroke(stroke, cap = StrokeCap.Round)
+            )
+            if (pair.first > 0f) {
+                drawArc(
+                    pair.second,
+                    -90f,
+                    pair.first.coerceIn(0f, 1f) * 360f,
+                    false,
+                    Offset(inset, inset),
+                    Size(size.width - inset * 2, size.height - inset * 2),
+                    style = Stroke(stroke, cap = StrokeCap.Round)
+                )
+            }
         }
     }
 }
@@ -293,36 +419,58 @@ private fun ActivityValue(label: String, value: String, color: Color) {
 
 @Composable
 private fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
+    val locale = LocalLocale.current.platformLocale
     MetricCard("Steps", Icons.AutoMirrored.Filled.DirectionsRun, WarmOrange, onClick) {
-        Text("${"%,d".format(metrics.steps)}", fontSize = 27.sp, fontWeight = FontWeight.Bold)
-        Text("of ${"%,d".format(metrics.stepGoal)} steps", color = Muted, fontSize = 11.sp)
-        MiniBars(WarmOrange, listOf(.25f,.4f,.33f,.7f,.5f,.86f,.65f,.48f,.72f,.55f,.9f,.61f,1f))
+        val steps = metrics.steps
+        if (steps != null) {
+            Text(String.format(locale, "%,d", steps), fontSize = 27.sp, fontWeight = FontWeight.Bold)
+            Text("of ${String.format(locale, "%,d", metrics.stepGoal)} steps", color = Muted, fontSize = 11.sp)
+            MiniBars(WarmOrange, listOf(.25f,.4f,.33f,.7f,.5f,.86f,.65f,.48f,.72f,.55f,.9f,.61f,1f))
+        } else {
+            Text("—", fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("No steps recorded", color = Muted, fontSize = 11.sp)
+            EmptyMetricPlaceholder()
+        }
     }
 }
 
 @Composable
 private fun HeartCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     MetricCard("Heart rate", Icons.Default.Favorite, PulsePink, onClick) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${metrics.heartRate}", fontSize = 27.sp, fontWeight = FontWeight.Bold)
-            Text(" bpm", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+        val hr = metrics.heartRate
+        if (hr != null) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$hr", fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                Text(" bpm", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+            }
+            Text("Resting", color = Muted, fontSize = 11.sp)
+            Sparkline(PulsePink, listOf(.25f,.35f,.28f,.52f,.39f,.34f,.66f,.45f,.58f,.4f,.5f,.7f,.61f,.76f))
+        } else {
+            Text("—", fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("No reading available", color = Muted, fontSize = 11.sp)
+            EmptyMetricPlaceholder()
         }
-        Text("Resting · 9:32 AM", color = Muted, fontSize = 11.sp)
-        Sparkline(PulsePink, listOf(.25f,.35f,.28f,.52f,.39f,.34f,.66f,.45f,.58f,.4f,.5f,.7f,.61f,.76f))
     }
 }
 
 @Composable
 private fun SleepCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     MetricCard("Sleep", Icons.Default.NightsStay, SleepPurple, onClick) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${metrics.sleepMinutes / 60}", fontSize = 27.sp, fontWeight = FontWeight.Bold)
-            Text(" hr  ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
-            Text("${metrics.sleepMinutes % 60}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 5.dp))
+        val sleep = metrics.sleepMinutes
+        if (sleep != null) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${sleep / 60}", fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                Text(" hr  ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+                Text("${sleep % 60}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 5.dp))
+            }
+            Text("Total sleep time", color = Muted, fontSize = 10.sp)
+            SleepBlocks()
+        } else {
+            Text("—", fontSize = 27.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("No sleep recorded", color = Muted, fontSize = 11.sp)
+            EmptyMetricPlaceholder()
         }
-        Text("38 min more than yesterday", color = Muted, fontSize = 10.sp)
-        SleepBlocks()
     }
 }
 
@@ -331,12 +479,15 @@ private fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () 
     val locale = LocalLocale.current.platformLocale
     MetricCard("Water", Icons.Default.LocalDrink, WaterBlue, onClick) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(String.format(locale, "%.2g", metrics.waterLiters), fontSize = 27.sp, fontWeight = FontWeight.Bold)
+            Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 27.sp, fontWeight = FontWeight.Bold)
             Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
         }
         Text("of ${metrics.waterGoalLiters.toInt()} L daily goal", color = Muted, fontSize = 11.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val progress by animateFloatAsState((metrics.waterLiters / metrics.waterGoalLiters).toFloat().coerceIn(0f, 1f), label = "water")
+            val progress by animateFloatAsState(
+                (metrics.waterLiters / metrics.waterGoalLiters).toFloat().coerceIn(0f, 1f),
+                label = "water"
+            )
             Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(WaterBlue.copy(alpha = .15f))) {
                 Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(WaterBlue))
             }
@@ -359,6 +510,25 @@ private fun MetricCard(title: String, icon: ImageVector, color: Color, onClick: 
         }
         Spacer(Modifier.height(7.dp))
         content()
+    }
+}
+
+@Composable
+private fun EmptyMetricPlaceholder() {
+    Row(
+        Modifier.fillMaxWidth().height(36.dp).padding(top = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(7) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Muted.copy(alpha = 0.25f))
+            )
+        }
     }
 }
 
@@ -397,18 +567,55 @@ private fun SleepBlocks() {
 }
 
 @Composable
-private fun InsightCard() {
-    HealthCard(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Insights, null, tint = Color(0xFF159B72), modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("A step in the right direction", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+private fun InsightCard(state: DashboardUiState) {
+    val locale = LocalLocale.current.platformLocale
+    if (state.isDemoMode) {
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Insights, null, tint = Color(0xFF159B72), modifier = Modifier.size(19.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Sample Insight (Demo)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(9.dp))
+            Text("Sample data active. When real metrics are synced, personalized trends will appear here.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
+            Spacer(Modifier.height(9.dp))
+            Surface(shape = CircleShape, color = Color(0xFFE3F7EF)) {
+                Text("Demo Preview", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFF159B72), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            }
         }
-        Spacer(Modifier.height(9.dp))
-        Text("You’re walking more this week.\nDaily average is up 18% from last week.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-        Spacer(Modifier.height(9.dp))
-        Surface(shape = CircleShape, color = Color(0xFFE3F7EF)) {
-            Text("↑ 18%", Modifier.padding(horizontal = 10.dp, vertical = 5.dp), color = Color(0xFF159B72), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+    } else {
+        val steps = state.metrics.steps
+        val water = state.metrics.waterLiters
+        val goal = state.metrics.stepGoal
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Insights, null, tint = Color(0xFF159B72), modifier = Modifier.size(19.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    when {
+                        steps != null && steps >= goal -> "Goal achieved"
+                        steps != null -> "Daily progress"
+                        water > 0.0 -> "Hydration logged"
+                        else -> "Data & privacy"
+                    },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+            Spacer(Modifier.height(9.dp))
+            Text(
+                when {
+                    steps != null && steps >= goal -> "You reached your step goal of ${String.format(locale, "%,d", goal)} steps today!"
+                    steps != null -> "${String.format(locale, "%,d", goal - steps)} steps remaining to reach your goal of ${String.format(locale, "%,d", goal)} steps."
+                    water > 0.0 -> "You have logged ${String.format(locale, "%.1f", water)} L of water today."
+                    state.hasHealthPermissions -> "Health Connect is connected. Sync to view your daily metrics."
+                    state.healthConnectAvailable -> "Connect Health Connect in Profile to see your steps, heart rate, and sleep."
+                    else -> "All health data is stored locally on this device."
+                },
+                color = Muted,
+                fontSize = 12.sp,
+                lineHeight = 18.sp
+            )
         }
     }
 }
@@ -450,7 +657,13 @@ private fun FavoritesSheet(hidden: Set<String>, onToggle: (String) -> Unit, onDi
 }
 
 @Composable
-private fun ProfileScreen(state: DashboardUiState, onBack: () -> Unit, onConnect: () -> Unit, onSync: () -> Unit) {
+private fun ProfileScreen(
+    state: DashboardUiState,
+    onBack: () -> Unit,
+    onConnect: () -> Unit,
+    onSync: () -> Unit,
+    onToggleDemo: () -> Unit
+) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
@@ -489,31 +702,69 @@ private fun ProfileScreen(state: DashboardUiState, onBack: () -> Unit, onConnect
                 Text(if (state.hasHealthPermissions) "Sync now" else "Connect")
             }
         }
+        Spacer(Modifier.height(16.dp))
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Tune, null, tint = Muted)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Sample Demo Mode", fontWeight = FontWeight.Bold)
+                    Text("Display sample data to preview UI layouts without real health records.", color = Muted, fontSize = 12.sp)
+                }
+                Switch(
+                    checked = state.isDemoMode,
+                    onCheckedChange = { onToggleDemo() },
+                    colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun DetailScreen(type: String, metrics: DashboardMetrics, onBack: () -> Unit) {
+private fun DetailScreen(type: String, metrics: DashboardMetrics, isDemo: Boolean, onBack: () -> Unit) {
+    val locale = LocalLocale.current.platformLocale
     val color = when (type) { "Steps" -> WarmOrange; "Heart rate" -> PulsePink; "Sleep" -> SleepPurple; "Water" -> WaterBlue; else -> PulsePink }
     LazyColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                Text(type, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1f)) {
+                    Text(type, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (isDemo) "Demo preview data" else "Source: ${metrics.source.label}",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
         item {
             HealthCard(Modifier.fillMaxWidth()) {
                 Text("TODAY", color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(when (type) {
-                    "Steps" -> "${"%,d".format(metrics.steps)} steps"
-                    "Heart rate" -> "${metrics.heartRate} bpm resting"
-                    "Sleep" -> "${metrics.sleepMinutes / 60} hr ${metrics.sleepMinutes % 60} min"
-                    "Water" -> "${metrics.waterLiters} L"
-                    else -> "${metrics.activeCalories} active kcal"
-                }, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                val (valueText, hasData) = when (type) {
+                    "Steps" -> metrics.steps?.let { "${String.format(locale, "%,d", it)} steps" } to (metrics.steps != null)
+                    "Heart rate" -> metrics.heartRate?.let { "$it bpm resting" } to (metrics.heartRate != null)
+                    "Sleep" -> metrics.sleepMinutes?.let { "${it / 60} hr ${it % 60} min" } to (metrics.sleepMinutes != null)
+                    "Water" -> "${String.format(locale, "%.1f", metrics.waterLiters)} L" to (metrics.waterLiters > 0.0)
+                    else -> metrics.activeCalories?.let { "$it active kcal" } to (metrics.activeCalories != null)
+                }
+                Text(
+                    text = valueText ?: "No data recorded",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (hasData) MaterialTheme.colorScheme.onSurface else Muted
+                )
                 Spacer(Modifier.height(18.dp))
-                MiniBars(color, listOf(.3f,.45f,.38f,.62f,.54f,.8f,.67f,.9f,.76f,1f,.84f,.94f))
+                if (hasData) {
+                    MiniBars(color, listOf(.3f,.45f,.38f,.62f,.54f,.8f,.67f,.9f,.76f,1f,.84f,.94f))
+                } else {
+                    Text(
+                        "No records found for today. New readings from Health Connect or local logs will appear here.",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
         items(listOf("7-day trend", "Goal progress", "Data sources")) { label ->
@@ -559,5 +810,44 @@ private fun EmptyStateScreen(padding: PaddingValues, icon: ImageVector, title: S
         Text(title, fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(body, color = Muted, textAlign = TextAlign.Center, lineHeight = 20.sp)
+    }
+}
+
+@Preview(name = "Dashboard Real Empty State", showBackground = true)
+@Composable
+private fun SummaryScreenEmptyPreview() {
+    PulseTheme {
+        SummaryScreen(
+            state = DashboardUiState(),
+            contentPadding = PaddingValues(),
+            onRange = {},
+            onWater = {},
+            onEdit = {},
+            onProfile = {},
+            onDetail = {},
+            onExitDemo = {}
+        )
+    }
+}
+
+@Preview(name = "Dashboard Demo Mode State", showBackground = true)
+@Composable
+private fun SummaryScreenDemoPreview() {
+    PulseTheme {
+        SummaryScreen(
+            state = DashboardUiState(
+                metrics = DashboardMetrics.demo(),
+                isDemoMode = true,
+                hasHealthPermissions = true,
+                healthConnectAvailable = true
+            ),
+            contentPadding = PaddingValues(),
+            onRange = {},
+            onWater = {},
+            onEdit = {},
+            onProfile = {},
+            onDetail = {},
+            onExitDemo = {}
+        )
     }
 }

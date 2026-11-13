@@ -5,8 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
-import com.pulsehealth.app.data.HealthDataRepository
+import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectRepository
+import com.pulsehealth.app.data.HealthDataRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.UserPreferencesRepository
 import com.pulsehealth.app.data.local.PulseDatabase
@@ -20,6 +21,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val preferences = UserPreferencesRepository(application)
     private val healthData = HealthDataRepository(PulseDatabase.get(application).hydrationDao())
     val healthRepository = HealthConnectRepository(application)
+    private val isDemoModeFlow = MutableStateFlow(false)
     private val runtimeState = MutableStateFlow(
         DashboardUiState(healthConnectAvailable = healthRepository.isAvailable())
     )
@@ -27,11 +29,24 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val uiState = combine(
         runtimeState,
         healthData.todayWaterLiters,
-        preferences.hiddenCards
-    ) { state, water, hidden ->
+        preferences.hiddenCards,
+        isDemoModeFlow
+    ) { state, water, hidden, isDemo ->
+        val effectiveMetrics = if (isDemo) {
+            DashboardMetrics.demo().copy(waterLiters = if (water > 0.0) water else 1.5)
+        } else {
+            val source = if (state.metrics.source == DataSource.NONE && water > 0.0) {
+                DataSource.LOCAL
+            } else {
+                state.metrics.source
+            }
+            state.metrics.copy(waterLiters = water, source = source)
+        }
+
         state.copy(
-            metrics = state.metrics.copy(waterLiters = water),
-            hiddenCards = hidden
+            metrics = effectiveMetrics,
+            hiddenCards = hidden,
+            isDemoMode = isDemo
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), runtimeState.value)
 
@@ -46,6 +61,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleCard(id: String) = viewModelScope.launch { preferences.toggleCard(id) }
 
+    fun setDemoMode(enabled: Boolean) {
+        isDemoModeFlow.value = enabled
+    }
+
+    fun toggleDemoMode() {
+        isDemoModeFlow.value = !isDemoModeFlow.value
+    }
+
     fun refreshPermissionsAndSync() = viewModelScope.launch {
         val granted = runCatching { healthRepository.hasPermissions() }.getOrDefault(false)
         runtimeState.value = runtimeState.value.copy(hasHealthPermissions = granted)
@@ -58,7 +81,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         runtimeState.value = current.copy(isSyncing = true, message = null)
         runCatching { healthRepository.read(current.selectedRange, current.metrics) }
             .onSuccess { metrics ->
-                runtimeState.value = runtimeState.value.copy(metrics = metrics, isSyncing = false)
+                runtimeState.value = runtimeState.value.copy(
+                    metrics = metrics,
+                    isSyncing = false,
+                    lastSyncedEpochMillis = System.currentTimeMillis()
+                )
             }
             .onFailure {
                 runtimeState.value = runtimeState.value.copy(
