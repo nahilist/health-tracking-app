@@ -13,4 +13,7 @@ interface HydrationRepository {
     suspend fun addWater(amountMilliliters: Int = 250, recordedAtEpochMillis: Long? = null)
     suspend fun updateWater(id: String, amountMilliliters: Int): Boolean
     suspend fun deleteWater(id: String): Boolean
+    suspend fun getAllEntries(): List<HydrationEntryEntity>
+    suspend fun clearAllData()
+    suspend fun exportDataJson(): String
 }

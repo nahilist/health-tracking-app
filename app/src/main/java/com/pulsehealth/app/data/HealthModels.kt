@@ -71,6 +71,7 @@ data class DashboardUiState(
     val hasHealthPermissions: Boolean = false,
     val hasWriteHydrationPermission: Boolean = false,
     val syncWaterToHealthConnect: Boolean = false,
+    val onboardingCompleted: Boolean = true,
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
     val errorMessage: String? = null,

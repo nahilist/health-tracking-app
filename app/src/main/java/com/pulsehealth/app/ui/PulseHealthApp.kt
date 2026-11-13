@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,11 +48,13 @@ import com.pulsehealth.app.ui.components.EmptyStateScreen
 import com.pulsehealth.app.ui.detail.DetailScreen
 import com.pulsehealth.app.ui.navigation.PulseDestination
 import com.pulsehealth.app.ui.navigation.TopLevelDestination
+import com.pulsehealth.app.ui.onboarding.OnboardingScreen
 import com.pulsehealth.app.ui.profile.ProfileScreen
 import com.pulsehealth.app.ui.summary.FavoritesSheet
 import com.pulsehealth.app.ui.summary.SummaryScreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
+import kotlinx.coroutines.launch
 
 @Composable
 fun PulseHealthApp(
@@ -75,91 +78,108 @@ fun PulseHealthApp(
 
     val isTopLevelDestination = TopLevelDestination.entries.any { it.route == currentRoute }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            if (isTopLevelDestination) {
-                PulseBottomBar(
-                    currentRoute = currentRoute,
-                    onNavigateToDestination = { destination ->
-                        navController.navigate(destination.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+    if (!state.onboardingCompleted) {
+        OnboardingScreen(
+            onComplete = { viewModel.setOnboardingCompleted(true) },
+            onRequestPermissions = { permissionLauncher.launch(viewModel.healthRepository.readPermissions) }
+        )
+    } else {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (isTopLevelDestination) {
+                    PulseBottomBar(
+                        currentRoute = currentRoute,
+                        onNavigateToDestination = { destination ->
+                            navController.navigate(destination.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
-                    }
-                )
-            }
-        }
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = PulseDestination.Summary.route,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            composable(PulseDestination.Summary.route) {
-                SummaryScreen(
-                    state = state,
-                    contentPadding = padding,
-                    onRange = viewModel::selectRange,
-                    onWater = viewModel::addWater,
-                    onEdit = { editing = true },
-                    onProfile = { navController.navigate(PulseDestination.Profile.route) },
-                    onDetail = { type ->
-                        navController.navigate(PulseDestination.Detail.createRoute(type))
-                    },
-                    onExitDemo = { viewModel.setDemoMode(false) },
-                    onRetry = viewModel::sync,
-                    onDismissError = viewModel::clearError
-                )
-            }
-            composable(PulseDestination.Sharing.route) {
-                EmptyStateScreen(
-                    padding = padding,
-                    icon = Icons.Default.Groups,
-                    title = "Health sharing",
-                    body = "Share selected trends with people you trust. Your health data stays private until you choose otherwise."
-                )
-            }
-            composable(PulseDestination.Browse.route) {
-                BrowseScreen(padding) { type ->
-                    navController.navigate(PulseDestination.Detail.createRoute(type))
+                    )
                 }
             }
-            composable(
-                route = PulseDestination.Detail.route,
-                arguments = listOf(
-                    navArgument(PulseDestination.Detail.ARG_METRIC_TYPE) {
-                        type = NavType.StringType
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = PulseDestination.Summary.route,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                composable(PulseDestination.Summary.route) {
+                    SummaryScreen(
+                        state = state,
+                        contentPadding = padding,
+                        onRange = viewModel::selectRange,
+                        onWater = viewModel::addWater,
+                        onEdit = { editing = true },
+                        onProfile = { navController.navigate(PulseDestination.Profile.route) },
+                        onDetail = { type ->
+                            navController.navigate(PulseDestination.Detail.createRoute(type))
+                        },
+                        onExitDemo = { viewModel.setDemoMode(false) },
+                        onRetry = viewModel::sync,
+                        onDismissError = viewModel::clearError
+                    )
+                }
+                composable(PulseDestination.Sharing.route) {
+                    EmptyStateScreen(
+                        padding = padding,
+                        icon = Icons.Default.Groups,
+                        title = "Health sharing",
+                        body = "Share selected trends with people you trust. Your health data stays private until you choose otherwise."
+                    )
+                }
+                composable(PulseDestination.Browse.route) {
+                    BrowseScreen(padding) { type ->
+                        navController.navigate(PulseDestination.Detail.createRoute(type))
                     }
-                )
-            ) { backStackEntry ->
-                val metricType = backStackEntry.arguments?.getString(PulseDestination.Detail.ARG_METRIC_TYPE).orEmpty()
-                DetailScreen(
-                    type = metricType,
-                    metrics = state.metrics,
-                    isDemo = state.isDemoMode,
-                    todayHydrationEntries = todayHydration,
-                    weeklyWaterLiters = weeklyWater,
-                    onAddWater = viewModel::addWater,
-                    onEditWater = viewModel::editWater,
-                    onDeleteWater = viewModel::deleteWater,
-                    onSetWaterGoal = viewModel::setWaterGoal,
-                    onBack = { navController.navigateUp() }
-                )
-            }
-            composable(PulseDestination.Profile.route) {
-                ProfileScreen(
-                    state = state,
-                    onBack = { navController.navigateUp() },
-                    onConnect = { permissionLauncher.launch(viewModel.healthRepository.readPermissions) },
-                    onSync = viewModel::sync,
-                    onToggleDemo = viewModel::toggleDemoMode,
-                    onToggleSyncWater = viewModel::setSyncWaterToHealthConnect,
-                    onRequestWritePermissions = { writePermissionLauncher.launch(viewModel.healthRepository.writePermissions) }
-                )
+                }
+                composable(
+                    route = PulseDestination.Detail.route,
+                    arguments = listOf(
+                        navArgument(PulseDestination.Detail.ARG_METRIC_TYPE) {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { backStackEntry ->
+                    val metricType = backStackEntry.arguments?.getString(PulseDestination.Detail.ARG_METRIC_TYPE).orEmpty()
+                    DetailScreen(
+                        type = metricType,
+                        metrics = state.metrics,
+                        isDemo = state.isDemoMode,
+                        todayHydrationEntries = todayHydration,
+                        weeklyWaterLiters = weeklyWater,
+                        onAddWater = viewModel::addWater,
+                        onEditWater = viewModel::editWater,
+                        onDeleteWater = viewModel::deleteWater,
+                        onSetWaterGoal = viewModel::setWaterGoal,
+                        onBack = { navController.navigateUp() }
+                    )
+                }
+                composable(PulseDestination.Profile.route) {
+                    val coroutineScope = rememberCoroutineScope()
+                    ProfileScreen(
+                        state = state,
+                        onBack = { navController.navigateUp() },
+                        onConnect = { permissionLauncher.launch(viewModel.healthRepository.readPermissions) },
+                        onSync = viewModel::sync,
+                        onToggleDemo = viewModel::toggleDemoMode,
+                        onToggleSyncWater = viewModel::setSyncWaterToHealthConnect,
+                        onRequestWritePermissions = { writePermissionLauncher.launch(viewModel.healthRepository.writePermissions) },
+                        onExportData = { onResult ->
+                            coroutineScope.launch {
+                                val json = viewModel.exportDataJson()
+                                onResult(json)
+                            }
+                        },
+                        onDeleteAllData = {
+                            viewModel.deleteAllLocalData()
+                        }
+                    )
+                }
             }
         }
     }

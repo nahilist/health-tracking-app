@@ -78,19 +78,26 @@ class DashboardViewModel(
         val hiddenCards: Set<String>,
         val waterGoalLiters: Double,
         val syncWaterToHealthConnect: Boolean,
+        val onboardingCompleted: Boolean,
         val isDemoMode: Boolean
     )
+
+    private val appFlagsFlow = combine(
+        preferencesRepository.onboardingCompleted,
+        isDemoModeFlow
+    ) { onboarding, isDemo -> onboarding to isDemo }
 
     private val preferencesFlow = combine(
         preferencesRepository.hiddenCards,
         preferencesRepository.waterGoalLiters,
         preferencesRepository.syncWaterToHealthConnect,
-        isDemoModeFlow
-    ) { hidden, goal, syncWater, isDemo ->
+        appFlagsFlow
+    ) { hidden, goal, syncWater, (onboarding, isDemo) ->
         PreferencesState(
             hiddenCards = hidden,
             waterGoalLiters = goal,
             syncWaterToHealthConnect = syncWater,
+            onboardingCompleted = onboarding,
             isDemoMode = isDemo
         )
     }
@@ -127,6 +134,7 @@ class DashboardViewModel(
             hasHealthPermissions = sync.hasHealthPermissions,
             hasWriteHydrationPermission = sync.hasWriteHydrationPermission,
             syncWaterToHealthConnect = pref.syncWaterToHealthConnect,
+            onboardingCompleted = pref.onboardingCompleted,
             isLoading = sync.isLoading,
             isSyncing = sync.isSyncing,
             errorMessage = sync.errorMessage,
@@ -172,6 +180,27 @@ class DashboardViewModel(
 
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) = viewModelScope.launch {
+        preferencesRepository.setOnboardingCompleted(completed)
+    }
+
+    suspend fun exportDataJson(): String {
+        return hydrationRepository.exportDataJson()
+    }
+
+    fun deleteAllLocalData(onDeleted: () -> Unit = {}) = viewModelScope.launch {
+        hydrationRepository.clearAllData()
+        preferencesRepository.clearAllPreferences()
+        syncStateFlow.update {
+            it.copy(
+                metrics = DashboardMetrics(),
+                lastSyncedEpochMillis = null,
+                errorMessage = null
+            )
+        }
+        onDeleted()
     }
 
     fun setSyncWaterToHealthConnect(enabled: Boolean) = viewModelScope.launch {

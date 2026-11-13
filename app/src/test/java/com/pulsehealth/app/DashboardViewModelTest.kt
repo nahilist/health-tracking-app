@@ -84,12 +84,24 @@ class DashboardViewModelTest {
             _entries.value = current.filterNot { it.id == id }
             return true
         }
+
+        override suspend fun getAllEntries(): List<HydrationEntryEntity> = _entries.value
+
+        override suspend fun clearAllData() {
+            _water.value = 0.0
+            _weeklyWater.value = 0.0
+            _entries.value = emptyList()
+        }
+
+        override suspend fun exportDataJson(): String =
+            "{\"app\":\"Pulse Health\",\"hydrationEntriesCount\":${_entries.value.size}}"
     }
 
     private class FakePreferencesRepository(
         initialHidden: Set<String> = emptySet(),
         initialGoal: Double = 2.0,
-        initialSyncWater: Boolean = false
+        initialSyncWater: Boolean = false,
+        initialOnboardingCompleted: Boolean = true
     ) : PreferencesRepository {
         private val _hidden = MutableStateFlow(initialHidden)
         override val hiddenCards: Flow<Set<String>> = _hidden.asStateFlow()
@@ -99,6 +111,9 @@ class DashboardViewModelTest {
 
         private val _syncWater = MutableStateFlow(initialSyncWater)
         override val syncWaterToHealthConnect: Flow<Boolean> = _syncWater.asStateFlow()
+
+        private val _onboardingCompleted = MutableStateFlow(initialOnboardingCompleted)
+        override val onboardingCompleted: Flow<Boolean> = _onboardingCompleted.asStateFlow()
 
         override suspend fun toggleCard(id: String) {
             val current = _hidden.value.toMutableSet()
@@ -112,6 +127,17 @@ class DashboardViewModelTest {
 
         override suspend fun setSyncWaterToHealthConnect(enabled: Boolean) {
             _syncWater.value = enabled
+        }
+
+        override suspend fun setOnboardingCompleted(completed: Boolean) {
+            _onboardingCompleted.value = completed
+        }
+
+        override suspend fun clearAllPreferences() {
+            _hidden.value = emptySet()
+            _goal.value = 2.0
+            _syncWater.value = false
+            _onboardingCompleted.value = false
         }
     }
 
@@ -394,5 +420,62 @@ class DashboardViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.syncWaterToHealthConnect)
+    }
+
+    @Test
+    fun onboardingFlowSavesStateAndCompletes() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository(initialOnboardingCompleted = false)
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.onboardingCompleted)
+
+        viewModel.setOnboardingCompleted(true)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.onboardingCompleted)
+    }
+
+    @Test
+    fun deleteAllLocalDataClearsRepositoryAndState() = runTest {
+        val hydrationRepo = FakeHydrationRepository(initialWater = 1.5)
+        val prefRepo = FakePreferencesRepository(initialHidden = setOf("Sleep"), initialSyncWater = true)
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(1.5, viewModel.uiState.value.metrics.waterLiters, 0.001)
+
+        var deletedCallbackCalled = false
+        viewModel.deleteAllLocalData { deletedCallbackCalled = true }
+        advanceUntilIdle()
+
+        assertTrue(deletedCallbackCalled)
+        assertEquals(0.0, viewModel.uiState.value.metrics.waterLiters, 0.001)
+        assertTrue(viewModel.uiState.value.hiddenCards.isEmpty())
+        assertFalse(viewModel.uiState.value.syncWaterToHealthConnect)
+        assertEquals(0, hydrationRepo.getAllEntries().size)
+    }
+
+    @Test
+    fun exportDataJsonProducesValidJsonFromRepository() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo)
+        val json = viewModel.exportDataJson()
+
+        assertTrue(json.contains("\"app\":\"Pulse Health\""))
     }
 }

@@ -23,6 +23,7 @@ class UserPreferencesRepository(
         val hiddenCards = stringSetPreferencesKey("hidden_cards")
         val waterGoalLiters = doublePreferencesKey("water_goal_liters")
         val syncWaterToHealthConnect = booleanPreferencesKey("sync_water_to_health_connect")
+        val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
     }
 
     override val hiddenCards: Flow<Set<String>> =
@@ -33,6 +34,9 @@ class UserPreferencesRepository(
 
     override val syncWaterToHealthConnect: Flow<Boolean> =
         context.userDataStore.data.map { it[Keys.syncWaterToHealthConnect] ?: false }
+
+    override val onboardingCompleted: Flow<Boolean> =
+        context.userDataStore.data.map { it[Keys.onboardingCompleted] ?: false }
 
     override suspend fun toggleCard(id: String): Unit = withContext(ioDispatcher) {
         context.userDataStore.edit { preferences ->
@@ -52,6 +56,18 @@ class UserPreferencesRepository(
     override suspend fun setSyncWaterToHealthConnect(enabled: Boolean): Unit = withContext(ioDispatcher) {
         context.userDataStore.edit { preferences ->
             preferences[Keys.syncWaterToHealthConnect] = enabled
+        }
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean): Unit = withContext(ioDispatcher) {
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.onboardingCompleted] = completed
+        }
+    }
+
+    override suspend fun clearAllPreferences(): Unit = withContext(ioDispatcher) {
+        context.userDataStore.edit { preferences ->
+            preferences.clear()
         }
     }
 }

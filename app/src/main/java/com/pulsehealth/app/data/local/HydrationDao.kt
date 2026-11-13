@@ -53,6 +53,12 @@ interface HydrationDao {
     @Query("SELECT * FROM hydration_entries WHERE id = :id")
     suspend fun getEntryById(id: String): HydrationEntryEntity?
 
+    @Query("SELECT * FROM hydration_entries ORDER BY recordedAtEpochMillis DESC")
+    suspend fun getAllEntries(): List<HydrationEntryEntity>
+
+    @Query("DELETE FROM hydration_entries")
+    suspend fun deleteAll(): Int
+
     @Query("DELETE FROM hydration_entries WHERE recordedAtEpochMillis < :cutoffEpochMillis")
     suspend fun deleteOlderThan(cutoffEpochMillis: Long): Int
 }
