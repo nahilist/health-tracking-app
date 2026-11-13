@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("androidx.room")
+    id("jacoco")
 }
 
 android {
@@ -38,6 +39,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            enableUnitTestCoverage = true
         }
         release {
             isMinifyEnabled = true
@@ -50,6 +52,12 @@ android {
         }
     }
 
+    lint {
+        xmlReport = true
+        htmlReport = true
+        abortOnError = false
+    }
+
     buildFeatures { compose = true }
 
     packaging.resources.excludes += setOf(
@@ -59,6 +67,56 @@ android {
     )
 
     testOptions.unitTests.isIncludeAndroidResources = true
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        "androidx/**/*.*",
+        "**/*_Factory*.*",
+        "**/*_MembersInjector*.*",
+        "**/*_Provide*.*",
+        "**/*Companion*.*",
+        "**/*Args*.*",
+        "**/*Directions*.*"
+    )
+
+    val debugKotlin = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+        exclude(fileFilter)
+    }
+    val debugJavac = fileTree("${layout.buildDirectory.get()}/intermediates/javac/debug/compileDebugJavaWithJavac/classes") {
+        exclude(fileFilter)
+    }
+    val fallbackKotlin = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+    }
+
+    val mainSrc = files("$projectDir/src/main/java")
+
+    sourceDirectories.setFrom(mainSrc)
+    classDirectories.setFrom(debugKotlin + debugJavac + fallbackKotlin)
+    executionData.setFrom(fileTree(layout.buildDirectory.get()) {
+        include(
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec",
+            "jacoco/testDebugUnitTest.exec"
+        )
+    })
 }
 
 room {
