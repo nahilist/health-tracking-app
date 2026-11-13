@@ -56,6 +56,25 @@ app/build/outputs/bundle/release/app-release.aab
 
 An unsigned local release bundle is suitable only for build verification, not distribution.
 
+### Code Quality and Coverage (SonarQube & JaCoCo)
+
+Run unit tests and generate JaCoCo coverage reports:
+
+```powershell
+.\gradlew.bat testDebugUnitTest jacocoTestReport
+```
+
+HTML report output: `app/build/reports/jacoco/jacocoTestReport/html/index.html`  
+XML report output: `app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml`
+
+Run full SonarQube quality analysis (tests, coverage, lint, and Sonar scanner):
+
+```powershell
+.\gradlew.bat sonar "-Dsonar.token=<your-token>"
+```
+
+Or provide `SONAR_TOKEN` and `SONAR_HOST_URL` via environment variables.
+
 ## 4. Install on a device
 
 Preferred during development: connect an Android device with USB debugging and run the `app` configuration from Android Studio.
