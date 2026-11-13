@@ -1,11 +1,13 @@
 package com.pulsehealth.app.di
 
 import android.content.Context
+import com.pulsehealth.app.data.AuthRepository
 import com.pulsehealth.app.data.DefaultHealthConnectRepository
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HealthDataRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
+import com.pulsehealth.app.data.SupabaseAuthRepository
 import com.pulsehealth.app.data.UserPreferencesRepository
 import com.pulsehealth.app.data.local.PulseDatabase
 import kotlinx.coroutines.CoroutineDispatcher
@@ -17,6 +19,7 @@ interface AppContainer {
     val hydrationRepository: HydrationRepository
     val preferencesRepository: PreferencesRepository
     val healthConnectRepository: HealthConnectRepository
+    val authRepository: AuthRepository
     val clock: Clock
     val zoneId: ZoneId
     val ioDispatcher: CoroutineDispatcher
@@ -29,6 +32,13 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
 
     private val database: PulseDatabase by lazy {
         PulseDatabase.get(applicationContext)
+    }
+
+    override val authRepository: AuthRepository by lazy {
+        SupabaseAuthRepository(
+            context = applicationContext,
+            ioDispatcher = ioDispatcher
+        )
     }
 
     override val hydrationRepository: HydrationRepository by lazy {

@@ -478,4 +478,72 @@ class DashboardViewModelTest {
 
         assertTrue(json.contains("\"app\":\"Pulse Health\""))
     }
+
+    @Test
+    fun signInAsGuestUpdatesUiStateToGuest() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+        val authRepo = com.pulsehealth.app.data.NoOpAuthRepository(com.pulsehealth.app.data.AuthState.Unauthenticated)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo, authRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(com.pulsehealth.app.data.AuthState.Unauthenticated, viewModel.uiState.value.authState)
+
+        viewModel.signInAsGuest()
+        advanceUntilIdle()
+
+        assertEquals(com.pulsehealth.app.data.AuthState.Guest, viewModel.uiState.value.authState)
+        assertTrue(viewModel.uiState.value.currentUser?.isAnonymous == true)
+    }
+
+    @Test
+    fun signInWithEmailUpdatesUiStateToAuthenticated() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+        val authRepo = com.pulsehealth.app.data.NoOpAuthRepository(com.pulsehealth.app.data.AuthState.Unauthenticated)
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo, authRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.signInWithEmail("tester@pulsehealth.app", "pass12345")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.authState is com.pulsehealth.app.data.AuthState.Authenticated)
+        assertEquals("tester@pulsehealth.app", viewModel.uiState.value.currentUser?.email)
+    }
+
+    @Test
+    fun signOutRevertsUiStateToUnauthenticated() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+        val authRepo = com.pulsehealth.app.data.NoOpAuthRepository(
+            com.pulsehealth.app.data.AuthState.Authenticated(
+                com.pulsehealth.app.data.AuthUser(id = "user_1", email = "bob@example.com")
+            )
+        )
+
+        val viewModel = DashboardViewModel(SavedStateHandle(), hydrationRepo, prefRepo, healthRepo, authRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.authState is com.pulsehealth.app.data.AuthState.Authenticated)
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertEquals(com.pulsehealth.app.data.AuthState.Unauthenticated, viewModel.uiState.value.authState)
+        assertNull(viewModel.uiState.value.currentUser)
+    }
 }

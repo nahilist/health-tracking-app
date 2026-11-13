@@ -8,12 +8,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pulsehealth.app.PulseHealthApplication
+import com.pulsehealth.app.data.AuthRepository
+import com.pulsehealth.app.data.AuthResult
+import com.pulsehealth.app.data.AuthState
+import com.pulsehealth.app.data.AuthUser
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
+import com.pulsehealth.app.data.NoOpAuthRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.local.HydrationEntryEntity
@@ -29,7 +34,8 @@ class DashboardViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val hydrationRepository: HydrationRepository,
     private val preferencesRepository: PreferencesRepository,
-    val healthRepository: HealthConnectRepository
+    val healthRepository: HealthConnectRepository,
+    val authRepository: AuthRepository = NoOpAuthRepository()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -74,12 +80,17 @@ class DashboardViewModel(
         )
     )
 
+    val authState: StateFlow<AuthState> = authRepository.authState
+    val currentUser: StateFlow<AuthUser?> = authRepository.currentUser
+
     private data class PreferencesState(
         val hiddenCards: Set<String>,
         val waterGoalLiters: Double,
         val syncWaterToHealthConnect: Boolean,
         val onboardingCompleted: Boolean,
-        val isDemoMode: Boolean
+        val isDemoMode: Boolean,
+        val authState: AuthState = AuthState.Loading,
+        val currentUser: AuthUser? = null
     )
 
     private val appFlagsFlow = combine(
@@ -87,18 +98,26 @@ class DashboardViewModel(
         isDemoModeFlow
     ) { onboarding, isDemo -> onboarding to isDemo }
 
+    private val authInfoFlow = combine(
+        authRepository.authState,
+        authRepository.currentUser
+    ) { authState, user -> authState to user }
+
     private val preferencesFlow = combine(
         preferencesRepository.hiddenCards,
         preferencesRepository.waterGoalLiters,
         preferencesRepository.syncWaterToHealthConnect,
-        appFlagsFlow
-    ) { hidden, goal, syncWater, (onboarding, isDemo) ->
+        appFlagsFlow,
+        authInfoFlow
+    ) { hidden, goal, syncWater, (onboarding, isDemo), (authState, user) ->
         PreferencesState(
             hiddenCards = hidden,
             waterGoalLiters = goal,
             syncWaterToHealthConnect = syncWater,
             onboardingCompleted = onboarding,
-            isDemoMode = isDemo
+            isDemoMode = isDemo,
+            authState = authState,
+            currentUser = user
         )
     }
 
@@ -140,7 +159,9 @@ class DashboardViewModel(
             errorMessage = sync.errorMessage,
             hiddenCards = pref.hiddenCards,
             isDemoMode = pref.isDemoMode,
-            lastSyncedEpochMillis = sync.lastSyncedEpochMillis
+            lastSyncedEpochMillis = sync.lastSyncedEpochMillis,
+            authState = pref.authState,
+            currentUser = pref.currentUser
         )
     }.stateIn(
         viewModelScope,
@@ -148,7 +169,9 @@ class DashboardViewModel(
         DashboardUiState(
             healthConnectAvailability = healthRepository.getAvailability(),
             selectedRange = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY),
-            isDemoMode = isDemoModeFlow.value
+            isDemoMode = isDemoModeFlow.value,
+            authState = authRepository.authState.value,
+            currentUser = authRepository.currentUser.value
         )
     )
 
@@ -264,6 +287,26 @@ class DashboardViewModel(
             }
     }
 
+    fun signInWithEmail(email: String, password: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.signInWithEmail(email, password)
+        onResult(result)
+    }
+
+    fun signUpWithEmail(email: String, password: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.signUpWithEmail(email, password)
+        onResult(result)
+    }
+
+    fun signInAsGuest(onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.signInAsGuest()
+        onResult(result)
+    }
+
+    fun signOut(onComplete: () -> Unit = {}) = viewModelScope.launch {
+        authRepository.signOut()
+        onComplete()
+    }
+
     companion object {
         const val KEY_SELECTED_RANGE = "selected_range"
         const val KEY_IS_DEMO_MODE = "is_demo_mode"
@@ -276,7 +319,8 @@ class DashboardViewModel(
                     savedStateHandle = savedStateHandle,
                     hydrationRepository = app.container.hydrationRepository,
                     preferencesRepository = app.container.preferencesRepository,
-                    healthRepository = app.container.healthConnectRepository
+                    healthRepository = app.container.healthConnectRepository,
+                    authRepository = app.container.authRepository
                 )
             }
         }

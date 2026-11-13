@@ -77,7 +77,9 @@ data class DashboardUiState(
     val errorMessage: String? = null,
     val hiddenCards: Set<String> = emptySet(),
     val isDemoMode: Boolean = false,
-    val lastSyncedEpochMillis: Long? = null
+    val lastSyncedEpochMillis: Long? = null,
+    val authState: AuthState = AuthState.Loading,
+    val currentUser: AuthUser? = null
 ) {
     val healthConnectAvailable: Boolean
         get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE

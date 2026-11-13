@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
@@ -54,10 +55,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.HealthConnectAvailability
+import com.pulsehealth.app.ui.components.AuthDialog
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.HealthConnectRationaleDialog
+import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
+import com.pulsehealth.app.ui.theme.WarmOrange
 import com.pulsehealth.app.ui.theme.WaterBlue
 
 @Composable
@@ -70,12 +74,17 @@ fun ProfileScreen(
     onToggleSyncWater: (Boolean) -> Unit = {},
     onRequestWritePermissions: () -> Unit = {},
     onExportData: ((String) -> Unit) -> Unit = {},
-    onDeleteAllData: () -> Unit = {}
+    onDeleteAllData: () -> Unit = {},
+    onSignIn: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
+    onSignUp: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
+    onSignInAsGuest: () -> Unit = {},
+    onSignOut: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showAuthDialog by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -101,6 +110,44 @@ fun ProfileScreen(
                 fontSize = 13.sp,
                 lineHeight = 19.sp
             )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CloudDone, null, tint = PulsePink, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Account & Cloud Sync", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    val user = state.currentUser
+                    if (user != null && !user.isAnonymous) {
+                        Text("Signed in as ${user.email ?: user.displayName ?: "User"}", color = ExerciseGreen, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Connected to Supabase PostgreSQL", color = Muted, fontSize = 11.sp)
+                    } else {
+                        Text("Local guest mode (Offline only)", color = WarmOrange, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text("Sign in to back up and sync records across devices", color = Muted, fontSize = 11.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            val user = state.currentUser
+            if (user != null && !user.isAnonymous) {
+                OutlinedButton(
+                    onClick = onSignOut,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign Out")
+                }
+            } else {
+                Button(
+                    onClick = { showAuthDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = PulsePink),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign In / Create Account")
+                }
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -359,6 +406,28 @@ fun ProfileScreen(
                 Button(onClick = { showAboutDialog = false }) {
                     Text("Close")
                 }
+            }
+        )
+    }
+
+    if (showAuthDialog) {
+        AuthDialog(
+            onDismiss = { showAuthDialog = false },
+            onSignIn = { email, password, onError ->
+                onSignIn(email, password) { err ->
+                    if (err.isEmpty()) showAuthDialog = false
+                    else onError(err)
+                }
+            },
+            onSignUp = { email, password, onError ->
+                onSignUp(email, password) { err ->
+                    if (err.isEmpty()) showAuthDialog = false
+                    else onError(err)
+                }
+            },
+            onGuest = {
+                onSignInAsGuest()
+                showAuthDialog = false
             }
         )
     }
