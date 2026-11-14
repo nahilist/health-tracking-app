@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.NightsStay
@@ -65,12 +64,12 @@ fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     }
     MetricCard("Steps", Icons.AutoMirrored.Filled.DirectionsRun, WarmOrange, onClick, description) {
         if (steps != null) {
-            Text(String.format(locale, "%,d", steps), fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(String.format(locale, "%,d", steps), fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text("of ${String.format(locale, "%,d", metrics.stepGoal)} steps", color = Muted, fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
             MiniBars(WarmOrange, listOf(.25f, .4f, .33f, .7f, .5f, .86f, .65f, .48f, .72f, .55f, .9f, .61f, 1f))
         } else {
-            Text("—", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
             Text("No steps recorded", color = Muted, fontSize = 11.sp)
             EmptyMetricPlaceholder()
         }
@@ -88,14 +87,14 @@ fun HeartCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     MetricCard("Heart rate", Icons.Default.Favorite, PulsePink, onClick, description) {
         if (hr != null) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("$hr", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text(" bpm", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+                Text("$hr", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(" bpm", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp))
             }
-            Text("Resting heart rate", color = Muted, fontSize = 11.sp)
-            Spacer(Modifier.height(4.dp))
+            Text("Resting", color = Muted, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
             Sparkline(PulsePink, listOf(.25f, .35f, .28f, .52f, .39f, .34f, .66f, .45f, .58f, .4f, .5f, .7f, .61f, .76f))
         } else {
-            Text("—", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
             Text("No reading available", color = Muted, fontSize = 11.sp)
             EmptyMetricPlaceholder()
         }
@@ -113,16 +112,16 @@ fun SleepCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     MetricCard("Sleep", Icons.Default.NightsStay, SleepPurple, onClick, description) {
         if (sleep != null) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("${sleep / 60}", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text(" hr  ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-                Text("${sleep % 60}", fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 4.dp))
+                Text("${sleep / 60}", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(" hr ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp))
+                Text("${sleep % 60}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
             }
-            Text("Total restorative sleep", color = Muted, fontSize = 10.sp)
-            Spacer(Modifier.height(4.dp))
+            Text("Sleep duration", color = Muted, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
             SleepBlocks()
         } else {
-            Text("—", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Muted)
+            Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
             Text("No sleep recorded", color = Muted, fontSize = 11.sp)
             EmptyMetricPlaceholder()
         }
@@ -135,10 +134,10 @@ fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit)
     val description = "Water: ${String.format(locale, "%.1f", metrics.waterLiters)} of ${metrics.waterGoalLiters.toInt()} liters daily goal"
     MetricCard("Water", Icons.Default.LocalDrink, WaterBlue, onClick, description) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+            Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp))
         }
-        Text("of ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L daily target", color = Muted, fontSize = 11.sp)
+        Text("of ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L goal", color = Muted, fontSize = 11.sp)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             val progress by animateFloatAsState(
@@ -148,30 +147,29 @@ fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit)
             Box(
                 Modifier
                     .weight(1f)
-                    .height(8.dp)
+                    .height(6.dp)
                     .clip(CircleShape)
                     .background(WaterBlue.copy(alpha = 0.15f))
             ) {
                 Box(
                     Modifier
                         .fillMaxWidth(progress)
-                        .height(8.dp)
+                        .height(6.dp)
                         .clip(CircleShape)
                         .background(WaterBlue)
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             IconButton(
                 onClick = onAdd,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                     .semantics { contentDescription = "Quick add 250 milliliters of water" }
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = WaterBlue.copy(alpha = 0.12f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, WaterBlue.copy(alpha = 0.3f))
+                    color = WaterBlue.copy(alpha = 0.12f)
                 ) {
                     Icon(
                         Icons.Default.Add,
@@ -197,7 +195,7 @@ fun MetricCard(
     HealthCard(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 158.dp)
+            .defaultMinSize(minHeight = 150.dp)
             .clickable(onClick = onClick)
             .semantics {
                 role = Role.Button
@@ -208,20 +206,11 @@ fun MetricCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(17.dp))
-            }
-            Spacer(Modifier.width(8.dp))
-            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, null, tint = Muted.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+            Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(title, color = color, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         content()
     }
 }
@@ -229,7 +218,7 @@ fun MetricCard(
 @Composable
 fun EmptyMetricPlaceholder() {
     Row(
-        Modifier.fillMaxWidth().height(36.dp).padding(top = 10.dp),
+        Modifier.fillMaxWidth().height(32.dp).padding(top = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -237,9 +226,9 @@ fun EmptyMetricPlaceholder() {
             Box(
                 Modifier
                     .weight(1f)
-                    .height(4.dp)
+                    .height(3.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Muted.copy(alpha = 0.25f))
+                    .background(Muted.copy(alpha = 0.2f))
             )
         }
     }
@@ -248,8 +237,8 @@ fun EmptyMetricPlaceholder() {
 @Composable
 fun MiniBars(color: Color, values: List<Float>) {
     Row(
-        Modifier.fillMaxWidth().height(36.dp).padding(top = 7.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        Modifier.fillMaxWidth().height(32.dp).padding(top = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         values.forEachIndexed { i, value ->
@@ -258,8 +247,8 @@ fun MiniBars(color: Color, values: List<Float>) {
                     .weight(1f)
                     .fillMaxSize(value)
                     .background(
-                        color.copy(alpha = if (i > values.lastIndex - 3) 1f else 0.45f),
-                        RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
+                        color.copy(alpha = if (i > values.lastIndex - 3) 0.95f else 0.35f),
+                        RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)
                     )
             )
         }
@@ -268,11 +257,11 @@ fun MiniBars(color: Color, values: List<Float>) {
 
 @Composable
 fun Sparkline(color: Color, values: List<Float>) {
-    Canvas(Modifier.fillMaxWidth().height(36.dp).padding(top = 9.dp)) {
+    Canvas(Modifier.fillMaxWidth().height(32.dp).padding(top = 8.dp)) {
         values.zipWithNext().forEachIndexed { index, pair ->
             val x1 = index * size.width / (values.size - 1)
             val x2 = (index + 1) * size.width / (values.size - 1)
-            drawLine(color, Offset(x1, size.height * (1 - pair.first)), Offset(x2, size.height * (1 - pair.second)), strokeWidth = 2.5f)
+            drawLine(color, Offset(x1, size.height * (1 - pair.first)), Offset(x2, size.height * (1 - pair.second)), strokeWidth = 2f)
         }
     }
 }
@@ -280,16 +269,16 @@ fun Sparkline(color: Color, values: List<Float>) {
 @Composable
 fun SleepBlocks() {
     Row(
-        Modifier.fillMaxWidth().height(38.dp).padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        Modifier.fillMaxWidth().height(34.dp).padding(top = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         listOf(0.65f, 0.42f, 0.8f, 0.55f, 0.88f, 0.7f, 0.38f, 0.74f, 0.58f).forEach { value ->
             Box(
                 Modifier
                     .weight(1f)
-                    .height((28 * value).dp)
-                    .background(SleepPurple.copy(alpha = 0.75f), RoundedCornerShape(3.dp))
+                    .height((24 * value).dp)
+                    .background(SleepPurple.copy(alpha = 0.65f), RoundedCornerShape(2.dp))
             )
         }
     }
