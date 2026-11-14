@@ -120,16 +120,21 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 6. Phase 4: production launch
 
-- Final brand assets and screenshots
-- Accessibility audit
-- Performance/baseline profile work
-- Threat-model and dependency review
-- Privacy policy, terms and support contact
-- Health Apps/Health Connect Play declarations
-- Play App Signing and production environment protection
-- Staged internal/closed/open testing tracks
-- Monitoring, incident response and rollback runbook
-- Versioning, changelog and support matrix
+### PR 16: accessibility audit, release bundle validation and Play store declarations (Completed)
+
+- [x] Complete TalkBack accessibility labeling and semantic roles (`Role.Button`, `Role.Tab`) across dashboard cards, navigation bars, and dialogs
+- [x] Adaptive layout height auditing and 200% dynamic font scaling support (replacing fixed height bounds with `defaultMinSize`)
+- [x] Full minimum 48dp touch target compliance on all interactive buttons and icons
+- [x] Production Privacy Policy documentation (`docs/PRIVACY_POLICY.md`)
+- [x] Google Play Console Health Apps & Health Connect declarations (`docs/PLAY_STORE_DECLARATIONS.md`)
+- [x] Production R8 minification and `bundleRelease` signed bundle verification
+
+### PR 17: release tagging, changelog and production monitoring runbook
+
+- Production versioning and release notes (`docs/CHANGELOG.md`)
+- Threat model and dependency license compliance review
+- Rollback and incident response runbook verification
+- Play App Signing and staged rollout track plan
 
 ## 7. Known technical debt
 
@@ -146,4 +151,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement Phase 4: Production Launch readiness (Accessibility audit, baseline profile optimization, and production release packaging).
+Implement PR 17: Production release tagging, changelog, and incident response runbook.

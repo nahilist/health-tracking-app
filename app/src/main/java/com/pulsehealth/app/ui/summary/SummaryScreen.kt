@@ -45,6 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -97,11 +102,17 @@ fun SummaryScreen(
                     Text("Summary", fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
                 Surface(
-                    modifier = Modifier.size(44.dp).clickable(onClick = onProfile),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(onClick = onProfile)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Open profile and settings"
+                        },
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    Icon(Icons.Default.Person, "Profile", Modifier.padding(11.dp), tint = Muted)
+                    Icon(Icons.Default.Person, contentDescription = null, Modifier.padding(13.dp), tint = Muted)
                 }
             }
         }
@@ -321,11 +332,19 @@ fun RangeSelector(selected: TimeRange, onRange: (TimeRange) -> Unit) {
             .padding(3.dp)
     ) {
         TimeRange.entries.forEach { range ->
+            val isCurrentRange = selected == range
             Surface(
-                modifier = Modifier.weight(1f).clickable { onRange(range) },
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onRange(range) }
+                    .semantics {
+                        role = Role.Tab
+                        this.selected = isCurrentRange
+                        contentDescription = "${range.label} range"
+                    },
                 shape = RoundedCornerShape(10.dp),
-                color = if (selected == range) MaterialTheme.colorScheme.surface else Color.Transparent,
-                shadowElevation = if (selected == range) 1.dp else 0.dp
+                color = if (isCurrentRange) MaterialTheme.colorScheme.surface else Color.Transparent,
+                shadowElevation = if (isCurrentRange) 1.dp else 0.dp
             ) {
                 Text(
                     range.label,
