@@ -136,9 +136,13 @@ fun PulseHealthApp(
                     )
                 }
                 composable(PulseDestination.Browse.route) {
-                    BrowseScreen(padding) { type ->
-                        navController.navigate(PulseDestination.Detail.createRoute(type))
-                    }
+                    BrowseScreen(
+                        padding = padding,
+                        metrics = state.metrics,
+                        onOpen = { type ->
+                            navController.navigate(PulseDestination.Detail.createRoute(type))
+                        }
+                    )
                 }
                 composable(
                     route = PulseDestination.Detail.route,
@@ -153,6 +157,10 @@ fun PulseHealthApp(
                         type = metricType,
                         metrics = state.metrics,
                         isDemo = state.isDemoMode,
+                        selectedRange = state.selectedRange,
+                        onSelectRange = viewModel::selectRange,
+                        streakInfo = state.streakInfo,
+                        weeklyHydrationProgress = state.weeklyHydrationProgress,
                         todayHydrationEntries = todayHydration,
                         weeklyWaterLiters = weeklyWater,
                         onAddWater = viewModel::addWater,

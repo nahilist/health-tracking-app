@@ -22,15 +22,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -50,17 +49,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pulsehealth.app.data.DailyHydrationProgress
 import com.pulsehealth.app.data.DashboardMetrics
+import com.pulsehealth.app.data.HydrationStreakInfo
+import com.pulsehealth.app.data.MetricRegistry
+import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.ui.components.HealthCard
-import com.pulsehealth.app.ui.summary.MiniBars
+import com.pulsehealth.app.ui.components.MetricTrendChart
+import com.pulsehealth.app.ui.summary.ActivityRings
+import com.pulsehealth.app.ui.summary.RangeSelector
+import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
-import com.pulsehealth.app.ui.theme.SleepPurple
+import com.pulsehealth.app.ui.theme.StandCyan
 import com.pulsehealth.app.ui.theme.WarmOrange
 import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.Instant
@@ -72,6 +80,10 @@ fun DetailScreen(
     type: String,
     metrics: DashboardMetrics,
     isDemo: Boolean,
+    selectedRange: TimeRange = TimeRange.TODAY,
+    onSelectRange: (TimeRange) -> Unit = {},
+    streakInfo: HydrationStreakInfo = HydrationStreakInfo(),
+    weeklyHydrationProgress: List<DailyHydrationProgress> = emptyList(),
     todayHydrationEntries: List<HydrationEntryEntity> = emptyList(),
     weeklyWaterLiters: Double = 0.0,
     onAddWater: (Int) -> Unit = {},
@@ -81,16 +93,28 @@ fun DetailScreen(
     onBack: () -> Unit
 ) {
     val locale = LocalLocale.current.platformLocale
-    val color = when (type) {
-        "Steps" -> WarmOrange
-        "Heart rate" -> PulsePink
-        "Sleep" -> SleepPurple
-        "Water" -> WaterBlue
-        else -> PulsePink
-    }
+    val metricInfo = remember(type) { MetricRegistry.getById(type) }
+    val normalizedId = remember(type) { MetricRegistry.normalizeId(type) }
+    val color = metricInfo.color
 
     var editingEntry by remember { mutableStateOf<HydrationEntryEntity?>(null) }
     var showGoalDialog by remember { mutableStateOf(false) }
+
+    val formattedValue = remember(type, metrics, locale) {
+        MetricRegistry.formatValue(type, metrics, locale)
+    }
+    val goalText = remember(type, metrics, locale) {
+        MetricRegistry.getGoalText(type, metrics, locale)
+    }
+    val progressRatio = remember(type, metrics) {
+        MetricRegistry.getProgressRatio(type, metrics)
+    }
+    val summaryStats = remember(type, metrics, selectedRange, weeklyHydrationProgress, locale) {
+        MetricRegistry.getSummaryStats(type, metrics, selectedRange, weeklyHydrationProgress, locale)
+    }
+    val trendPoints = remember(type, metrics, weeklyHydrationProgress) {
+        MetricRegistry.getTrendPoints(type, metrics, weeklyHydrationProgress)
+    }
 
     LazyColumn(
         Modifier
@@ -100,11 +124,15 @@ fun DetailScreen(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Top Header with Back Navigation
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                Spacer(Modifier.width(6.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(type, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+                    Text(metricInfo.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(
                         if (isDemo) "Demo preview data" else "Source: ${metrics.source.label}",
                         color = Muted,
@@ -114,43 +142,115 @@ fun DetailScreen(
             }
         }
 
-        if (type == "Water") {
-            item {
-                HealthCard(Modifier.fillMaxWidth()) {
-                    Text("TODAY'S INTAKE", color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
+        // Range Selector
+        item {
+            RangeSelector(selected = selectedRange, onRange = onSelectRange)
+        }
+
+        // Hero Metric Card
+        item {
+            HealthCard(Modifier.fillMaxWidth()) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = color.copy(alpha = 0.12f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Text(
+                        text = metricInfo.category.label.uppercase(locale),
+                        color = color,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                if (normalizedId == "Activity") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ActivityRings(metrics = metrics, modifier = Modifier.size(112.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column {
+                                Text("Move", color = PulsePink, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    metrics.activeCalories?.let { "$it / ${metrics.calorieGoal} kcal" } ?: "— / ${metrics.calorieGoal} kcal",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column {
+                                Text("Exercise", color = ExerciseGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    metrics.exerciseMinutes?.let { "$it / ${metrics.exerciseGoalMinutes} min" } ?: "— / ${metrics.exerciseGoalMinutes} min",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column {
+                                Text("Stand", color = StandCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    metrics.standHours?.let { "$it / ${metrics.standGoalHours} hr" } ?: "— / ${metrics.standGoalHours} hr",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        Text(
-                            text = String.format(locale, "%.2f L", metrics.waterLiters),
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        OutlinedButton(
-                            onClick = { showGoalDialog = true },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Goal: ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L")
+                        Column {
+                            Text(
+                                text = formattedValue,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (goalText != null) {
+                                Text(
+                                    text = goalText,
+                                    color = Muted,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        if (normalizedId == "Water") {
+                            OutlinedButton(
+                                onClick = { showGoalDialog = true },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Edit Goal")
+                            }
                         }
                     }
-                    Spacer(Modifier.height(12.dp))
-                    val progress = (metrics.waterLiters / metrics.waterGoalLiters).toFloat().coerceIn(0f, 1f)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(CircleShape),
-                        color = WaterBlue,
-                        trackColor = WaterBlue.copy(alpha = 0.15f),
-                        strokeCap = StrokeCap.Round
-                    )
+
+                    if (progressRatio != null) {
+                        Spacer(Modifier.height(14.dp))
+                        LinearProgressIndicator(
+                            progress = { progressRatio.coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(10.dp)
+                                .clip(CircleShape),
+                            color = if (progressRatio >= 1.0f) ExerciseGreen else color,
+                            trackColor = color.copy(alpha = 0.15f),
+                            strokeCap = StrokeCap.Round
+                        )
+                    }
                 }
             }
+        }
 
+        // Quick log buttons for water intake
+        if (normalizedId == "Water") {
             item {
                 HealthCard(Modifier.fillMaxWidth()) {
                     Text("QUICK LOG", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -171,36 +271,112 @@ fun DetailScreen(
                     }
                 }
             }
+        }
 
-            item {
-                HealthCard(Modifier.fillMaxWidth()) {
-                    Text("WEEKLY TOTAL", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(4.dp))
+        // Interactive Trend Chart
+        item {
+            HealthCard(Modifier.fillMaxWidth()) {
+                Text(
+                    text = "7-DAY TREND",
+                    color = color,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(12.dp))
+                MetricTrendChart(
+                    points = trendPoints,
+                    primaryColor = color,
+                    targetLabel = goalText
+                )
+            }
+        }
+
+        // Summary Statistics Card
+        item {
+            HealthCard(Modifier.fillMaxWidth()) {
+                Text("STATISTICS", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Daily Average", color = Muted, fontSize = 11.sp)
+                        Text(summaryStats.averageLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                    if (summaryStats.totalLabel != null) {
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            Text("Total", color = Muted, fontSize = 11.sp)
+                            Text(summaryStats.totalLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+                    }
+                }
+
+                if (summaryStats.highLabel != null || summaryStats.lowLabel != null) {
+                    Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (summaryStats.highLabel != null) {
+                            Column(Modifier.weight(1f)) {
+                                Text("High", color = Muted, fontSize = 11.sp)
+                                Text(summaryStats.highLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            }
+                        }
+                        if (summaryStats.lowLabel != null) {
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                Text("Low", color = Muted, fontSize = 11.sp)
+                                Text(summaryStats.lowLabel, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            }
+                        }
+                    }
+                }
+
+                if (summaryStats.completionRateLabel != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(
-                                text = String.format(locale, "%.1f L", weeklyWaterLiters),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Past 7 days",
-                                color = Muted,
-                                fontSize = 12.sp
-                            )
+                            Text("Status", color = Muted, fontSize = 11.sp)
+                            Text(summaryStats.completionRateLabel, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = color)
                         }
-                        Column(horizontalAlignment = Alignment.End) {
+                    }
+                }
+            }
+        }
+
+        // Hydration Streak banner (for Water)
+        if (normalizedId == "Water" && (streakInfo.currentStreakDays > 0 || streakInfo.isGoalMetToday)) {
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = ExerciseGreen.copy(alpha = 0.15f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = ExerciseGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
                             Text(
-                                text = String.format(locale, "%.1f L / day", weeklyWaterLiters / 7.0),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold
+                                text = "${streakInfo.currentStreakDays}-Day Streak 🔥",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
                             Text(
-                                text = "Daily average",
+                                text = "Best streak: ${streakInfo.bestStreakDays} days · ${streakInfo.daysMetThisWeek}/7 days met this week",
                                 color = Muted,
                                 fontSize = 12.sp
                             )
@@ -208,7 +384,10 @@ fun DetailScreen(
                     }
                 }
             }
+        }
 
+        // Today's Hydration Entries Log
+        if (normalizedId == "Water") {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -230,7 +409,7 @@ fun DetailScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Log water intake above to track daily hydration.",
+                            text = "Tap a quick log button above to record your water intake.",
                             color = Muted,
                             fontSize = 12.sp
                         )
@@ -277,74 +456,70 @@ fun DetailScreen(
                                 Icon(Icons.Default.Edit, "Edit entry", tint = Muted, modifier = Modifier.size(18.dp))
                             }
                             IconButton(onClick = { onDeleteWater(entry.id) }) {
-                                Icon(Icons.Default.DeleteOutline, "Delete entry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.DeleteOutline,
+                                    "Delete entry",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
                 }
             }
-        } else {
-            item {
-                HealthCard(Modifier.fillMaxWidth()) {
-                    Text("TODAY", color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    val (valueText, hasData) = when (type) {
-                        "Steps" -> metrics.steps?.let { "${String.format(locale, "%,d", it)} steps" } to (metrics.steps != null)
-                        "Heart rate" -> metrics.heartRate?.let { "$it bpm resting" } to (metrics.heartRate != null)
-                        "Sleep" -> metrics.sleepMinutes?.let { "${it / 60} hr ${it % 60} min" } to (metrics.sleepMinutes != null)
-                        else -> metrics.activeCalories?.let { "$it active kcal" } to (metrics.activeCalories != null)
-                    }
-                    Text(
-                        text = valueText ?: "No data recorded",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (hasData) MaterialTheme.colorScheme.onSurface else Muted
+        }
+
+        // Educational Non-Diagnostic Section
+        item {
+            HealthCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(Modifier.height(18.dp))
-                    if (hasData) {
-                        MiniBars(color, listOf(.3f, .45f, .38f, .62f, .54f, .8f, .67f, .9f, .76f, 1f, .84f, .94f))
-                    } else {
-                        Text(
-                            "No records found for today. New readings from Health Connect will appear here.",
-                            color = Muted,
-                            fontSize = 12.sp
-                        )
-                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = metricInfo.aboutTitle,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = metricInfo.aboutDescription,
+                    color = Muted,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
+                )
             }
+        }
 
-            items(listOf("7-day trend", "Goal progress")) { label ->
-                HealthCard(Modifier.fillMaxWidth()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                        Icon(Icons.Default.ChevronRight, null, tint = Muted)
-                    }
-                }
-            }
-
-            item {
-                HealthCard(Modifier.fillMaxWidth()) {
-                    Text("DATA SOURCES", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    if (metrics.contributingApps.isNotEmpty()) {
-                        metrics.contributingApps.forEach { appName ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Apps, null, tint = color, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(appName, fontSize = 14.sp)
-                            }
+        // Data Sources Section
+        item {
+            HealthCard(Modifier.fillMaxWidth()) {
+                Text("DATA SOURCES", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                if (metrics.contributingApps.isNotEmpty()) {
+                    metrics.contributingApps.forEach { appName ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Apps, null, tint = color, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(appName, fontSize = 14.sp)
                         }
-                    } else {
-                        Text(
-                            text = if (isDemo) "Demo sample data" else "No connected data sources for this range",
-                            color = Muted,
-                            fontSize = 13.sp
-                        )
                     }
+                } else {
+                    Text(
+                        text = if (isDemo) "Demo sample data" else "No connected data sources for this range",
+                        color = Muted,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }
