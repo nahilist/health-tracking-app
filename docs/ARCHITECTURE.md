@@ -40,6 +40,7 @@ flowchart TD
 | Authentication | `data/SupabaseAuthRepository.kt` | Supabase auth client with EncryptedSharedPreferences (Keystore) |
 | Sync Engine | `data/sync/SupabaseSyncRepository.kt` | Two-way idempotent Room outbox sync and WorkManager scheduling |
 | Notifications | `notifications/` | Opt-in local reminders, quiet hours, actionable quick-add receiver and WorkManager scheduler |
+| Sharing | `data/SharingRepository.kt` | Granular recipient authorizations, expiry policies and sanitized report export |
 | Database | `data/local/` | Room database, entities and DAOs |
 
 ### Current limitations

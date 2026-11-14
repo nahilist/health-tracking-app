@@ -48,6 +48,7 @@ import com.pulsehealth.app.data.AuthResult
 import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.EmptyStateScreen
 import com.pulsehealth.app.ui.detail.DetailScreen
+import com.pulsehealth.app.ui.sharing.SharingScreen
 import com.pulsehealth.app.ui.navigation.PulseDestination
 import com.pulsehealth.app.ui.navigation.TopLevelDestination
 import com.pulsehealth.app.ui.onboarding.OnboardingScreen
@@ -128,11 +129,17 @@ fun PulseHealthApp(
                     )
                 }
                 composable(PulseDestination.Sharing.route) {
-                    EmptyStateScreen(
+                    SharingScreen(
+                        state = state,
                         padding = padding,
-                        icon = Icons.Default.Groups,
-                        title = "Health sharing",
-                        body = "Share selected trends with people you trust. Your health data stays private until you choose otherwise."
+                        onAddContact = viewModel::addTrustedContact,
+                        onUpdateMetrics = viewModel::updateContactMetrics,
+                        onRevokeContact = viewModel::revokeContactSharing,
+                        onDeleteContact = viewModel::deleteTrustedContact,
+                        onExportPackage = { name, metrics, range ->
+                            viewModel.createExportHealthPackage(name, metrics, range)
+                        },
+                        onFormatShareText = viewModel::formatShareText
                     )
                 }
                 composable(PulseDestination.Browse.route) {

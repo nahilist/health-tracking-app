@@ -2,11 +2,13 @@ package com.pulsehealth.app.di
 
 import android.content.Context
 import com.pulsehealth.app.data.AuthRepository
+import com.pulsehealth.app.data.DataStoreSharingRepository
 import com.pulsehealth.app.data.DefaultHealthConnectRepository
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HealthDataRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
+import com.pulsehealth.app.data.SharingRepository
 import com.pulsehealth.app.data.SupabaseAuthRepository
 import com.pulsehealth.app.data.UserPreferencesRepository
 import com.pulsehealth.app.data.local.PulseDatabase
@@ -26,6 +28,7 @@ interface AppContainer {
     val authRepository: AuthRepository
     val syncRepository: SyncRepository
     val reminderScheduler: ReminderScheduler
+    val sharingRepository: SharingRepository
     val clock: Clock
     val zoneId: ZoneId
     val ioDispatcher: CoroutineDispatcher
@@ -87,6 +90,13 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
             context = applicationContext,
             clock = clock,
             zoneId = zoneId,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val sharingRepository: SharingRepository by lazy {
+        DataStoreSharingRepository(
+            context = applicationContext,
             ioDispatcher = ioDispatcher
         )
     }
