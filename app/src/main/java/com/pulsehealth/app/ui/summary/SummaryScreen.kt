@@ -21,11 +21,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,9 +55,11 @@ import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.ui.components.HealthCard
+import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.PulseTheme
+import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -150,6 +155,12 @@ fun SummaryScreen(
                         }
                     }
                 }
+            }
+            if (state.streakInfo.currentStreakDays > 0 || state.streakInfo.isGoalMetToday) {
+                item { HydrationStreakBanner(state) }
+            }
+            if (state.weeklyHydrationProgress.isNotEmpty()) {
+                item { WeeklyHydrationTrendCard(state) }
             }
             item { InsightCard(state) }
         }
@@ -379,6 +390,161 @@ fun InsightCard(state: DashboardUiState) {
                 fontSize = 12.sp,
                 lineHeight = 18.sp
             )
+        }
+    }
+}
+
+@Composable
+fun HydrationStreakBanner(state: DashboardUiState) {
+    val streak = state.streakInfo
+    val isMetToday = streak.isGoalMetToday
+    val currentStreak = streak.currentStreakDays
+
+    if (currentStreak == 0 && !isMetToday) return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isMetToday) ExerciseGreen.copy(alpha = 0.15f) else PulsePink.copy(alpha = 0.12f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isMetToday) ExerciseGreen.copy(alpha = 0.4f) else PulsePink.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                if (isMetToday) Icons.Default.EmojiEvents else Icons.Default.Whatshot,
+                contentDescription = null,
+                tint = if (isMetToday) ExerciseGreen else PulsePink,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = if (isMetToday) "Daily Goal Achieved! 🎉" else "$currentStreak-Day Goal Streak 🔥",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (isMetToday) {
+                        "You've crushed your ${String.format(java.util.Locale.getDefault(), "%.1f", state.metrics.waterGoalLiters)}L goal! Current streak: $currentStreak days."
+                    } else {
+                        val remaining = (state.metrics.waterGoalLiters - state.metrics.waterLiters).coerceAtLeast(0.0)
+                        "${String.format(java.util.Locale.getDefault(), "%.1f", remaining)}L remaining to extend your streak today!"
+                    },
+                    fontSize = 12.sp,
+                    color = Muted,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyHydrationTrendCard(state: DashboardUiState) {
+    if (state.weeklyHydrationProgress.isEmpty()) return
+
+    HealthCard(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.WaterDrop, contentDescription = null, tint = WaterBlue, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Weekly Hydration Trend",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "${state.streakInfo.daysMetThisWeek}/7 days met",
+                color = if (state.streakInfo.daysMetThisWeek >= 4) ExerciseGreen else Muted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth().height(110.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            state.weeklyHydrationProgress.forEach { day ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(horizontal = 3.dp)
+                ) {
+                    val ratio = day.progressRatio
+                    val barHeightDp = (ratio.coerceIn(0.08f, 1.0f) * 60).dp
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(12.dp)
+                                .height(60.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(12.dp)
+                                .height(barHeightDp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    if (day.isGoalAchieved) ExerciseGreen else WaterBlue
+                                )
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Text(
+                        text = if (day.waterLiters > 0.0) String.format(java.util.Locale.getDefault(), "%.1f", day.waterLiters) else "-",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (day.isToday) MaterialTheme.colorScheme.onSurface else Muted
+                    )
+
+                    Text(
+                        text = day.dayLabel,
+                        fontSize = 10.sp,
+                        fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
+                        color = if (day.isToday) PulsePink else Muted
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Target: ${String.format(java.util.Locale.getDefault(), "%.1f", state.metrics.waterGoalLiters)} L/day",
+                fontSize = 11.sp,
+                color = Muted
+            )
+            if (state.streakInfo.bestStreakDays > 0) {
+                Text(
+                    "Best Streak: ${state.streakInfo.bestStreakDays} days",
+                    fontSize = 11.sp,
+                    color = Muted,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

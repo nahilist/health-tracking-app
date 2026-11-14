@@ -92,11 +92,12 @@ Phase gate: authenticated users can recover data on a second device without dupl
 - [x] Interactive "+250 ml" quick-add notification action via `HydrationActionReceiver`
 - [x] WorkManager `ReminderWorker` and `WorkManagerReminderScheduler`
 
-### PR 13: goals, progress trends and achievements
+### PR 13: goals, progress trends and achievements (Completed)
 
-- Goals and progress trends
-- Streak calculations and milestones
-- Dynamic progress indicators on Dashboard
+- [x] Goals and progress trends calculation
+- [x] Consecutive days goal streak calculations and all-time best streaks
+- [x] Dynamic 7-day weekly hydration bar visualization on Dashboard
+- [x] Milestone celebration banner on reaching daily hydration goal
 
 ### PR 14: complete Browse and metric history
 
@@ -135,4 +136,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “goals, progress trends and achievements” (PR 13). Add streak calculations, milestone celebrations, and dynamic weekly hydration trend visualizations.
+Implement “complete Browse and metric history” (PR 14). Add interactive detail trend views across all metrics (Steps, Heart Rate, Sleep, Calories, Exercise, Stand) and complete Browse navigation.

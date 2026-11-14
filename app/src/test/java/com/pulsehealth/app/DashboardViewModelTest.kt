@@ -51,6 +51,9 @@ class DashboardViewModelTest {
         override fun observeRecentEntries(limit: Int, offset: Int): Flow<List<HydrationEntryEntity>> =
             _entries.asStateFlow()
 
+        override fun observePastDaysEntries(days: Int): Flow<List<HydrationEntryEntity>> =
+            _entries.asStateFlow()
+
         override suspend fun addWater(amountMilliliters: Int, recordedAtEpochMillis: Long?) {
             _water.value += amountMilliliters / 1000.0
             _weeklyWater.value += amountMilliliters / 1000.0

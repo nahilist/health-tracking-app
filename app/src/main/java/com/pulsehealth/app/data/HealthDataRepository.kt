@@ -44,6 +44,14 @@ class HealthDataRepository(
         return hydrationDao.observeRecentEntries(limit, offset)
     }
 
+    override fun observePastDaysEntries(days: Int): Flow<List<HydrationEntryEntity>> {
+        require(days in 1..365) { "Days must be between 1 and 365" }
+        val today = Instant.ofEpochMilli(clock.millis()).atZone(zoneId).toLocalDate()
+        val start = today.minusDays((days - 1).toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val end = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        return hydrationDao.observeEntries(start, end)
+    }
+
     override suspend fun addWater(
         amountMilliliters: Int,
         recordedAtEpochMillis: Long?
