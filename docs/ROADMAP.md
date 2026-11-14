@@ -129,12 +129,12 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Google Play Console Health Apps & Health Connect declarations (`docs/PLAY_STORE_DECLARATIONS.md`)
 - [x] Production R8 minification and `bundleRelease` signed bundle verification
 
-### PR 17: release tagging, changelog and production monitoring runbook
+### PR 17: release tagging, changelog and production monitoring runbook (Completed)
 
-- Production versioning and release notes (`docs/CHANGELOG.md`)
-- Threat model and dependency license compliance review
-- Rollback and incident response runbook verification
-- Play App Signing and staged rollout track plan
+- [x] Production versioning and release notes (`docs/CHANGELOG.md`)
+- [x] Threat model and dependency license compliance review (`docs/DEPENDENCY_COMPLIANCE.md`)
+- [x] Rollback and incident response runbook verification (`docs/INCIDENT_RESPONSE_RUNBOOK.md`)
+- [x] Play App Signing and staged rollout track plan
 
 ## 7. Known technical debt
 
@@ -149,6 +149,6 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Placeholder Sharing/Browse | Incomplete product flows | Resolved in PR 14 & 15 |
 | No instrumented UI suite | Regression risk | Medium |
 
-## 8. Recommended next PR
+## 8. Recommended next step
 
-Implement PR 17: Production release tagging, changelog, and incident response runbook.
+Phase 4 roadmap milestones completed! The codebase is production-ready for tagging `v1.0.0` and distribution via Google Play Store tracks.
