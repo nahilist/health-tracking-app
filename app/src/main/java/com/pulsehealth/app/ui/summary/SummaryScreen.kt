@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +67,7 @@ import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.PulseTheme
+import com.pulsehealth.app.ui.theme.WarmOrange
 import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -111,9 +114,22 @@ fun SummaryScreen(
                             contentDescription = "Open profile and settings"
                         },
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f))
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = null, Modifier.padding(13.dp), tint = Muted)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, contentDescription = null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurface)
+                        if (state.currentUser != null && !state.currentUser.isAnonymous) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(4.dp)
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(if (state.isCloudSyncing) WarmOrange else ExerciseGreen)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -150,20 +166,26 @@ fun SummaryScreen(
             }
             item {
                 val visibleCards = FavoriteCardId.ALL.filterNot { state.isCardHidden(it) }
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    visibleCards.chunked(2).forEach { rowCards ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowCards.forEach { card ->
-                                Box(Modifier.weight(1f)) {
-                                    when (card) {
-                                        FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                        FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                        FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                        FavoriteCardId.WATER -> WaterCard(state.metrics, onWater) { onDetail(card.metricRegistryId) }
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val columns = if (maxWidth >= 600.dp) 4 else 2
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        visibleCards.chunked(columns).forEach { rowCards ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                rowCards.forEach { card ->
+                                    Box(Modifier.weight(1f)) {
+                                        when (card) {
+                                            FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                            FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                            FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                            FavoriteCardId.WATER -> WaterCard(state.metrics, onWater) { onDetail(card.metricRegistryId) }
+                                        }
                                     }
                                 }
+                                val emptySlots = columns - rowCards.size
+                                repeat(emptySlots) {
+                                    Spacer(Modifier.weight(1f))
+                                }
                             }
-                            if (rowCards.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -210,6 +232,14 @@ fun ErrorBanner(
     onRetry: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val safeMessage = remember(message) {
+        val lower = message.lowercase(java.util.Locale.ROOT)
+        if (lower.contains("apikey") || lower.contains("bearer") || lower.contains("header") || lower.contains("url:") || lower.contains("http")) {
+            "Unable to synchronize records. Please verify your connection and try again."
+        } else {
+            message.substringBefore("\n").substringBefore("URL:").trim()
+        }
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -229,13 +259,13 @@ fun ErrorBanner(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Sync error",
+                    text = "Sync notification",
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
                 Text(
-                    text = message,
+                    text = safeMessage,
                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
                     fontSize = 12.sp,
                     lineHeight = 16.sp

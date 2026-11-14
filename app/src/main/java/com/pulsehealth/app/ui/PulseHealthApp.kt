@@ -247,10 +247,11 @@ fun PulseBottomBar(
     onNavigateToDestination: (TopLevelDestination) -> Unit
 ) {
     Surface(
-        tonalElevation = 4.dp,
-        shadowElevation = 12.dp,
+        tonalElevation = 6.dp,
+        shadowElevation = 16.dp,
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
             Modifier

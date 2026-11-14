@@ -118,4 +118,38 @@ class AuthRepositoryTest {
         assertEquals(AuthState.Unauthenticated, repository.authState.value)
         assertNull(repository.currentUser.value)
     }
+
+    @Test
+    fun sanitizeAuthErrorStripsApiKeysUrlsAndHeaders() {
+        val technicalLeakedException = RuntimeException(
+            """
+            invalid_credentials (Invalid login credentials: invalid_credentials)
+            URL: https://nomvvyfcmcoitjtswlgy.supabase.co/auth/v1/token?grant_type=password
+            Headers: [Authorization=[Bearer sb_publishable_5WybkEPBGc5nhjOIPVu11g_PHVNAiTz], apikey=[sb_publishable_5WybkEPBGc5nhjOIPVu11g_PHVNAiTz]]
+            Http Method: POST
+            """.trimIndent()
+        )
+
+        val cleanMessage = SupabaseAuthRepository.sanitizeAuthError(technicalLeakedException)
+        assertEquals("Invalid email or password. Please verify your credentials and try again.", cleanMessage)
+        assertFalse(cleanMessage.contains("apikey"))
+        assertFalse(cleanMessage.contains("Bearer"))
+        assertFalse(cleanMessage.contains("http"))
+        assertFalse(cleanMessage.contains("sb_publishable"))
+    }
+
+    @Test
+    fun sanitizeAuthErrorHandlesExistingUserAndNetworkFailures() {
+        val userExistsException = RuntimeException("User already registered with this email")
+        assertEquals(
+            "An account with this email address already exists. Please sign in instead.",
+            SupabaseAuthRepository.sanitizeAuthError(userExistsException)
+        )
+
+        val networkException = RuntimeException("java.net.ConnectException: Failed to connect to host")
+        assertEquals(
+            "Network error. Please check your internet connection.",
+            SupabaseAuthRepository.sanitizeAuthError(networkException)
+        )
+    }
 }
