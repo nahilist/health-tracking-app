@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,6 +25,10 @@ class UserPreferencesRepository(
         val waterGoalLiters = doublePreferencesKey("water_goal_liters")
         val syncWaterToHealthConnect = booleanPreferencesKey("sync_water_to_health_connect")
         val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
+        val remindersEnabled = booleanPreferencesKey("reminders_enabled")
+        val reminderIntervalHours = intPreferencesKey("reminder_interval_hours")
+        val quietHoursStartHour = intPreferencesKey("quiet_hours_start_hour")
+        val quietHoursEndHour = intPreferencesKey("quiet_hours_end_hour")
     }
 
     override val hiddenCards: Flow<Set<String>> =
@@ -37,6 +42,18 @@ class UserPreferencesRepository(
 
     override val onboardingCompleted: Flow<Boolean> =
         context.userDataStore.data.map { it[Keys.onboardingCompleted] ?: false }
+
+    override val remindersEnabled: Flow<Boolean> =
+        context.userDataStore.data.map { it[Keys.remindersEnabled] ?: false }
+
+    override val reminderIntervalHours: Flow<Int> =
+        context.userDataStore.data.map { it[Keys.reminderIntervalHours] ?: 2 }
+
+    override val quietHoursStartHour: Flow<Int> =
+        context.userDataStore.data.map { it[Keys.quietHoursStartHour] ?: 22 }
+
+    override val quietHoursEndHour: Flow<Int> =
+        context.userDataStore.data.map { it[Keys.quietHoursEndHour] ?: 8 }
 
     override suspend fun toggleCard(id: String): Unit = withContext(ioDispatcher) {
         context.userDataStore.edit { preferences ->
@@ -62,6 +79,27 @@ class UserPreferencesRepository(
     override suspend fun setOnboardingCompleted(completed: Boolean): Unit = withContext(ioDispatcher) {
         context.userDataStore.edit { preferences ->
             preferences[Keys.onboardingCompleted] = completed
+        }
+    }
+
+    override suspend fun setRemindersEnabled(enabled: Boolean): Unit = withContext(ioDispatcher) {
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.remindersEnabled] = enabled
+        }
+    }
+
+    override suspend fun setReminderIntervalHours(hours: Int): Unit = withContext(ioDispatcher) {
+        require(hours in 1..12) { "Reminder interval must be between 1 and 12 hours" }
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.reminderIntervalHours] = hours
+        }
+    }
+
+    override suspend fun setQuietHours(startHour: Int, endHour: Int): Unit = withContext(ioDispatcher) {
+        require(startHour in 0..23 && endHour in 0..23) { "Hours must be between 0 and 23" }
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.quietHoursStartHour] = startHour
+            preferences[Keys.quietHoursEndHour] = endHour
         }
     }
 

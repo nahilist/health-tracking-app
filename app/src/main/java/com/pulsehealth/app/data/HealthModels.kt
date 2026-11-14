@@ -82,7 +82,11 @@ data class DashboardUiState(
     val currentUser: AuthUser? = null,
     val isCloudSyncing: Boolean = false,
     val lastCloudSyncedEpochMillis: Long? = null,
-    val cloudSyncError: String? = null
+    val cloudSyncError: String? = null,
+    val remindersEnabled: Boolean = false,
+    val reminderIntervalHours: Int = 2,
+    val quietHoursStartHour: Int = 22,
+    val quietHoursEndHour: Int = 8
 ) {
     val healthConnectAvailable: Boolean
         get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE

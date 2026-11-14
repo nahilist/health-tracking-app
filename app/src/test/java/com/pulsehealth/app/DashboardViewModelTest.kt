@@ -115,6 +115,18 @@ class DashboardViewModelTest {
         private val _onboardingCompleted = MutableStateFlow(initialOnboardingCompleted)
         override val onboardingCompleted: Flow<Boolean> = _onboardingCompleted.asStateFlow()
 
+        private val _reminders = MutableStateFlow(false)
+        override val remindersEnabled: Flow<Boolean> = _reminders.asStateFlow()
+
+        private val _interval = MutableStateFlow(2)
+        override val reminderIntervalHours: Flow<Int> = _interval.asStateFlow()
+
+        private val _quietStart = MutableStateFlow(22)
+        override val quietHoursStartHour: Flow<Int> = _quietStart.asStateFlow()
+
+        private val _quietEnd = MutableStateFlow(8)
+        override val quietHoursEndHour: Flow<Int> = _quietEnd.asStateFlow()
+
         override suspend fun toggleCard(id: String) {
             val current = _hidden.value.toMutableSet()
             if (!current.add(id)) current.remove(id)
@@ -133,11 +145,28 @@ class DashboardViewModelTest {
             _onboardingCompleted.value = completed
         }
 
+        override suspend fun setRemindersEnabled(enabled: Boolean) {
+            _reminders.value = enabled
+        }
+
+        override suspend fun setReminderIntervalHours(hours: Int) {
+            _interval.value = hours
+        }
+
+        override suspend fun setQuietHours(startHour: Int, endHour: Int) {
+            _quietStart.value = startHour
+            _quietEnd.value = endHour
+        }
+
         override suspend fun clearAllPreferences() {
             _hidden.value = emptySet()
             _goal.value = 2.0
             _syncWater.value = false
             _onboardingCompleted.value = false
+            _reminders.value = false
+            _interval.value = 2
+            _quietStart.value = 22
+            _quietEnd.value = 8
         }
     }
 
@@ -581,5 +610,45 @@ class DashboardViewModelTest {
         advanceUntilIdle()
 
         assertTrue(syncInvoked)
+    }
+
+    @Test
+    fun togglingRemindersUpdatesStateAndScheduler() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+        val reminderScheduler = com.pulsehealth.app.notifications.NoOpReminderScheduler()
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = hydrationRepo,
+            preferencesRepository = prefRepo,
+            healthRepository = healthRepo,
+            reminderScheduler = reminderScheduler
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.remindersEnabled)
+
+        viewModel.setRemindersEnabled(true)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.remindersEnabled)
+        assertEquals(2, reminderScheduler.scheduledInterval)
+
+        viewModel.setReminderIntervalHours(3)
+        advanceUntilIdle()
+
+        assertEquals(3, viewModel.uiState.value.reminderIntervalHours)
+        assertEquals(3, reminderScheduler.scheduledInterval)
+
+        viewModel.setRemindersEnabled(false)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.remindersEnabled)
+        assertTrue(reminderScheduler.isCancelled)
     }
 }

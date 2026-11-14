@@ -1,7 +1,12 @@
 package com.pulsehealth.app.ui.profile
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,12 +24,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
@@ -34,6 +41,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.ui.components.AuthDialog
@@ -79,13 +88,25 @@ fun ProfileScreen(
     onSignUp: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onSignInAsGuest: () -> Unit = {},
     onSignOut: () -> Unit = {},
-    onSyncCloud: () -> Unit = {}
+    onSyncCloud: () -> Unit = {},
+    onToggleReminders: (Boolean) -> Unit = {},
+    onSetReminderInterval: (Int) -> Unit = {},
+    onSetQuietHours: (startHour: Int, endHour: Int) -> Unit = { _, _ -> },
+    onSendTestReminder: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            onToggleReminders(true)
+        }
+    }
 
     Column(
         Modifier
@@ -286,6 +307,84 @@ fun ProfileScreen(
                     enabled = state.healthConnectAvailable,
                     colors = SwitchDefaults.colors(checkedThumbColor = WaterBlue, checkedTrackColor = WaterBlue.copy(alpha = 0.5f))
                 )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.NotificationsActive, null, tint = PulsePink, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Hydration Reminders", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        if (state.remindersEnabled) "Reminders active every ${state.reminderIntervalHours}h"
+                        else "Get gentle local reminders to stay hydrated",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                }
+                Switch(
+                    checked = state.remindersEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                ) == PackageManager.PERMISSION_GRANTED
+                                if (!hasPermission) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    onToggleReminders(true)
+                                }
+                            } else {
+                                onToggleReminders(true)
+                            }
+                        } else {
+                            onToggleReminders(false)
+                        }
+                    },
+                    colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
+                )
+            }
+
+            if (state.remindersEnabled) {
+                Spacer(Modifier.height(14.dp))
+                Text("Reminder Frequency", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(1 to "1h", 2 to "2h", 3 to "3h", 4 to "4h").forEach { (hours, label) ->
+                        val selected = state.reminderIntervalHours == hours
+                        FilterChip(
+                            selected = selected,
+                            onClick = { onSetReminderInterval(hours) },
+                            label = { Text(label, fontSize = 12.sp) }
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Bedtime, null, tint = Muted, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text("Quiet Hours (${state.quietHoursStartHour}:00 – ${state.quietHoursEndHour}:00)", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                        Text("Notifications are automatically silenced overnight", color = Muted, fontSize = 11.sp)
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onSendTestReminder,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Send Test Reminder", fontSize = 13.sp)
+                }
             }
         }
 

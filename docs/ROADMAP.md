@@ -84,9 +84,24 @@ Phase gate: authenticated users can recover data on a second device without dupl
 
 ## 5. Phase 3: engagement
 
-- Local reminders and quiet hours
+### PR 12: local reminders and quiet hours (Completed)
+
+- [x] Opt-in local hydration reminders with configurable intervals (1h, 2h, 3h, 4h)
+- [x] Automatic quiet hours window silencing notifications overnight (e.g. 22:00 – 08:00)
+- [x] Android Notification Channel (`pulse_hydration_reminders`) and `POST_NOTIFICATIONS` permission flow
+- [x] Interactive "+250 ml" quick-add notification action via `HydrationActionReceiver`
+- [x] WorkManager `ReminderWorker` and `WorkManagerReminderScheduler`
+
+### PR 13: goals, progress trends and achievements
+
 - Goals and progress trends
+- Streak calculations and milestones
+- Dynamic progress indicators on Dashboard
+
+### PR 14: complete Browse and metric history
+
 - Complete Browse and metric history
+- Interactive trend visualization for Steps, Heart Rate, Sleep, and Hydration
 - Trusted sharing design and authorization review
 - Optional privacy-reviewed crash/analytics tooling
 
@@ -120,4 +135,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Proceed to Phase 3: Engagement & Notification features (local reminders, quiet hours, hydration progress goals, and detailed Browse metric history).
+Implement “goals, progress trends and achievements” (PR 13). Add streak calculations, milestone celebrations, and dynamic weekly hydration trend visualizations.
