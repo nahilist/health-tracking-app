@@ -23,7 +23,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,7 +39,16 @@ import com.pulsehealth.app.ui.theme.StandCyan
 
 @Composable
 fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
-    HealthCard(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    val description = "Activity: Move ${metrics.activeCalories ?: 0} of ${metrics.calorieGoal} kcal, Exercise ${metrics.exerciseMinutes ?: 0} of ${metrics.exerciseGoalMinutes} minutes, Stand ${metrics.standHours ?: 0} of ${metrics.standGoalHours} hours. Tap for details."
+    HealthCard(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .semantics {
+                role = Role.Button
+                contentDescription = description
+            }
+    ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text("Activity", fontWeight = FontWeight.Bold, fontSize = 16.sp)

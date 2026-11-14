@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +37,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,8 +55,13 @@ import com.pulsehealth.app.ui.theme.WaterBlue
 @Composable
 fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     val locale = LocalLocale.current.platformLocale
-    MetricCard("Steps", Icons.AutoMirrored.Filled.DirectionsRun, WarmOrange, onClick) {
-        val steps = metrics.steps
+    val steps = metrics.steps
+    val description = if (steps != null) {
+        "Steps: ${String.format(locale, "%,d", steps)} of ${String.format(locale, "%,d", metrics.stepGoal)} steps goal"
+    } else {
+        "Steps: No steps recorded"
+    }
+    MetricCard("Steps", Icons.AutoMirrored.Filled.DirectionsRun, WarmOrange, onClick, description) {
         if (steps != null) {
             Text(String.format(locale, "%,d", steps), fontSize = 27.sp, fontWeight = FontWeight.Bold)
             Text("of ${String.format(locale, "%,d", metrics.stepGoal)} steps", color = Muted, fontSize = 11.sp)
@@ -66,8 +76,13 @@ fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 
 @Composable
 fun HeartCard(metrics: DashboardMetrics, onClick: () -> Unit) {
-    MetricCard("Heart rate", Icons.Default.Favorite, PulsePink, onClick) {
-        val hr = metrics.heartRate
+    val hr = metrics.heartRate
+    val description = if (hr != null) {
+        "Heart rate: $hr bpm resting"
+    } else {
+        "Heart rate: No reading available"
+    }
+    MetricCard("Heart rate", Icons.Default.Favorite, PulsePink, onClick, description) {
         if (hr != null) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("$hr", fontSize = 27.sp, fontWeight = FontWeight.Bold)
@@ -85,8 +100,13 @@ fun HeartCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 
 @Composable
 fun SleepCard(metrics: DashboardMetrics, onClick: () -> Unit) {
-    MetricCard("Sleep", Icons.Default.NightsStay, SleepPurple, onClick) {
-        val sleep = metrics.sleepMinutes
+    val sleep = metrics.sleepMinutes
+    val description = if (sleep != null) {
+        "Sleep: ${sleep / 60} hours ${sleep % 60} minutes"
+    } else {
+        "Sleep: No sleep recorded"
+    }
+    MetricCard("Sleep", Icons.Default.NightsStay, SleepPurple, onClick, description) {
         if (sleep != null) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("${sleep / 60}", fontSize = 27.sp, fontWeight = FontWeight.Bold)
@@ -107,7 +127,8 @@ fun SleepCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 @Composable
 fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit) {
     val locale = LocalLocale.current.platformLocale
-    MetricCard("Water", Icons.Default.LocalDrink, WaterBlue, onClick) {
+    val description = "Water: ${String.format(locale, "%.1f", metrics.waterLiters)} of ${metrics.waterGoalLiters.toInt()} liters daily goal"
+    MetricCard("Water", Icons.Default.LocalDrink, WaterBlue, onClick, description) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 27.sp, fontWeight = FontWeight.Bold)
             Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
@@ -121,9 +142,15 @@ fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit)
             Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(WaterBlue.copy(alpha = 0.15f))) {
                 Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(WaterBlue))
             }
-            IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
+            IconButton(
+                onClick = onAdd,
+                modifier = Modifier
+                    .size(44.dp)
+                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    .semantics { contentDescription = "Quick add 250 milliliters of water" }
+            ) {
                 Surface(shape = CircleShape, color = WaterBlue.copy(alpha = 0.1f)) {
-                    Icon(Icons.Default.Add, "Add 250 milliliters", Modifier.padding(6.dp), tint = WaterBlue)
+                    Icon(Icons.Default.Add, null, Modifier.padding(6.dp), tint = WaterBlue)
                 }
             }
         }
@@ -136,9 +163,19 @@ fun MetricCard(
     icon: ImageVector,
     color: Color,
     onClick: () -> Unit,
+    cardDescription: String = "$title card",
     content: @Composable ColumnScope.() -> Unit
 ) {
-    HealthCard(Modifier.fillMaxWidth().height(154.dp).clickable(onClick = onClick)) {
+    HealthCard(
+        Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 154.dp)
+            .clickable(onClick = onClick)
+            .semantics {
+                role = Role.Button
+                contentDescription = cardDescription
+            }
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = color, modifier = Modifier.size(17.dp))
             Spacer(Modifier.width(5.dp))

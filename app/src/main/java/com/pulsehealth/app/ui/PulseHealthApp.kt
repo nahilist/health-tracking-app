@@ -31,6 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -262,13 +267,18 @@ fun PulseBottomBar(
                         .weight(1f)
                         .clip(RoundedCornerShape(24.dp))
                         .clickable { onNavigateToDestination(item) }
+                        .semantics {
+                            role = Role.Tab
+                            selected = active
+                            contentDescription = "${item.label} tab"
+                        }
                         .background(if (active) PulsePink.copy(alpha = 0.11f) else Color.Transparent)
                         .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         item.icon,
-                        contentDescription = item.label,
+                        contentDescription = null,
                         tint = if (active) PulsePink else Muted,
                         modifier = Modifier.size(22.dp)
                     )
