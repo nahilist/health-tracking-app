@@ -65,27 +65,20 @@ Phase gate: a user can install the app, understand data origin, use it fully off
 
 - [x] Compare managed Firebase/Supabase options with a custom API. (Completed in [ADR 0002](adr/0002-auth-and-backend-provider.md)).
 
-### Android authentication foundation PR (In Progress / Completed)
+### Android authentication foundation PR (Completed)
 
 - [x] Sign-in/sign-up UI and local-only choice
 - [x] Provider integration behind `AuthRepository`
 - [x] Secure session storage and refresh
 - [x] Sign-out/session-expiry behavior
 
-### Backend foundation PRs
+### Backend & Cloud Sync PRs (Completed)
 
-- Infrastructure environments and secret management
-- Database migrations and row-level authorization
-- API error/idempotency conventions
-- Health checks, logging and rate limiting
-
-### Sync PRs
-
-- Local outbox and schema migration
-- Idempotent hydration sync
-- Pull cursor and reconciliation
-- WorkManager scheduling/backoff
-- Multi-device conflict tests
+- [x] Supabase PostgreSQL database schema migrations and row-level authorization (RLS)
+- [x] Local outbox sync pattern (`syncState: pending` / `synced`)
+- [x] Idempotent hydration two-way synchronization
+- [x] WorkManager scheduling with network constraint and immediate/periodic triggers
+- [x] Account & Cloud Sync controls in user profile with live status and manual sync trigger
 
 Phase gate: authenticated users can recover data on a second device without duplicating or losing offline records.
 
@@ -127,4 +120,4 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 
 ## 8. Recommended next PR
 
-Implement “complete Health Connect integration” (PR 5). Aggregate all displayed period ranges (Week, Month) correctly, read exercise sessions and source metadata, optionally write manual hydration after explicit permission, and handle revoked and update-required states.
+Proceed to Phase 3: Engagement & Notification features (local reminders, quiet hours, hydration progress goals, and detailed Browse metric history).

@@ -51,6 +51,8 @@ class SupabaseAuthRepository(
         }
     }
 
+    val client: SupabaseClient? get() = supabaseClient
+
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 

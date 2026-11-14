@@ -22,6 +22,9 @@ import com.pulsehealth.app.data.NoOpAuthRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.local.HydrationEntryEntity
+import com.pulsehealth.app.data.sync.NoOpSyncRepository
+import com.pulsehealth.app.data.sync.SyncRepository
+import com.pulsehealth.app.data.sync.SyncResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +38,8 @@ class DashboardViewModel(
     private val hydrationRepository: HydrationRepository,
     private val preferencesRepository: PreferencesRepository,
     val healthRepository: HealthConnectRepository,
-    val authRepository: AuthRepository = NoOpAuthRepository()
+    val authRepository: AuthRepository = NoOpAuthRepository(),
+    val syncRepository: SyncRepository = NoOpSyncRepository()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -55,6 +59,10 @@ class DashboardViewModel(
     val weeklyWaterLiters: StateFlow<Double> =
         hydrationRepository.weeklyWaterLiters
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0.0)
+
+    val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
+    val lastCloudSyncedEpochMillis: StateFlow<Long?> = syncRepository.lastSyncedEpochMillis
+    val lastCloudSyncError: StateFlow<String?> = syncRepository.lastSyncError
 
     private data class SyncState(
         val healthConnectAvailability: HealthConnectAvailability,
@@ -83,6 +91,14 @@ class DashboardViewModel(
     val authState: StateFlow<AuthState> = authRepository.authState
     val currentUser: StateFlow<AuthUser?> = authRepository.currentUser
 
+    private data class AccountAndCloudState(
+        val authState: AuthState = AuthState.Loading,
+        val currentUser: AuthUser? = null,
+        val isCloudSyncing: Boolean = false,
+        val lastCloudSyncedEpochMillis: Long? = null,
+        val cloudSyncError: String? = null
+    )
+
     private data class PreferencesState(
         val hiddenCards: Set<String>,
         val waterGoalLiters: Double,
@@ -90,7 +106,10 @@ class DashboardViewModel(
         val onboardingCompleted: Boolean,
         val isDemoMode: Boolean,
         val authState: AuthState = AuthState.Loading,
-        val currentUser: AuthUser? = null
+        val currentUser: AuthUser? = null,
+        val isCloudSyncing: Boolean = false,
+        val lastCloudSyncedEpochMillis: Long? = null,
+        val cloudSyncError: String? = null
     )
 
     private val appFlagsFlow = combine(
@@ -98,26 +117,34 @@ class DashboardViewModel(
         isDemoModeFlow
     ) { onboarding, isDemo -> onboarding to isDemo }
 
-    private val authInfoFlow = combine(
+    private val accountAndCloudFlow = combine(
         authRepository.authState,
-        authRepository.currentUser
-    ) { authState, user -> authState to user }
+        authRepository.currentUser,
+        syncRepository.isSyncing,
+        syncRepository.lastSyncedEpochMillis,
+        syncRepository.lastSyncError
+    ) { authState, user, cloudSyncing, lastCloudSync, cloudError ->
+        AccountAndCloudState(authState, user, cloudSyncing, lastCloudSync, cloudError)
+    }
 
     private val preferencesFlow = combine(
         preferencesRepository.hiddenCards,
         preferencesRepository.waterGoalLiters,
         preferencesRepository.syncWaterToHealthConnect,
         appFlagsFlow,
-        authInfoFlow
-    ) { hidden, goal, syncWater, (onboarding, isDemo), (authState, user) ->
+        accountAndCloudFlow
+    ) { hidden, goal, syncWater, (onboarding, isDemo), account ->
         PreferencesState(
             hiddenCards = hidden,
             waterGoalLiters = goal,
             syncWaterToHealthConnect = syncWater,
             onboardingCompleted = onboarding,
             isDemoMode = isDemo,
-            authState = authState,
-            currentUser = user
+            authState = account.authState,
+            currentUser = account.currentUser,
+            isCloudSyncing = account.isCloudSyncing,
+            lastCloudSyncedEpochMillis = account.lastCloudSyncedEpochMillis,
+            cloudSyncError = account.cloudSyncError
         )
     }
 
@@ -161,7 +188,10 @@ class DashboardViewModel(
             isDemoMode = pref.isDemoMode,
             lastSyncedEpochMillis = sync.lastSyncedEpochMillis,
             authState = pref.authState,
-            currentUser = pref.currentUser
+            currentUser = pref.currentUser,
+            isCloudSyncing = pref.isCloudSyncing,
+            lastCloudSyncedEpochMillis = pref.lastCloudSyncedEpochMillis,
+            cloudSyncError = pref.cloudSyncError
         )
     }.stateIn(
         viewModelScope,
@@ -171,7 +201,10 @@ class DashboardViewModel(
             selectedRange = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY),
             isDemoMode = isDemoModeFlow.value,
             authState = authRepository.authState.value,
-            currentUser = authRepository.currentUser.value
+            currentUser = authRepository.currentUser.value,
+            isCloudSyncing = syncRepository.isSyncing.value,
+            lastCloudSyncedEpochMillis = syncRepository.lastSyncedEpochMillis.value,
+            cloudSyncError = syncRepository.lastSyncError.value
         )
     )
 
@@ -186,6 +219,7 @@ class DashboardViewModel(
 
     fun addWater(amountMilliliters: Int = 250) = viewModelScope.launch {
         hydrationRepository.addWater(amountMilliliters)
+        syncRepository.triggerImmediateSync()
         if (uiState.value.syncWaterToHealthConnect && syncStateFlow.value.hasWriteHydrationPermission) {
             runCatching {
                 healthRepository.writeHydration(amountMilliliters, System.currentTimeMillis())
@@ -195,10 +229,12 @@ class DashboardViewModel(
 
     fun editWater(id: String, amountMilliliters: Int) = viewModelScope.launch {
         hydrationRepository.updateWater(id, amountMilliliters)
+        syncRepository.triggerImmediateSync()
     }
 
     fun deleteWater(id: String) = viewModelScope.launch {
         hydrationRepository.deleteWater(id)
+        syncRepository.triggerImmediateSync()
     }
 
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
@@ -289,11 +325,24 @@ class DashboardViewModel(
 
     fun signInWithEmail(email: String, password: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
         val result = authRepository.signInWithEmail(email, password)
+        if (result is AuthResult.Success) {
+            syncRepository.schedulePeriodicSync()
+            syncRepository.sync()
+        }
         onResult(result)
     }
 
     fun signUpWithEmail(email: String, password: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
         val result = authRepository.signUpWithEmail(email, password)
+        if (result is AuthResult.Success) {
+            syncRepository.schedulePeriodicSync()
+            syncRepository.sync()
+        }
+        onResult(result)
+    }
+
+    fun syncCloud(onResult: (SyncResult) -> Unit = {}) = viewModelScope.launch {
+        val result = syncRepository.sync()
         onResult(result)
     }
 
@@ -320,7 +369,8 @@ class DashboardViewModel(
                     hydrationRepository = app.container.hydrationRepository,
                     preferencesRepository = app.container.preferencesRepository,
                     healthRepository = app.container.healthConnectRepository,
-                    authRepository = app.container.authRepository
+                    authRepository = app.container.authRepository,
+                    syncRepository = app.container.syncRepository
                 )
             }
         }

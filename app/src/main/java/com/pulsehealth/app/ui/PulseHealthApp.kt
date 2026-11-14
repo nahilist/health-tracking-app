@@ -200,6 +200,9 @@ fun PulseHealthApp(
                         },
                         onSignOut = {
                             viewModel.signOut()
+                        },
+                        onSyncCloud = {
+                            viewModel.syncCloud()
                         }
                     )
                 }
