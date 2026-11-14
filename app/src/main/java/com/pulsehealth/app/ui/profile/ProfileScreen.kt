@@ -160,11 +160,21 @@ fun ProfileScreen(
                 }
             }
             if (state.cloudSyncError != null) {
+                val safeSyncError = remember(state.cloudSyncError) {
+                    val raw = state.cloudSyncError
+                    val lower = raw.lowercase(java.util.Locale.ROOT)
+                    if (lower.contains("apikey") || lower.contains("bearer") || lower.contains("header") || lower.contains("url:") || lower.contains("http")) {
+                        "Cloud sync encountered an issue. Local records remain safe."
+                    } else {
+                        raw.substringBefore("\n").substringBefore("URL:").trim()
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = state.cloudSyncError,
+                    text = safeSyncError,
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
             Spacer(Modifier.height(12.dp))

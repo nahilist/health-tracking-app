@@ -65,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Decoupled favorite metric card configuration from localized English display labels by introducing canonical identifiers (`FavoriteCardId`), automated transparent in-flight DataStore migration, and TalkBack button semantics.
+- **Auth & Sync Error Sanitization & Leak Prevention**: Completely sanitized all authentication and synchronization error handling in `SupabaseAuthRepository`, `SupabaseSyncRepository`, `AuthDialog`, `SummaryScreen`, and `ProfileScreen`. Strips internal URLs, authorization headers, and API keys, preventing sensitive credential leakage and rendering human-friendly error messages.
+- **Frontend Redesign & Play Store Polish**: Elevated overall visual identity inspired by top health apps (Google Fit, Apple Health, Samsung Health, WHOOP) with vibrant palette, rounded cards (24dp), segmented pill controls, concentric Activity rings with percentage indicators, responsive adaptive grid layout (`BoxWithConstraints`), and category filter pills on Browse.
 
 ### Security & Privacy
 - Zero advertising SDKs, tracking pixels, or third-party behavioral profiling libraries.

@@ -134,7 +134,7 @@ class SupabaseAuthRepository(
                 val remoteUser = client.auth.currentUserOrNull()
                 handleSuccessfulAuth(trimmedEmail, remoteUser?.id)
             } catch (e: Exception) {
-                AuthResult.Error(e.message ?: "Authentication failed. Please check your credentials.", e)
+                AuthResult.Error(sanitizeAuthError(e, "Authentication failed. Please verify your credentials."), e)
             }
         } else {
             handleSuccessfulAuth(trimmedEmail)
@@ -156,7 +156,7 @@ class SupabaseAuthRepository(
                 val remoteUser = client.auth.currentUserOrNull()
                 handleSuccessfulAuth(trimmedEmail, remoteUser?.id)
             } catch (e: Exception) {
-                AuthResult.Error(e.message ?: "Registration failed. Please check your details.", e)
+                AuthResult.Error(sanitizeAuthError(e, "Registration failed. Please check your details."), e)
             }
         } else {
             handleSuccessfulAuth(trimmedEmail)
@@ -202,7 +202,7 @@ class SupabaseAuthRepository(
                 val user = _currentUser.value ?: return@withContext AuthResult.Error("No active user session to refresh.")
                 AuthResult.Success(user)
             } catch (e: Exception) {
-                AuthResult.Error(e.message ?: "Failed to refresh session.", e)
+                AuthResult.Error(sanitizeAuthError(e, "Failed to refresh session."), e)
             }
         } else {
             val user = _currentUser.value
@@ -241,6 +241,36 @@ class SupabaseAuthRepository(
 
         const val MODE_GUEST = "GUEST"
         const val MODE_AUTHENTICATED = "AUTHENTICATED"
+
+        fun sanitizeAuthError(e: Throwable?, fallback: String = "Authentication failed. Please check your credentials."): String {
+            if (e == null) return fallback
+            val msg = e.message ?: return fallback
+            val lower = msg.lowercase(java.util.Locale.ROOT)
+
+            return when {
+                lower.contains("invalid_credentials") || lower.contains("invalid login credentials") ->
+                    "Invalid email or password. Please verify your credentials and try again."
+                lower.contains("user_already_exists") || lower.contains("user already registered") || lower.contains("already exists") ->
+                    "An account with this email address already exists. Please sign in instead."
+                lower.contains("email not confirmed") || lower.contains("unconfirmed") ->
+                    "Please verify your email address before signing in."
+                lower.contains("password should be at least") || lower.contains("weak_password") ->
+                    "Password must be at least 6 characters long."
+                lower.contains("rate limit") || lower.contains("too many requests") || lower.contains("429") || lower.contains("over_email_send_rate_limit") ->
+                    "Too many attempts. Please wait a few moments and try again."
+                lower.contains("network") || lower.contains("unable to resolve host") || lower.contains("connectexception") || lower.contains("timeout") || lower.contains("failed to connect") ->
+                    "Network error. Please check your internet connection."
+                lower.contains("signup is disabled") ->
+                    "Sign-ups are currently disabled."
+                // Critical safeguard: prevent leaking internal URLs, headers, or API keys
+                lower.contains("apikey") || lower.contains("bearer") || lower.contains("header") || lower.contains("http") || lower.contains("url:") ->
+                    fallback
+                msg.length > 80 ->
+                    fallback
+                else ->
+                    msg.substringBefore("\n").substringBefore("URL:").trim().ifEmpty { fallback }
+            }
+        }
 
         private fun createSecurePreferences(context: Context): SharedPreferences {
             return try {

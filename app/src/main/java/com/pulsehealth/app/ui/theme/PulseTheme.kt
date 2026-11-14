@@ -5,36 +5,65 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-val PulsePink = Color(0xFFF2335B)
-val ExerciseGreen = Color(0xFF35C76F)
-val StandCyan = Color(0xFF16ABC3)
-val WaterBlue = Color(0xFF209FE5)
-val SleepPurple = Color(0xFF7658D6)
-val WarmOrange = Color(0xFFF59C22)
-val AppBackground = Color(0xFFF4F4F8)
-val Ink = Color(0xFF202126)
-val Muted = Color(0xFF777981)
+val PulsePink = Color(0xFFFF2A55)
+val ExerciseGreen = Color(0xFF00E676)
+val StandCyan = Color(0xFF00E5FF)
+val WaterBlue = Color(0xFF0091FF)
+val SleepPurple = Color(0xFF8A53FF)
+val WarmOrange = Color(0xFFFF7A00)
+val AppBackground = Color(0xFFF7F8FC)
+val Ink = Color(0xFF12131A)
+val Muted = Color(0xFF75788A)
+
+// Top App Brushes & Gradients
+val ActivityGradient = Brush.linearGradient(listOf(PulsePink, WarmOrange))
+val ExerciseGradient = Brush.linearGradient(listOf(ExerciseGreen, StandCyan))
+val WaterGradient = Brush.linearGradient(listOf(WaterBlue, StandCyan))
+val SleepGradient = Brush.linearGradient(listOf(SleepPurple, PulsePink))
 
 private val LightColors = lightColorScheme(
     primary = PulsePink,
     onPrimary = Color.White,
+    secondary = StandCyan,
+    onSecondary = Color.White,
+    tertiary = ExerciseGreen,
+    onTertiary = Color.White,
     background = AppBackground,
     onBackground = Ink,
     surface = Color.White,
     onSurface = Ink,
-    surfaceVariant = Color(0xFFE9E9EF),
+    surfaceVariant = Color(0xFFEDF0F7),
     onSurfaceVariant = Muted,
-    outline = Color(0xFFD8D8DF)
+    outline = Color(0xFFD6DBE8),
+    outlineVariant = Color(0xFFE6EAF2),
+    error = Color(0xFFE53935),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFEBEE),
+    onErrorContainer = Color(0xFFB71C1C)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFFF6681),
+    primary = Color(0xFFFF4D71),
+    onPrimary = Color.White,
     secondary = StandCyan,
-    background = Color(0xFF111216),
-    surface = Color(0xFF1B1C21),
-    onSurface = Color(0xFFF5F5F7)
+    onSecondary = Color.Black,
+    tertiary = ExerciseGreen,
+    onTertiary = Color.Black,
+    background = Color(0xFF0C0D11),
+    onBackground = Color(0xFFF5F6FA),
+    surface = Color(0xFF161820),
+    onSurface = Color(0xFFF5F6FA),
+    surfaceVariant = Color(0xFF222530),
+    onSurfaceVariant = Color(0xFF9EA3B5),
+    outline = Color(0xFF323646),
+    outlineVariant = Color(0xFF232733),
+    error = Color(0xFFFF5252),
+    onError = Color.Black,
+    errorContainer = Color(0xFF381519),
+    onErrorContainer = Color(0xFFFFB4AB)
 )
 
 @Composable

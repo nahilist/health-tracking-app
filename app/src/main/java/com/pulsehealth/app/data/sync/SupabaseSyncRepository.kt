@@ -108,7 +108,7 @@ class SupabaseSyncRepository(
             _lastSyncedEpochMillis.value = now
             SyncResult.Success(uploadedCount, downloadedCount)
         } catch (e: Exception) {
-            val message = e.message ?: "Failed to synchronize health records."
+            val message = sanitizeSyncError(e, "Failed to synchronize health records.")
             _lastSyncError.value = message
             SyncResult.Error(message, e)
         } finally {
@@ -159,5 +159,23 @@ class SupabaseSyncRepository(
 
         const val WORK_NAME_PERIODIC = "pulse_periodic_cloud_sync"
         const val WORK_NAME_IMMEDIATE = "pulse_immediate_cloud_sync"
+
+        fun sanitizeSyncError(e: Throwable?, fallback: String = "Failed to synchronize health records."): String {
+            if (e == null) return fallback
+            val msg = e.message ?: return fallback
+            val lower = msg.lowercase(java.util.Locale.ROOT)
+            return when {
+                lower.contains("network") || lower.contains("unable to resolve host") || lower.contains("connectexception") || lower.contains("timeout") || lower.contains("failed to connect") ->
+                    "Unable to connect to sync server. Records saved locally."
+                lower.contains("jwt") || lower.contains("unauthorized") || lower.contains("session") || lower.contains("401") || lower.contains("403") ->
+                    "Session expired. Please sign in again to sync cloud records."
+                lower.contains("apikey") || lower.contains("bearer") || lower.contains("header") || lower.contains("http") || lower.contains("url:") ->
+                    fallback
+                msg.length > 80 ->
+                    fallback
+                else ->
+                    msg.substringBefore("\n").substringBefore("URL:").trim().ifEmpty { fallback }
+            }
+        }
     }
 }

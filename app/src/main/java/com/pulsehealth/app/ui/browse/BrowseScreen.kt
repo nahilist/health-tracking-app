@@ -1,6 +1,7 @@
 package com.pulsehealth.app.ui.browse
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,9 +60,15 @@ fun BrowseScreen(
 ) {
     val locale = LocalLocale.current.platformLocale
     var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<HealthCategory?>(null) }
 
-    val filteredMetrics = remember(searchQuery) {
-        MetricRegistry.search(searchQuery)
+    val filteredMetrics = remember(searchQuery, selectedCategory) {
+        val base = MetricRegistry.search(searchQuery)
+        if (selectedCategory != null) {
+            base.filter { it.category == selectedCategory }
+        } else {
+            base
+        }
     }
 
     LazyColumn(
@@ -105,7 +113,7 @@ fun BrowseScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
@@ -115,15 +123,55 @@ fun BrowseScreen(
             )
         }
 
-        if (searchQuery.isNotBlank()) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val isAll = selectedCategory == null
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.clickable { selectedCategory = null }
+                ) {
+                    Text(
+                        "All",
+                        color = if (isAll) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isAll) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                    )
+                }
+                HealthCategory.entries.forEach { cat ->
+                    val isCatSelected = selectedCategory == cat
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.clickable { selectedCategory = if (isCatSelected) null else cat }
+                    ) {
+                        Text(
+                            cat.label,
+                            color = if (isCatSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (searchQuery.isNotBlank() || selectedCategory != null) {
             if (filteredMetrics.isEmpty()) {
                 item {
-                    EmptySearchResults(searchQuery)
+                    EmptySearchResults(searchQuery.ifBlank { selectedCategory?.label ?: "" })
                 }
             } else {
                 item {
                     Text(
-                        "Search Results (${filteredMetrics.size})",
+                        if (searchQuery.isNotBlank()) "Search Results (${filteredMetrics.size})" else "${selectedCategory?.label} (${filteredMetrics.size})",
                         color = Muted,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
