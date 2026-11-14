@@ -247,18 +247,17 @@ fun PulseBottomBar(
     onNavigateToDestination: (TopLevelDestination) -> Unit
 ) {
     Surface(
-        tonalElevation = 6.dp,
-        shadowElevation = 16.dp,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(70.dp)
-                .padding(horizontal = 18.dp, vertical = 6.dp),
+                .height(64.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             TopLevelDestination.entries.forEach { item ->
@@ -266,16 +265,17 @@ fun PulseBottomBar(
                 Column(
                     Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onNavigateToDestination(item) }
                         .semantics {
                             role = Role.Tab
                             selected = active
                             contentDescription = "${item.label} tab"
                         }
-                        .background(if (active) PulsePink.copy(alpha = 0.11f) else Color.Transparent)
+                        .background(if (active) PulsePink.copy(alpha = 0.08f) else Color.Transparent)
                         .padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         item.icon,
@@ -283,10 +283,11 @@ fun PulseBottomBar(
                         tint = if (active) PulsePink else Muted,
                         modifier = Modifier.size(22.dp)
                     )
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
                     Text(
                         item.label,
                         color = if (active) PulsePink else Muted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal
                     )
                 }

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -114,39 +115,24 @@ fun SharingScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Screen Header
+        // Screen Header with integrated privacy reassurance
         item {
             Column {
-                Text("Sharing", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                Text("Sharing", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text("Share selected health trends with people you trust", color = Muted, fontSize = 13.sp)
-            }
-        }
-
-        // Privacy Guarantee Banner
-        item {
-            HealthCard(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Surface(
-                        shape = CircleShape,
-                        color = ExerciseGreen.copy(alpha = 0.12f),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Security, contentDescription = null, tint = ExerciseGreen, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Private & Under Your Control", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Health data stays private by default. You choose exactly who to share with, which metrics they can see, and for how long. You can revoke access at any time.",
-                            color = Muted,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp
-                        )
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Security,
+                        contentDescription = null,
+                        tint = ExerciseGreen,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "End-to-end private. Only people you invite can see your records.",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -160,9 +146,10 @@ fun SharingScreen(
                 Button(
                     onClick = { showAddDialog = true },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PulsePink)
                 ) {
-                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Add Contact", fontSize = 13.sp)
                 }
@@ -170,9 +157,9 @@ fun SharingScreen(
                 OutlinedButton(
                     onClick = { showExportDialog = true },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Export Report", fontSize = 13.sp)
                 }
@@ -184,8 +171,10 @@ fun SharingScreen(
             Text(
                 text = "TRUSTED RECIPIENTS (${state.trustedContacts.size})",
                 color = Muted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             )
         }
 
@@ -229,30 +218,6 @@ fun SharingScreen(
                     onRevoke = { onRevokeContact(contact.id) },
                     onDelete = { onDeleteContact(contact.id) }
                 )
-            }
-        }
-
-        // Export Wellness Summary Card
-        item {
-            HealthCard(Modifier.fillMaxWidth()) {
-                Text("WELLNESS REPORT EXPORT", color = PulsePink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "Create a sanitized summary of your health trends to share directly with your healthcare provider or save to your files.",
-                    color = Muted,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
-                Spacer(Modifier.height(12.dp))
-                FilledTonalButton(
-                    onClick = { showExportDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Configure & Share Summary", fontSize = 13.sp)
-                }
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,10 +44,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -114,51 +118,57 @@ fun ProfileScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-            Text("Profile & data", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(4.dp))
+            Text("Profile & Settings", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.height(18.dp))
-
-        HealthCard(Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Person, null, tint = PulsePink, modifier = Modifier.size(42.dp))
-            Spacer(Modifier.height(10.dp))
-            Text("Your health, under your control", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(
-                "Pulse Health stores preferences only on this device and reads health metrics through Android Health Connect.",
-                color = Muted,
-                fontSize = 13.sp,
-                lineHeight = 19.sp
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
 
         HealthCard(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CloudDone, null, tint = PulsePink, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Account & Cloud Sync", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    val user = state.currentUser
-                    if (user != null && !user.isAnonymous) {
-                        Text("Signed in as ${user.email ?: user.displayName ?: "User"}", color = ExerciseGreen, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text("Connected to Supabase PostgreSQL", color = Muted, fontSize = 11.sp)
-                        val freshness = state.cloudFreshnessLabel
-                        if (freshness != null) {
-                            Text("Last synced: $freshness", color = Muted, fontSize = 11.sp)
-                        }
-                    } else {
-                        Text("Local guest mode (Offline only)", color = WarmOrange, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text("Sign in to back up and sync records across devices", color = Muted, fontSize = 11.sp)
+                val user = state.currentUser
+                val isSignedIn = user != null && !user.isAnonymous
+                Surface(
+                    shape = CircleShape,
+                    color = if (isSignedIn) ExerciseGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = if (isSignedIn) ExerciseGreen else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (isSignedIn) (user.email ?: user.displayName ?: "User") else "Local Guest",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        if (isSignedIn) {
+                            val freshness = state.cloudFreshnessLabel
+                            if (freshness != null) "Synced: $freshness" else "Connected to Supabase"
+                        } else "Offline mode (On-device storage)",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                }
                 if (state.isCloudSyncing) {
-                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 }
             }
+
             if (state.cloudSyncError != null) {
                 val safeSyncError = remember(state.cloudSyncError) {
                     val raw = state.cloudSyncError
@@ -177,7 +187,8 @@ fun ProfileScreen(
                     fontWeight = FontWeight.Medium
                 )
             }
-            Spacer(Modifier.height(12.dp))
+
+            Spacer(Modifier.height(14.dp))
             val user = state.currentUser
             if (user != null && !user.isAnonymous) {
                 Row(
@@ -211,270 +222,331 @@ fun ProfileScreen(
                 }
             }
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        HealthCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.MonitorHeart, null, tint = PulsePink)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Health Connect", fontWeight = FontWeight.Bold)
-                    Text(
-                        when (state.healthConnectAvailability) {
-                            HealthConnectAvailability.NOT_SUPPORTED -> "Not supported on this device"
-                            HealthConnectAvailability.UPDATE_REQUIRED -> "Provider update required in Play Store"
-                            HealthConnectAvailability.AVAILABLE -> if (state.hasHealthPermissions) {
-                                "Connected and ready"
-                            } else {
-                                "Permissions needed to sync"
-                            }
-                        },
-                        color = Muted,
-                        fontSize = 12.sp
-                    )
-                }
-                if (state.isSyncing) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
-            Spacer(Modifier.height(14.dp))
-            when (state.healthConnectAvailability) {
-                HealthConnectAvailability.UPDATE_REQUIRED -> {
-                    Button(
-                        onClick = {
-                            val playStoreIntent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("market://details?id=com.google.android.apps.healthdata")
-                            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                            runCatching { context.startActivity(playStoreIntent) }.onFailure {
-                                val webIntent = Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
-                                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                                runCatching { context.startActivity(webIntent) }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = PulsePink)
+        // Section 1: DATA SOURCES & SYNC
+        Column {
+            Text(
+                "DATA SOURCES & SYNC",
+                color = Muted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+            HealthCard(
+                Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            ) {
+                // Health Connect Row
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = PulsePink.copy(alpha = 0.12f),
+                        modifier = Modifier.size(38.dp)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Update in Play Store")
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.MonitorHeart, null, tint = PulsePink, modifier = Modifier.size(20.dp))
+                        }
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Health Connect", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(
+                            when (state.healthConnectAvailability) {
+                                HealthConnectAvailability.NOT_SUPPORTED -> "Not supported on this device"
+                                HealthConnectAvailability.UPDATE_REQUIRED -> "Provider update required in Play Store"
+                                HealthConnectAvailability.AVAILABLE -> if (state.hasHealthPermissions) {
+                                    "Connected and ready"
+                                } else {
+                                    "Permissions needed to sync"
+                                }
+                            },
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    if (state.isSyncing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 }
-                HealthConnectAvailability.AVAILABLE -> {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                when (state.healthConnectAvailability) {
+                    HealthConnectAvailability.UPDATE_REQUIRED -> {
+                        Spacer(Modifier.height(10.dp))
                         Button(
-                            onClick = if (state.hasHealthPermissions) onSync else { { showRationaleDialog = true } },
-                            enabled = !state.isSyncing,
+                            onClick = {
+                                val playStoreIntent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("market://details?id=com.google.android.apps.healthdata")
+                                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                runCatching { context.startActivity(playStoreIntent) }.onFailure {
+                                    val webIntent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
+                                    ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                    runCatching { context.startActivity(webIntent) }
+                                }
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = PulsePink)
                         ) {
-                            Icon(if (state.hasHealthPermissions) Icons.Default.Sync else Icons.Default.Settings, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (state.hasHealthPermissions) "Sync now" else "Connect")
+                            Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Update in Play Store", fontSize = 12.sp)
                         }
-
-                        if (state.hasHealthPermissions) {
-                            OutlinedButton(
-                                onClick = {
-                                    val settingsIntent = Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS").apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    runCatching { context.startActivity(settingsIntent) }
-                                }
+                    }
+                    HealthConnectAvailability.AVAILABLE -> {
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = if (state.hasHealthPermissions) onSync else { { showRationaleDialog = true } },
+                                enabled = !state.isSyncing,
+                                colors = ButtonDefaults.buttonColors(containerColor = PulsePink)
                             ) {
-                                Text("Permissions", fontSize = 13.sp)
+                                Icon(if (state.hasHealthPermissions) Icons.Default.Sync else Icons.Default.Settings, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(if (state.hasHealthPermissions) "Sync now" else "Connect", fontSize = 12.sp)
+                            }
+
+                            if (state.hasHealthPermissions) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val settingsIntent = Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS").apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        runCatching { context.startActivity(settingsIntent) }
+                                    }
+                                ) {
+                                    Text("Permissions", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
+                    HealthConnectAvailability.NOT_SUPPORTED -> Unit
                 }
-                HealthConnectAvailability.NOT_SUPPORTED -> {
-                    Text(
-                        "Health Connect is not supported on this Android system version.",
-                        color = Muted,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
 
-        Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(14.dp))
 
-        HealthCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.WaterDrop, null, tint = WaterBlue)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Sync water to Health Connect", fontWeight = FontWeight.Bold)
-                    Text("Save logged water into Health Connect so other fitness apps can access it.", color = Muted, fontSize = 12.sp)
-                }
-                Switch(
-                    checked = state.syncWaterToHealthConnect,
-                    onCheckedChange = { enabled ->
-                        onToggleSyncWater(enabled)
-                        if (enabled && !state.hasWriteHydrationPermission) {
-                            onRequestWritePermissions()
+                // Water sync to Health Connect
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = WaterBlue.copy(alpha = 0.12f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.WaterDrop, null, tint = WaterBlue, modifier = Modifier.size(20.dp))
                         }
-                    },
-                    enabled = state.healthConnectAvailable,
-                    colors = SwitchDefaults.colors(checkedThumbColor = WaterBlue, checkedTrackColor = WaterBlue.copy(alpha = 0.5f))
-                )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Sync Water to Health Connect", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text("Write hydration logs into Health Connect", color = Muted, fontSize = 12.sp)
+                    }
+                    Switch(
+                        checked = state.syncWaterToHealthConnect,
+                        onCheckedChange = { enabled ->
+                            onToggleSyncWater(enabled)
+                            if (enabled && !state.hasWriteHydrationPermission) {
+                                onRequestWritePermissions()
+                            }
+                        },
+                        enabled = state.healthConnectAvailable,
+                        colors = SwitchDefaults.colors(checkedThumbColor = WaterBlue, checkedTrackColor = WaterBlue.copy(alpha = 0.5f))
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        HealthCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.NotificationsActive, null, tint = PulsePink, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Hydration Reminders", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(
-                        if (state.remindersEnabled) "Reminders active every ${state.reminderIntervalHours}h"
-                        else "Get gentle local reminders to stay hydrated",
-                        color = Muted,
-                        fontSize = 12.sp
-                    )
-                }
-                Switch(
-                    checked = state.remindersEnabled,
-                    onCheckedChange = { enabled ->
-                        if (enabled) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.POST_NOTIFICATIONS
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (!hasPermission) {
-                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        // Section 2: PREFERENCES & REMINDERS
+        Column {
+            Text(
+                "PREFERENCES & REMINDERS",
+                color = Muted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+            HealthCard(
+                Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            ) {
+                // Reminders Toggle Row
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = PulsePink.copy(alpha = 0.12f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.NotificationsActive, null, tint = PulsePink, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Hydration Reminders", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(
+                            if (state.remindersEnabled) "Active every ${state.reminderIntervalHours}h"
+                            else "Local notifications to stay hydrated",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Switch(
+                        checked = state.remindersEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        onToggleReminders(true)
+                                    }
                                 } else {
                                     onToggleReminders(true)
                                 }
                             } else {
-                                onToggleReminders(true)
+                                onToggleReminders(false)
                             }
-                        } else {
-                            onToggleReminders(false)
-                        }
-                    },
-                    colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
-                )
-            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
+                    )
+                }
 
-            if (state.remindersEnabled) {
+                if (state.remindersEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Frequency", fontWeight = FontWeight.Medium, fontSize = 12.sp, color = Muted)
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(1 to "1h", 2 to "2h", 3 to "3h", 4 to "4h").forEach { (hours, label) ->
+                            val selected = state.reminderIntervalHours == hours
+                            FilterChip(
+                                selected = selected,
+                                onClick = { onSetReminderInterval(hours) },
+                                label = { Text(label, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Bedtime, null, tint = Muted, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Quiet hours: ${state.quietHoursStartHour}:00 – ${state.quietHoursEndHour}:00",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onSendTestReminder,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Send Test Reminder", fontSize = 12.sp)
+                    }
+                }
+
                 Spacer(Modifier.height(14.dp))
-                Text("Reminder Frequency", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Spacer(Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(14.dp))
+
+                // Demo mode row
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Muted.copy(alpha = 0.12f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Tune, null, tint = Muted, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Sample Demo Mode", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text("Preview UI with simulated health metrics", color = Muted, fontSize = 12.sp)
+                    }
+                    Switch(
+                        checked = state.isDemoMode,
+                        onCheckedChange = { onToggleDemo() },
+                        colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
+                    )
+                }
+            }
+        }
+
+        // Section 3: DATA & PRIVACY
+        Column {
+            Text(
+                "DATA & PRIVACY",
+                color = Muted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+            HealthCard(
+                Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(1 to "1h", 2 to "2h", 3 to "3h", 4 to "4h").forEach { (hours, label) ->
-                        val selected = state.reminderIntervalHours == hours
-                        FilterChip(
-                            selected = selected,
-                            onClick = { onSetReminderInterval(hours) },
-                            label = { Text(label, fontSize = 12.sp) }
+                    OutlinedButton(
+                        onClick = {
+                            onExportData { jsonString ->
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, jsonString)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, "Export Health Data")
+                                shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                runCatching { context.startActivity(shareIntent) }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.FileDownload, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Export JSON", fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = { showDeleteConfirmDialog = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
                         )
+                    ) {
+                        Icon(Icons.Default.DeleteForever, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Delete Data", fontSize = 12.sp)
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Bedtime, null, tint = Muted, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text("Quiet Hours (${state.quietHoursStartHour}:00 – ${state.quietHoursEndHour}:00)", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                        Text("Notifications are automatically silenced overnight", color = Muted, fontSize = 11.sp)
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = onSendTestReminder,
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = { showAboutDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Send Test Reminder", fontSize = 13.sp)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        HealthCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lock, null, tint = PulsePink)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Privacy & Data Management", fontWeight = FontWeight.Bold)
-                    Text("Manage, export, or permanently delete your local records.", color = Muted, fontSize = 12.sp)
-                }
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        onExportData { jsonString ->
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, jsonString)
-                                type = "text/plain"
-                            }
-                            val shareIntent = Intent.createChooser(sendIntent, "Export Health Data")
-                            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            runCatching { context.startActivity(shareIntent) }
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.FileDownload, null, Modifier.size(16.dp))
+                    Icon(Icons.Default.Info, null, tint = Muted, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Export (JSON)", fontSize = 12.sp)
+                    Text("About Pulse Health & Privacy Policy", color = Muted, fontSize = 13.sp)
                 }
-
-                Button(
-                    onClick = { showDeleteConfirmDialog = true },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                ) {
-                    Icon(Icons.Default.DeleteForever, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Delete data", fontSize = 12.sp)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            TextButton(
-                onClick = { showAboutDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Info, null, tint = Muted, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("About Pulse Health & Privacy Policy", color = Muted, fontSize = 13.sp)
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        HealthCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Tune, null, tint = Muted)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Sample Demo Mode", fontWeight = FontWeight.Bold)
-                    Text("Display sample data to preview UI layouts without real health records.", color = Muted, fontSize = 12.sp)
-                }
-                Switch(
-                    checked = state.isDemoMode,
-                    onCheckedChange = { onToggleDemo() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = PulsePink, checkedTrackColor = PulsePink.copy(alpha = 0.5f))
-                )
-            }
-        }
         Spacer(Modifier.height(16.dp))
     }
 

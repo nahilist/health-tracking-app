@@ -1,5 +1,6 @@
 package com.pulsehealth.app.ui.browse
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -132,9 +134,12 @@ fun BrowseScreen(
             ) {
                 val isAll = selectedCategory == null
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.clickable { selectedCategory = null }
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isAll) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = if (isAll) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { selectedCategory = null }
                 ) {
                     Text(
                         "All",
@@ -147,9 +152,12 @@ fun BrowseScreen(
                 HealthCategory.entries.forEach { cat ->
                     val isCatSelected = selectedCategory == cat
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.clickable { selectedCategory = if (isCatSelected) null else cat }
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = if (isCatSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { selectedCategory = if (isCatSelected) null else cat }
                     ) {
                         Text(
                             cat.label,
@@ -171,18 +179,33 @@ fun BrowseScreen(
             } else {
                 item {
                     Text(
-                        if (searchQuery.isNotBlank()) "Search Results (${filteredMetrics.size})" else "${selectedCategory?.label} (${filteredMetrics.size})",
+                        text = if (searchQuery.isNotBlank()) "SEARCH RESULTS (${filteredMetrics.size})" else "${selectedCategory?.label?.uppercase(locale)} (${filteredMetrics.size})",
                         color = Muted,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
                     )
                 }
-                items(filteredMetrics, key = { it.id }) { metric ->
-                    MetricListItem(
-                        metric = metric,
-                        valueText = MetricRegistry.formatValue(metric.id, metrics, locale),
-                        onClick = { onOpen(metric.id) }
-                    )
+                item {
+                    HealthCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        filteredMetrics.forEachIndexed { index, metric ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 68.dp)
+                                )
+                            }
+                            MetricRowItem(
+                                metric = metric,
+                                valueText = MetricRegistry.formatValue(metric.id, metrics, locale),
+                                onClick = { onOpen(metric.id) }
+                            )
+                        }
+                    }
                 }
             }
         } else {
@@ -193,21 +216,103 @@ fun BrowseScreen(
                         Text(
                             text = category.label.uppercase(locale),
                             color = Muted,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 4.dp)
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.8.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 6.dp)
                         )
                     }
-                    items(categoryMetrics, key = { it.id }) { metric ->
-                        MetricListItem(
-                            metric = metric,
-                            valueText = MetricRegistry.formatValue(metric.id, metrics, locale),
-                            onClick = { onOpen(metric.id) }
-                        )
+                    item {
+                        HealthCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            categoryMetrics.forEachIndexed { index, metric ->
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.padding(start = 68.dp)
+                                    )
+                                }
+                                MetricRowItem(
+                                    metric = metric,
+                                    valueText = MetricRegistry.formatValue(metric.id, metrics, locale),
+                                    onClick = { onOpen(metric.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MetricRowItem(
+    metric: MetricTypeInfo,
+    valueText: String,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp)
+            .semantics { contentDescription = "${metric.title}: $valueText" }
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = metric.color.copy(alpha = 0.12f),
+            modifier = Modifier.size(38.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = metric.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(19.dp),
+                    tint = metric.color
+                )
+            }
+        }
+
+        Spacer(Modifier.width(14.dp))
+
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = metric.title,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+            Text(
+                text = metric.subtitle,
+                color = Muted,
+                fontSize = 11.sp
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = valueText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (valueText != "No data" && valueText != "—" && valueText != "No activity") {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    Muted
+                }
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = Muted.copy(alpha = 0.5f),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
@@ -217,70 +322,7 @@ fun MetricListItem(
     valueText: String,
     onClick: () -> Unit
 ) {
-    HealthCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = "${metric.title}: $valueText" }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = metric.color.copy(alpha = 0.12f),
-                modifier = Modifier.size(42.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = metric.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = metric.color
-                    )
-                }
-            }
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = metric.title,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
-                )
-                Text(
-                    text = metric.subtitle,
-                    color = Muted,
-                    fontSize = 11.sp
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = valueText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (valueText != "No data" && valueText != "—" && valueText != "No activity") {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        Muted
-                    }
-                )
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Muted.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
+    MetricRowItem(metric = metric, valueText = valueText, onClick = onClick)
 }
 
 @Composable

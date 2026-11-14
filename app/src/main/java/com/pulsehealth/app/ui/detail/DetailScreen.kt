@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -416,52 +417,65 @@ fun DetailScreen(
                     }
                 }
             } else {
-                items(todayHydrationEntries, key = { it.id }) { entry ->
-                    HealthCard(Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = WaterBlue.copy(alpha = 0.12f),
-                                modifier = Modifier.size(40.dp)
+                item {
+                    HealthCard(
+                        Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        todayHydrationEntries.forEachIndexed { index, entry ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 66.dp)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.LocalDrink,
-                                        contentDescription = null,
-                                        tint = WaterBlue,
-                                        modifier = Modifier.size(20.dp)
+                                Surface(
+                                    shape = CircleShape,
+                                    color = WaterBlue.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.LocalDrink,
+                                            contentDescription = null,
+                                            tint = WaterBlue,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${entry.amountMilliliters} mL",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 15.sp
+                                    )
+                                    val time = Instant.ofEpochMilli(entry.recordedAtEpochMillis)
+                                        .atZone(ZoneId.systemDefault())
+                                        .format(DateTimeFormatter.ofPattern("h:mm a", locale))
+                                    Text(
+                                        text = time,
+                                        color = Muted,
+                                        fontSize = 12.sp
                                     )
                                 }
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = "${entry.amountMilliliters} mL",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                                val time = Instant.ofEpochMilli(entry.recordedAtEpochMillis)
-                                    .atZone(ZoneId.systemDefault())
-                                    .format(DateTimeFormatter.ofPattern("h:mm a", locale))
-                                Text(
-                                    text = time,
-                                    color = Muted,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            IconButton(onClick = { editingEntry = entry }) {
-                                Icon(Icons.Default.Edit, "Edit entry", tint = Muted, modifier = Modifier.size(18.dp))
-                            }
-                            IconButton(onClick = { onDeleteWater(entry.id) }) {
-                                Icon(
-                                    Icons.Default.DeleteOutline,
-                                    "Delete entry",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                IconButton(onClick = { editingEntry = entry }) {
+                                    Icon(Icons.Default.Edit, "Edit entry", tint = Muted, modifier = Modifier.size(16.dp))
+                                }
+                                IconButton(onClick = { onDeleteWater(entry.id) }) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        "Delete entry",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
