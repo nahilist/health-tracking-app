@@ -108,11 +108,13 @@ Phase gate: authenticated users can recover data on a second device without dupl
 - [x] Metric summary statistics (averages, totals, highs, lows, completion status)
 - [x] Non-diagnostic wellness descriptions and data source attribution
 
-### PR 15: trusted sharing design and privacy export review
+### PR 15: trusted sharing design and privacy export review (Completed)
 
-- Trusted sharing invitation and recipient authorization review
-- Export health package validation and selective metric sharing
-- Optional privacy-reviewed crash and telemetry scaffolding
+- [x] Trusted sharing invitation and recipient authorization review
+- [x] Granular metric authorization toggles and expiration windows (7 days, 30 days, until revoked)
+- [x] Export health package sanitization (`ExportedHealthPackage`) omitting unselected metrics
+- [x] Android system share sheet integration (`Intent.ACTION_SEND`) and report preview
+- [x] Full `SharingScreen` replacing placeholder UI with active recipient cards, status badges, and revocation controls
 
 Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetry matches published disclosures.
 
@@ -139,9 +141,9 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Display labels used as favorite IDs | Breaks localization/migrations | High |
 | No Room migration beyond v1 | Future update risk | High before schema change |
 | No secure session layer | Blocks authentication | Resolved in PR 10 |
-| Placeholder Sharing/Browse | Incomplete product flows | Browse resolved in PR 14 |
+| Placeholder Sharing/Browse | Incomplete product flows | Resolved in PR 14 & 15 |
 | No instrumented UI suite | Regression risk | Medium |
 
 ## 8. Recommended next PR
 
-Implement “trusted sharing design and privacy export review” (PR 15). Focus on recipient authorization flow, selective metric sharing toggles, and privacy controls.
+Implement Phase 4: Production Launch readiness (Accessibility audit, baseline profile optimization, and production release packaging).

@@ -16,13 +16,19 @@ import com.pulsehealth.app.data.AuthUser
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
+import com.pulsehealth.app.data.ExportedHealthPackage
 import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.HydrationTrends
 import com.pulsehealth.app.data.NoOpAuthRepository
+import com.pulsehealth.app.data.NoOpSharingRepository
 import com.pulsehealth.app.data.PreferencesRepository
+import com.pulsehealth.app.data.ShareDuration
+import com.pulsehealth.app.data.ShareRelationship
+import com.pulsehealth.app.data.SharingRepository
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.TrustedContact
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.sync.NoOpSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
@@ -47,7 +53,8 @@ class DashboardViewModel(
     val healthRepository: HealthConnectRepository,
     val authRepository: AuthRepository = NoOpAuthRepository(),
     val syncRepository: SyncRepository = NoOpSyncRepository(),
-    val reminderScheduler: ReminderScheduler = NoOpReminderScheduler()
+    val reminderScheduler: ReminderScheduler = NoOpReminderScheduler(),
+    val sharingRepository: SharingRepository = NoOpSharingRepository()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -185,8 +192,9 @@ class DashboardViewModel(
         syncStateFlow,
         hydrationFlow,
         selectedRangeFlow,
-        preferencesFlow
-    ) { sync, (water, pastEntries), rangeName, pref ->
+        preferencesFlow,
+        sharingRepository.contacts
+    ) { sync, (water, pastEntries), rangeName, pref, contacts ->
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
         val (streakInfo, weeklyProgress) = HydrationTrends.calculateStreaksAndProgress(
             entries = pastEntries,
@@ -234,7 +242,8 @@ class DashboardViewModel(
             quietHoursStartHour = pref.reminderSettings.quietHoursStartHour,
             quietHoursEndHour = pref.reminderSettings.quietHoursEndHour,
             streakInfo = streakInfo,
-            weeklyHydrationProgress = weeklyProgress
+            weeklyHydrationProgress = weeklyProgress,
+            trustedContacts = contacts
         )
     }.stateIn(
         viewModelScope,
@@ -426,6 +435,52 @@ class DashboardViewModel(
         NotificationHelper.showHydrationReminder(context, todayWater, goal)
     }
 
+    fun addTrustedContact(
+        name: String,
+        relationship: ShareRelationship,
+        contactIdentifier: String,
+        sharedMetrics: Set<String>,
+        duration: ShareDuration
+    ) = viewModelScope.launch {
+        val contact = TrustedContact.create(
+            name = name,
+            relationship = relationship,
+            contactIdentifier = contactIdentifier,
+            sharedMetrics = sharedMetrics,
+            duration = duration
+        )
+        sharingRepository.addContact(contact)
+    }
+
+    fun updateContactMetrics(contactId: String, sharedMetrics: Set<String>) = viewModelScope.launch {
+        sharingRepository.updateContactMetrics(contactId, sharedMetrics)
+    }
+
+    fun revokeContactSharing(contactId: String) = viewModelScope.launch {
+        sharingRepository.revokeContact(contactId)
+    }
+
+    fun deleteTrustedContact(contactId: String) = viewModelScope.launch {
+        sharingRepository.deleteContact(contactId)
+    }
+
+    suspend fun createExportHealthPackage(
+        recipientName: String?,
+        selectedMetrics: Set<String>,
+        range: TimeRange = uiState.value.selectedRange
+    ): ExportedHealthPackage {
+        return sharingRepository.createExportPackage(
+            recipientName = recipientName,
+            selectedMetrics = selectedMetrics,
+            range = range,
+            dashboardMetrics = uiState.value.metrics
+        )
+    }
+
+    fun formatShareText(pkg: ExportedHealthPackage): String {
+        return sharingRepository.formatShareText(pkg)
+    }
+
     companion object {
         const val KEY_SELECTED_RANGE = "selected_range"
         const val KEY_IS_DEMO_MODE = "is_demo_mode"
@@ -441,7 +496,8 @@ class DashboardViewModel(
                     healthRepository = app.container.healthConnectRepository,
                     authRepository = app.container.authRepository,
                     syncRepository = app.container.syncRepository,
-                    reminderScheduler = app.container.reminderScheduler
+                    reminderScheduler = app.container.reminderScheduler,
+                    sharingRepository = app.container.sharingRepository
                 )
             }
         }
