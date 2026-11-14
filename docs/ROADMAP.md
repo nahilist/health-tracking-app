@@ -99,12 +99,20 @@ Phase gate: authenticated users can recover data on a second device without dupl
 - [x] Dynamic 7-day weekly hydration bar visualization on Dashboard
 - [x] Milestone celebration banner on reaching daily hydration goal
 
-### PR 14: complete Browse and metric history
+### PR 14: complete Browse and metric history (Completed)
 
-- Complete Browse and metric history
-- Interactive trend visualization for Steps, Heart Rate, Sleep, and Hydration
-- Trusted sharing design and authorization review
-- Optional privacy-reviewed crash/analytics tooling
+- [x] Complete Browse screen with categorized navigation (Activity, Vitals, Sleep, Nutrition & Hydration)
+- [x] Real-time metric search filtering with empty-state handling
+- [x] Full metric detail history views with TimeRange switching (Today, Week, Month)
+- [x] Interactive trend visualization (`MetricTrendChart`) across Steps, Heart Rate, Sleep, Water, and Activity
+- [x] Metric summary statistics (averages, totals, highs, lows, completion status)
+- [x] Non-diagnostic wellness descriptions and data source attribution
+
+### PR 15: trusted sharing design and privacy export review
+
+- Trusted sharing invitation and recipient authorization review
+- Export health package validation and selective metric sharing
+- Optional privacy-reviewed crash and telemetry scaffolding
 
 Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetry matches published disclosures.
 
@@ -130,10 +138,10 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Manual dependency construction | Resolved in PR 2 | Resolved |
 | Display labels used as favorite IDs | Breaks localization/migrations | High |
 | No Room migration beyond v1 | Future update risk | High before schema change |
-| No secure session layer | Blocks authentication | High for Phase 2 |
-| Placeholder Sharing/Browse | Incomplete product flows | Medium |
+| No secure session layer | Blocks authentication | Resolved in PR 10 |
+| Placeholder Sharing/Browse | Incomplete product flows | Browse resolved in PR 14 |
 | No instrumented UI suite | Regression risk | Medium |
 
 ## 8. Recommended next PR
 
-Implement “complete Browse and metric history” (PR 14). Add interactive detail trend views across all metrics (Steps, Heart Rate, Sleep, Calories, Exercise, Stand) and complete Browse navigation.
+Implement “trusted sharing design and privacy export review” (PR 15). Focus on recipient authorization flow, selective metric sharing toggles, and privacy controls.
