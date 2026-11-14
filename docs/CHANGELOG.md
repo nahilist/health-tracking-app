@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Dedicated Modular Profile & Settings Architecture**:
+  - Re-architected Profile & Settings into an executive, modular multi-screen experience with distinct, dedicated destinations for each domain:
+    - **Account & Cloud Sync** (`AccountSectionScreen.kt`): User identity, sync freshness, Supabase PostgreSQL RLS security badge, instantaneous manual sync trigger, and secure auth actions.
+    - **Health Connect** (`HealthConnectSectionScreen.kt`): Standalone permission rationale hub, availability badge, 2-way water write-back toggle, and deep-link system settings shortcut.
+    - **Hydration Reminders** (`RemindersSectionScreen.kt`): Master reminder toggle with Android 13+ `POST_NOTIFICATIONS` runtime permission launcher, interval selection chips (1h, 2h, 3h, 4h), quiet hours schedule (22:00–08:00), and immediate diagnostic reminder trigger.
+    - **Data Vault & Privacy** (`DataPrivacySectionScreen.kt`): 100% user-owned declaration, standardized JSON export triggering system share sheet, local data erasure with double-confirmation dialog, and privacy policy viewer.
+    - **Preferences & About** (`PreferencesSectionScreen.kt`): Sample Demo Mode simulator toggle, build metadata, and architecture specifications.
+  - Native `BackHandler` integration ensuring predictable system back gesture/button behavior from any sub-screen back to the main Profile Hub.
+  - Executive minimalist styling: OLED-optimized high-contrast cards, hairline borders, live status dots, and fluid `AnimatedContent` cross-fading.
 - **Native Health Dashboard**:
   - Native Jetpack Compose interface with Material 3 theming supporting both dynamic light and dark color schemes.
   - Interactive 3-ring Activity visualizer representing daily Move (active calories), Exercise (minutes), and Stand (hours) progress.
