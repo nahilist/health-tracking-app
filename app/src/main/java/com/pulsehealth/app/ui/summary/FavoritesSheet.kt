@@ -17,9 +17,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pulsehealth.app.data.FavoriteCardId
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 
@@ -38,18 +43,24 @@ fun FavoritesSheet(
             Text("Edit favorites", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text("Choose the metrics shown on your Summary.", color = Muted, fontSize = 13.sp)
             Spacer(Modifier.height(16.dp))
-            listOf("Steps", "Heart rate", "Sleep", "Water").forEach { name ->
+            FavoriteCardId.ALL.forEach { card ->
+                val isHidden = card.canonicalId in hidden || card.legacyAlias in hidden
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onToggle(name) }
-                        .padding(vertical = 13.dp),
+                        .clickable { onToggle(card.canonicalId) }
+                        .padding(vertical = 13.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "${if (isHidden) "Add" else "Remove"} ${card.defaultTitle} from favorites"
+                        },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(name, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                    Text(card.defaultTitle, Modifier.weight(1f), fontWeight = FontWeight.Medium)
                     Text(
-                        if (name in hidden) "Add" else "Remove",
-                        color = if (name in hidden) Color(0xFF087CF0) else PulsePink
+                        if (isHidden) "Add" else "Remove",
+                        color = if (isHidden) Color(0xFF087CF0) else PulsePink,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
+import com.pulsehealth.app.data.FavoriteCardId
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.theme.ExerciseGreen
@@ -148,17 +149,17 @@ fun SummaryScreen(
                 }
             }
             item {
-                val visible = listOf("Steps", "Heart rate", "Sleep", "Water").filterNot { it in state.hiddenCards }
+                val visibleCards = FavoriteCardId.ALL.filterNot { state.isCardHidden(it) }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    visible.chunked(2).forEach { rowCards ->
+                    visibleCards.chunked(2).forEach { rowCards ->
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowCards.forEach { id ->
+                            rowCards.forEach { card ->
                                 Box(Modifier.weight(1f)) {
-                                    when (id) {
-                                        "Steps" -> StepsCard(state.metrics) { onDetail(id) }
-                                        "Heart rate" -> HeartCard(state.metrics) { onDetail(id) }
-                                        "Sleep" -> SleepCard(state.metrics) { onDetail(id) }
-                                        "Water" -> WaterCard(state.metrics, onWater) { onDetail(id) }
+                                    when (card) {
+                                        FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.WATER -> WaterCard(state.metrics, onWater) { onDetail(card.metricRegistryId) }
                                     }
                                 }
                             }

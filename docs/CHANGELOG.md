@@ -63,6 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adaptive layout height constraints (`defaultMinSize(minHeight = 154.dp)`) resilient to 200% font scaling without text clipping.
   - Complete production `PRIVACY_POLICY.md` and Google Play Console `PLAY_STORE_DECLARATIONS.md`.
 
+### Fixed
+- Decoupled favorite metric card configuration from localized English display labels by introducing canonical identifiers (`FavoriteCardId`), automated transparent in-flight DataStore migration, and TalkBack button semantics.
+
 ### Security & Privacy
 - Zero advertising SDKs, tracking pixels, or third-party behavioral profiling libraries.
 - TLS 1.3 encrypted transport for all network requests.
