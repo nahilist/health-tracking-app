@@ -121,6 +121,28 @@ data class DashboardUiState(
     val isEmpty: Boolean
         get() = !metrics.hasAnyData
 
+    fun isCardHidden(card: FavoriteCardId): Boolean {
+        return card.canonicalId in hiddenCards ||
+            card.legacyAlias in hiddenCards ||
+            hiddenCards.any {
+                it.equals(card.canonicalId, ignoreCase = true) ||
+                    it.equals(card.legacyAlias, ignoreCase = true)
+            }
+    }
+
+    fun isCardHidden(id: String): Boolean {
+        val card = FavoriteCardId.fromString(id)
+        return if (card != null) {
+            isCardHidden(card)
+        } else {
+            val canonical = FavoriteCardId.normalize(id)
+            hiddenCards.any {
+                it.equals(canonical, ignoreCase = true) ||
+                    it.equals(id, ignoreCase = true)
+            }
+        }
+    }
+
     val freshnessLabel: String?
         get() {
             val millis = lastSyncedEpochMillis ?: metrics.lastUpdatedEpochMillis ?: return null

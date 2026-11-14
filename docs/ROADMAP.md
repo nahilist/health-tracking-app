@@ -143,7 +143,7 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Demo and real values coexist | Resolved in PR 1 | Resolved |
 | Monolithic `PulseHealthApp.kt` | Resolved in PR 2 | Resolved |
 | Manual dependency construction | Resolved in PR 2 | Resolved |
-| Display labels used as favorite IDs | Breaks localization/migrations | High |
+| Display labels used as favorite IDs | Resolved in PR 18 | Resolved |
 | No Room migration beyond v1 | Future update risk | High before schema change |
 | No secure session layer | Blocks authentication | Resolved in PR 10 |
 | Placeholder Sharing/Browse | Incomplete product flows | Resolved in PR 14 & 15 |

@@ -32,7 +32,10 @@ class UserPreferencesRepository(
     }
 
     override val hiddenCards: Flow<Set<String>> =
-        context.userDataStore.data.map { it[Keys.hiddenCards] ?: emptySet() }
+        context.userDataStore.data.map { preferences ->
+            val raw = preferences[Keys.hiddenCards] ?: emptySet()
+            raw.map { FavoriteCardId.normalize(it) }.toSet()
+        }
 
     override val waterGoalLiters: Flow<Double> =
         context.userDataStore.data.map { it[Keys.waterGoalLiters] ?: 2.0 }
@@ -56,9 +59,12 @@ class UserPreferencesRepository(
         context.userDataStore.data.map { it[Keys.quietHoursEndHour] ?: 8 }
 
     override suspend fun toggleCard(id: String): Unit = withContext(ioDispatcher) {
+        val canonical = FavoriteCardId.normalize(id)
         context.userDataStore.edit { preferences ->
-            val cards = (preferences[Keys.hiddenCards] ?: emptySet()).toMutableSet()
-            if (!cards.add(id)) cards.remove(id)
+            val cards = (preferences[Keys.hiddenCards] ?: emptySet())
+                .map { FavoriteCardId.normalize(it) }
+                .toMutableSet()
+            if (!cards.add(canonical)) cards.remove(canonical)
             preferences[Keys.hiddenCards] = cards
         }
     }

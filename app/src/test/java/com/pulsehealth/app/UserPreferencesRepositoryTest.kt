@@ -38,13 +38,25 @@ class UserPreferencesRepositoryTest {
         val initial = repository.hiddenCards.first()
         assertTrue(initial.isEmpty())
 
-        repository.toggleCard("Steps")
+        repository.toggleCard("steps")
         val withSteps = repository.hiddenCards.first()
-        assertTrue(withSteps.contains("Steps"))
+        assertTrue(withSteps.contains("steps"))
 
-        repository.toggleCard("Steps")
+        repository.toggleCard("steps")
         val withoutSteps = repository.hiddenCards.first()
-        assertFalse(withoutSteps.contains("Steps"))
+        assertFalse(withoutSteps.contains("steps"))
+    }
+
+    @Test
+    fun togglingLegacyAliasNormalizesToCanonicalId() = runTest(testDispatcher) {
+        repository.toggleCard("Heart rate")
+        val withHeart = repository.hiddenCards.first()
+        assertTrue(withHeart.contains("heart_rate"))
+
+        // Toggling with canonical ID removes it
+        repository.toggleCard("heart_rate")
+        val withoutHeart = repository.hiddenCards.first()
+        assertFalse(withoutHeart.contains("heart_rate"))
     }
 
     @Test
