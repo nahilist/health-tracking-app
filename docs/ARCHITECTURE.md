@@ -39,6 +39,7 @@ flowchart TD
 | Health integration | `data/HealthConnectRepository.kt` | Availability, permissions, period aggregations and writes |
 | Authentication | `data/SupabaseAuthRepository.kt` | Supabase auth client with EncryptedSharedPreferences (Keystore) |
 | Sync Engine | `data/sync/SupabaseSyncRepository.kt` | Two-way idempotent Room outbox sync and WorkManager scheduling |
+| Notifications | `notifications/` | Opt-in local reminders, quiet hours, actionable quick-add receiver and WorkManager scheduler |
 | Database | `data/local/` | Room database, entities and DAOs |
 
 ### Current limitations

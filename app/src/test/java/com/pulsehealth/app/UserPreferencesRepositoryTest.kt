@@ -69,4 +69,21 @@ class UserPreferencesRepositoryTest {
         repository.clearAllPreferences()
         assertFalse(repository.onboardingCompleted.first())
     }
+
+    @Test
+    fun reminderPreferencesCanBeUpdatedAndPersisted() = runTest(testDispatcher) {
+        assertFalse(repository.remindersEnabled.first())
+        assertEquals(2, repository.reminderIntervalHours.first())
+        assertEquals(22, repository.quietHoursStartHour.first())
+        assertEquals(8, repository.quietHoursEndHour.first())
+
+        repository.setRemindersEnabled(true)
+        repository.setReminderIntervalHours(3)
+        repository.setQuietHours(23, 7)
+
+        assertTrue(repository.remindersEnabled.first())
+        assertEquals(3, repository.reminderIntervalHours.first())
+        assertEquals(23, repository.quietHoursStartHour.first())
+        assertEquals(7, repository.quietHoursEndHour.first())
+    }
 }

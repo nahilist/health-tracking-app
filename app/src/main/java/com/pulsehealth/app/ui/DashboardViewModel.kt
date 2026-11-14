@@ -1,5 +1,6 @@
 package com.pulsehealth.app.ui
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -25,10 +26,15 @@ import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.sync.NoOpSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
 import com.pulsehealth.app.data.sync.SyncResult
+import com.pulsehealth.app.notifications.NoOpReminderScheduler
+import com.pulsehealth.app.notifications.NotificationHelper
+import com.pulsehealth.app.notifications.ReminderScheduler
+import com.pulsehealth.app.notifications.ReminderSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,7 +45,8 @@ class DashboardViewModel(
     private val preferencesRepository: PreferencesRepository,
     val healthRepository: HealthConnectRepository,
     val authRepository: AuthRepository = NoOpAuthRepository(),
-    val syncRepository: SyncRepository = NoOpSyncRepository()
+    val syncRepository: SyncRepository = NoOpSyncRepository(),
+    val reminderScheduler: ReminderScheduler = NoOpReminderScheduler()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -109,13 +116,30 @@ class DashboardViewModel(
         val currentUser: AuthUser? = null,
         val isCloudSyncing: Boolean = false,
         val lastCloudSyncedEpochMillis: Long? = null,
-        val cloudSyncError: String? = null
+        val cloudSyncError: String? = null,
+        val reminderSettings: ReminderSettings = ReminderSettings()
     )
 
     private val appFlagsFlow = combine(
         preferencesRepository.onboardingCompleted,
         isDemoModeFlow
     ) { onboarding, isDemo -> onboarding to isDemo }
+
+    private val reminderSettingsFlow = combine(
+        preferencesRepository.remindersEnabled,
+        preferencesRepository.reminderIntervalHours,
+        preferencesRepository.quietHoursStartHour,
+        preferencesRepository.quietHoursEndHour
+    ) { enabled, interval, quietStart, quietEnd ->
+        ReminderSettings(enabled, interval, quietStart, quietEnd)
+    }
+
+    private val appAndReminderFlow = combine(
+        appFlagsFlow,
+        reminderSettingsFlow
+    ) { (onboarding, isDemo), reminders ->
+        Triple(onboarding, isDemo, reminders)
+    }
 
     private val accountAndCloudFlow = combine(
         authRepository.authState,
@@ -131,9 +155,9 @@ class DashboardViewModel(
         preferencesRepository.hiddenCards,
         preferencesRepository.waterGoalLiters,
         preferencesRepository.syncWaterToHealthConnect,
-        appFlagsFlow,
+        appAndReminderFlow,
         accountAndCloudFlow
-    ) { hidden, goal, syncWater, (onboarding, isDemo), account ->
+    ) { hidden, goal, syncWater, (onboarding, isDemo, reminders), account ->
         PreferencesState(
             hiddenCards = hidden,
             waterGoalLiters = goal,
@@ -144,7 +168,8 @@ class DashboardViewModel(
             currentUser = account.currentUser,
             isCloudSyncing = account.isCloudSyncing,
             lastCloudSyncedEpochMillis = account.lastCloudSyncedEpochMillis,
-            cloudSyncError = account.cloudSyncError
+            cloudSyncError = account.cloudSyncError,
+            reminderSettings = reminders
         )
     }
 
@@ -191,7 +216,11 @@ class DashboardViewModel(
             currentUser = pref.currentUser,
             isCloudSyncing = pref.isCloudSyncing,
             lastCloudSyncedEpochMillis = pref.lastCloudSyncedEpochMillis,
-            cloudSyncError = pref.cloudSyncError
+            cloudSyncError = pref.cloudSyncError,
+            remindersEnabled = pref.reminderSettings.enabled,
+            reminderIntervalHours = pref.reminderSettings.intervalHours,
+            quietHoursStartHour = pref.reminderSettings.quietHoursStartHour,
+            quietHoursEndHour = pref.reminderSettings.quietHoursEndHour
         )
     }.stateIn(
         viewModelScope,
@@ -356,6 +385,33 @@ class DashboardViewModel(
         onComplete()
     }
 
+    fun setRemindersEnabled(enabled: Boolean) = viewModelScope.launch {
+        preferencesRepository.setRemindersEnabled(enabled)
+        if (enabled) {
+            val interval = preferencesRepository.reminderIntervalHours.first()
+            reminderScheduler.scheduleReminders(interval)
+        } else {
+            reminderScheduler.cancelReminders()
+        }
+    }
+
+    fun setReminderIntervalHours(hours: Int) = viewModelScope.launch {
+        preferencesRepository.setReminderIntervalHours(hours)
+        if (uiState.value.remindersEnabled) {
+            reminderScheduler.scheduleReminders(hours)
+        }
+    }
+
+    fun setQuietHours(startHour: Int, endHour: Int) = viewModelScope.launch {
+        preferencesRepository.setQuietHours(startHour, endHour)
+    }
+
+    fun sendTestReminder(context: Context) = viewModelScope.launch {
+        val todayWater = hydrationRepository.todayWaterLiters.first()
+        val goal = preferencesRepository.waterGoalLiters.first()
+        NotificationHelper.showHydrationReminder(context, todayWater, goal)
+    }
+
     companion object {
         const val KEY_SELECTED_RANGE = "selected_range"
         const val KEY_IS_DEMO_MODE = "is_demo_mode"
@@ -370,7 +426,8 @@ class DashboardViewModel(
                     preferencesRepository = app.container.preferencesRepository,
                     healthRepository = app.container.healthConnectRepository,
                     authRepository = app.container.authRepository,
-                    syncRepository = app.container.syncRepository
+                    syncRepository = app.container.syncRepository,
+                    reminderScheduler = app.container.reminderScheduler
                 )
             }
         }

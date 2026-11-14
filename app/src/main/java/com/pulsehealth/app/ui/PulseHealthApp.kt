@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +63,7 @@ fun PulseHealthApp(
     navController: NavHostController = rememberNavController(),
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val todayHydration by viewModel.todayHydrationEntries.collectAsStateWithLifecycle()
     val weeklyWater by viewModel.weeklyWaterLiters.collectAsStateWithLifecycle()
@@ -203,7 +205,11 @@ fun PulseHealthApp(
                         },
                         onSyncCloud = {
                             viewModel.syncCloud()
-                        }
+                        },
+                        onToggleReminders = viewModel::setRemindersEnabled,
+                        onSetReminderInterval = viewModel::setReminderIntervalHours,
+                        onSetQuietHours = viewModel::setQuietHours,
+                        onSendTestReminder = { viewModel.sendTestReminder(context) }
                     )
                 }
             }
