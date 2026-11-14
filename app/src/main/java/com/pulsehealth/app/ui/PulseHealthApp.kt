@@ -43,6 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pulsehealth.app.data.AuthResult
 import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.EmptyStateScreen
 import com.pulsehealth.app.ui.detail.DetailScreen
@@ -177,6 +178,28 @@ fun PulseHealthApp(
                         },
                         onDeleteAllData = {
                             viewModel.deleteAllLocalData()
+                        },
+                        onSignIn = { email, password, onError ->
+                            viewModel.signInWithEmail(email, password) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> onError("")
+                                    is AuthResult.Error -> onError(result.message)
+                                }
+                            }
+                        },
+                        onSignUp = { email, password, onError ->
+                            viewModel.signUpWithEmail(email, password) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> onError("")
+                                    is AuthResult.Error -> onError(result.message)
+                                }
+                            }
+                        },
+                        onSignInAsGuest = {
+                            viewModel.signInAsGuest()
+                        },
+                        onSignOut = {
+                            viewModel.signOut()
                         }
                     )
                 }

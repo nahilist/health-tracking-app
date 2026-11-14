@@ -9,6 +9,11 @@ Naming:
 0002-dependency-injection.md
 ```
 
+## Recorded ADRs
+
+- [0001: Manual Dependency Injection via AppContainer](0001-dependency-injection.md) (Accepted)
+- [0002: Supabase as Authentication and Backend Provider for Hybrid Sync](0002-auth-and-backend-provider.md) (Accepted)
+
 Template:
 
 ```markdown

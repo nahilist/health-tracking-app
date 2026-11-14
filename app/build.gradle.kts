@@ -1,6 +1,9 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("androidx.room")
     id("jacoco")
@@ -33,6 +36,23 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        val localProps = Properties()
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            localPropsFile.inputStream().use { stream ->
+                localProps.load(stream)
+            }
+        }
+        val supabaseUrl = providers.environmentVariable("SUPABASE_URL")
+            .orElse(providers.gradleProperty("supabase.url"))
+            .getOrElse(localProps.getProperty("supabase.url", "https://nomvvyfcmcoitjtswlgy.supabase.co"))
+        val supabaseKey = providers.environmentVariable("SUPABASE_KEY")
+            .orElse(providers.gradleProperty("supabase.key"))
+            .getOrElse(localProps.getProperty("supabase.key", "sb_publishable_5WybkEPBGc5nhjOIPVu11g_PHVNAiTz"))
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
 
     buildTypes {
@@ -53,12 +73,13 @@ android {
     }
 
     lint {
-        xmlReport = true
-        htmlReport = true
         abortOnError = false
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     packaging.resources.excludes += setOf(
         "/META-INF/{AL2.0,LGPL2.1}",
@@ -134,6 +155,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.datastore:datastore-preferences:1.2.0")
+    implementation("androidx.security:security-crypto:1.0.0")
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.1.1"))
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.ktor:ktor-client-android:3.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")

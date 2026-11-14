@@ -50,20 +50,27 @@ Each item below should normally be one focused pull request. Do not begin a depe
 - [x] Optionally write manual hydration after explicit permission.
 - [x] Handle revoked and update-required states.
 
-### PR 6: onboarding and privacy controls
+### PR 6: onboarding and privacy controls (Completed)
 
-- Local-only onboarding.
-- Permission rationale.
-- Local data export/delete.
-- Privacy/about screen.
+- [x] Local-only onboarding.
+- [x] Permission rationale.
+- [x] Local data export/delete.
+- [x] Privacy/about screen.
 
 Phase gate: a user can install the app, understand data origin, use it fully offline and delete local data.
 
 ## 4. Phase 2: authentication and backend
 
-### ADR: provider and hosting selection
+### ADR: provider and hosting selection (Completed)
 
-Compare managed Firebase/Supabase options with a custom API based on authorization, relational needs, data residency, cost, lock-in and operations. Do not implement multiple providers speculatively.
+- [x] Compare managed Firebase/Supabase options with a custom API. (Completed in [ADR 0002](adr/0002-auth-and-backend-provider.md)).
+
+### Android authentication foundation PR (In Progress / Completed)
+
+- [x] Sign-in/sign-up UI and local-only choice
+- [x] Provider integration behind `AuthRepository`
+- [x] Secure session storage and refresh
+- [x] Sign-out/session-expiry behavior
 
 ### Backend foundation PRs
 
@@ -71,13 +78,6 @@ Compare managed Firebase/Supabase options with a custom API based on authorizati
 - Database migrations and row-level authorization
 - API error/idempotency conventions
 - Health checks, logging and rate limiting
-
-### Android authentication PRs
-
-- Sign-in/sign-up UI and local-only choice
-- Provider integration behind `AuthRepository`
-- Secure session storage and refresh
-- Sign-out/session-expiry behavior
 
 ### Sync PRs
 
