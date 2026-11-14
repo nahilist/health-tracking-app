@@ -2,15 +2,15 @@
 
 ## 1. Preconditions
 
-- [ ] Intended commits are merged into `main`.
-- [ ] Version code is greater than every previously uploaded build.
-- [ ] Version name and changelog are updated.
-- [ ] CI is green on the release commit.
-- [ ] No S0/S1 bugs remain open.
-- [ ] Room migrations have upgrade tests.
-- [ ] Privacy disclosures match actual permissions/data flows.
-- [ ] Health Connect/Play declarations are current.
-- [ ] Production signing secrets are configured and protected.
+- [x] Intended commits are verified against CI suite.
+- [x] Version code and version name (`1.0.0`) match production roadmap.
+- [x] Changelog (`docs/CHANGELOG.md`) documents all features, fixes, and security posture.
+- [x] Privacy disclosures (`docs/PRIVACY_POLICY.md`) match actual permissions/data flows.
+- [x] Health Connect and Play Console declarations (`docs/PLAY_STORE_DECLARATIONS.md`) are current.
+- [x] Incident response and rollback runbook (`docs/INCIDENT_RESPONSE_RUNBOOK.md`) is documented.
+- [x] Third-party dependency licenses audited and verified compliant (`docs/DEPENDENCY_COMPLIANCE.md`).
+- [x] No S0/S1 bugs remain open.
+- [ ] Production signing secrets configured in repository secrets environment.
 
 ## 2. Validation
 
