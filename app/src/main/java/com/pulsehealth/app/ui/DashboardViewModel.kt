@@ -19,6 +19,7 @@ import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectAvailability
 import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
+import com.pulsehealth.app.data.HydrationTrends
 import com.pulsehealth.app.data.NoOpAuthRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
@@ -173,13 +174,24 @@ class DashboardViewModel(
         )
     }
 
+    private val hydrationFlow = combine(
+        hydrationRepository.todayWaterLiters,
+        hydrationRepository.observePastDaysEntries(30)
+    ) { todayWater, pastEntries ->
+        todayWater to pastEntries
+    }
+
     val uiState: StateFlow<DashboardUiState> = combine(
         syncStateFlow,
-        hydrationRepository.todayWaterLiters,
+        hydrationFlow,
         selectedRangeFlow,
         preferencesFlow
-    ) { sync, water, rangeName, pref ->
+    ) { sync, (water, pastEntries), rangeName, pref ->
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
+        val (streakInfo, weeklyProgress) = HydrationTrends.calculateStreaksAndProgress(
+            entries = pastEntries,
+            goalLiters = pref.waterGoalLiters
+        )
         val effectiveMetrics = if (pref.isDemoMode) {
             DashboardMetrics.demo().copy(
                 waterLiters = if (water > 0.0) water else 1.5,
@@ -220,7 +232,9 @@ class DashboardViewModel(
             remindersEnabled = pref.reminderSettings.enabled,
             reminderIntervalHours = pref.reminderSettings.intervalHours,
             quietHoursStartHour = pref.reminderSettings.quietHoursStartHour,
-            quietHoursEndHour = pref.reminderSettings.quietHoursEndHour
+            quietHoursEndHour = pref.reminderSettings.quietHoursEndHour,
+            streakInfo = streakInfo,
+            weeklyHydrationProgress = weeklyProgress
         )
     }.stateIn(
         viewModelScope,

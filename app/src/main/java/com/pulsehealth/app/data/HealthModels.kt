@@ -1,6 +1,7 @@
 package com.pulsehealth.app.data
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -64,6 +65,27 @@ data class DashboardMetrics(
     }
 }
 
+data class DailyHydrationProgress(
+    val date: LocalDate,
+    val dayLabel: String,
+    val waterLiters: Double,
+    val goalLiters: Double,
+    val isToday: Boolean = false
+) {
+    val progressRatio: Float
+        get() = if (goalLiters > 0.0) (waterLiters / goalLiters).coerceIn(0.0, 1.5).toFloat() else 0f
+
+    val isGoalAchieved: Boolean
+        get() = waterLiters >= goalLiters && goalLiters > 0.0
+}
+
+data class HydrationStreakInfo(
+    val currentStreakDays: Int = 0,
+    val bestStreakDays: Int = 0,
+    val daysMetThisWeek: Int = 0,
+    val isGoalMetToday: Boolean = false
+)
+
 data class DashboardUiState(
     val metrics: DashboardMetrics = DashboardMetrics(),
     val selectedRange: TimeRange = TimeRange.TODAY,
@@ -86,7 +108,9 @@ data class DashboardUiState(
     val remindersEnabled: Boolean = false,
     val reminderIntervalHours: Int = 2,
     val quietHoursStartHour: Int = 22,
-    val quietHoursEndHour: Int = 8
+    val quietHoursEndHour: Int = 8,
+    val streakInfo: HydrationStreakInfo = HydrationStreakInfo(),
+    val weeklyHydrationProgress: List<DailyHydrationProgress> = emptyList()
 ) {
     val healthConnectAvailable: Boolean
         get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE
