@@ -91,15 +91,37 @@ class SupabaseAuthRepository(
         }
     }
 
-    override suspend fun signInWithEmail(email: String, password: String): AuthResult = withContext(ioDispatcher) {
+    private fun validateCredentials(email: String, password: String): String? {
         val trimmedEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            return@withContext AuthResult.Error("Please enter a valid email address.")
+            return "Please enter a valid email address."
         }
         if (password.length < 6) {
-            return@withContext AuthResult.Error("Password must be at least 6 characters.")
+            return "Password must be at least 6 characters."
         }
+        return null
+    }
 
+    private fun handleSuccessfulAuth(email: String, remoteUserId: String? = null): AuthResult.Success {
+        val trimmedEmail = email.trim()
+        val userId = remoteUserId ?: UUID.nameUUIDFromBytes(trimmedEmail.toByteArray()).toString()
+        val user = AuthUser(
+            id = userId,
+            email = trimmedEmail,
+            displayName = trimmedEmail.substringBefore("@"),
+            isAnonymous = false
+        )
+        persistSession(MODE_AUTHENTICATED, user)
+        _currentUser.value = user
+        _authState.value = AuthState.Authenticated(user)
+        return AuthResult.Success(user)
+    }
+
+    override suspend fun signInWithEmail(email: String, password: String): AuthResult = withContext(ioDispatcher) {
+        val validationError = validateCredentials(email, password)
+        if (validationError != null) return@withContext AuthResult.Error(validationError)
+
+        val trimmedEmail = email.trim()
         val client = supabaseClient
         if (client != null) {
             try {
@@ -108,44 +130,20 @@ class SupabaseAuthRepository(
                     this.password = password
                 }
                 val remoteUser = client.auth.currentUserOrNull()
-                val userId = remoteUser?.id ?: UUID.randomUUID().toString()
-                val user = AuthUser(
-                    id = userId,
-                    email = trimmedEmail,
-                    displayName = trimmedEmail.substringBefore("@"),
-                    isAnonymous = false
-                )
-                persistSession(MODE_AUTHENTICATED, user)
-                _currentUser.value = user
-                _authState.value = AuthState.Authenticated(user)
-                AuthResult.Success(user)
+                handleSuccessfulAuth(trimmedEmail, remoteUser?.id)
             } catch (e: Exception) {
                 AuthResult.Error(e.message ?: "Authentication failed. Please check your credentials.", e)
             }
         } else {
-            // Local sandbox fallback when running offline or without remote credentials
-            val user = AuthUser(
-                id = UUID.nameUUIDFromBytes(trimmedEmail.toByteArray()).toString(),
-                email = trimmedEmail,
-                displayName = trimmedEmail.substringBefore("@"),
-                isAnonymous = false
-            )
-            persistSession(MODE_AUTHENTICATED, user)
-            _currentUser.value = user
-            _authState.value = AuthState.Authenticated(user)
-            AuthResult.Success(user)
+            handleSuccessfulAuth(trimmedEmail)
         }
     }
 
     override suspend fun signUpWithEmail(email: String, password: String): AuthResult = withContext(ioDispatcher) {
-        val trimmedEmail = email.trim()
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmedEmail).matches()) {
-            return@withContext AuthResult.Error("Please enter a valid email address.")
-        }
-        if (password.length < 6) {
-            return@withContext AuthResult.Error("Password must be at least 6 characters.")
-        }
+        val validationError = validateCredentials(email, password)
+        if (validationError != null) return@withContext AuthResult.Error(validationError)
 
+        val trimmedEmail = email.trim()
         val client = supabaseClient
         if (client != null) {
             try {
@@ -154,32 +152,12 @@ class SupabaseAuthRepository(
                     this.password = password
                 }
                 val remoteUser = client.auth.currentUserOrNull()
-                val userId = remoteUser?.id ?: UUID.randomUUID().toString()
-                val user = AuthUser(
-                    id = userId,
-                    email = trimmedEmail,
-                    displayName = trimmedEmail.substringBefore("@"),
-                    isAnonymous = false
-                )
-                persistSession(MODE_AUTHENTICATED, user)
-                _currentUser.value = user
-                _authState.value = AuthState.Authenticated(user)
-                AuthResult.Success(user)
+                handleSuccessfulAuth(trimmedEmail, remoteUser?.id)
             } catch (e: Exception) {
                 AuthResult.Error(e.message ?: "Registration failed. Please check your details.", e)
             }
         } else {
-            // Local sandbox fallback when running offline or without remote credentials
-            val user = AuthUser(
-                id = UUID.nameUUIDFromBytes(trimmedEmail.toByteArray()).toString(),
-                email = trimmedEmail,
-                displayName = trimmedEmail.substringBefore("@"),
-                isAnonymous = false
-            )
-            persistSession(MODE_AUTHENTICATED, user)
-            _currentUser.value = user
-            _authState.value = AuthState.Authenticated(user)
-            AuthResult.Success(user)
+            handleSuccessfulAuth(trimmedEmail)
         }
     }
 
