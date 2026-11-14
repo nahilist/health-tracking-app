@@ -78,7 +78,8 @@ fun ProfileScreen(
     onSignIn: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onSignUp: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onSignInAsGuest: () -> Unit = {},
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    onSyncCloud: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showRationaleDialog by remember { mutableStateOf(false) }
@@ -124,20 +125,50 @@ fun ProfileScreen(
                     if (user != null && !user.isAnonymous) {
                         Text("Signed in as ${user.email ?: user.displayName ?: "User"}", color = ExerciseGreen, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Text("Connected to Supabase PostgreSQL", color = Muted, fontSize = 11.sp)
+                        val freshness = state.cloudFreshnessLabel
+                        if (freshness != null) {
+                            Text("Last synced: $freshness", color = Muted, fontSize = 11.sp)
+                        }
                     } else {
                         Text("Local guest mode (Offline only)", color = WarmOrange, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Text("Sign in to back up and sync records across devices", color = Muted, fontSize = 11.sp)
                     }
                 }
+                if (state.isCloudSyncing) {
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                }
+            }
+            if (state.cloudSyncError != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = state.cloudSyncError,
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp
+                )
             }
             Spacer(Modifier.height(12.dp))
             val user = state.currentUser
             if (user != null && !user.isAnonymous) {
-                OutlinedButton(
-                    onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Sign Out")
+                    Button(
+                        onClick = onSyncCloud,
+                        enabled = !state.isCloudSyncing,
+                        colors = ButtonDefaults.buttonColors(containerColor = PulsePink),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (state.isCloudSyncing) "Syncing..." else "Sync Now")
+                    }
+                    OutlinedButton(
+                        onClick = onSignOut,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Sign Out")
+                    }
                 }
             } else {
                 Button(

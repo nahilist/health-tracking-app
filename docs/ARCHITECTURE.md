@@ -14,23 +14,31 @@ flowchart TD
     VM --> PREF[UserPreferencesRepository]
     VM --> LOCAL[HealthDataRepository]
     VM --> HC[HealthConnectRepository]
+    VM --> AUTH[SupabaseAuthRepository]
+    VM --> SYNC[SupabaseSyncRepository]
     PREF --> DS[Preferences DataStore]
     LOCAL --> DAO[Room DAOs]
     DAO --> DB[(pulse_health.db)]
     HC --> PLATFORM[Android Health Connect]
+    AUTH --> SUPA[(Supabase Cloud Auth)]
+    SYNC --> WM[WorkManager Engine]
+    SYNC --> POSTGRES[(Supabase PostgreSQL)]
+    SYNC --> DAO
 ```
 
 ### Current layers
 
 | Layer | Location | Responsibility |
 |---|---|---|
-| Application | `PulseHealthApplication.kt` | Application process entry point; currently no container setup |
+| Application | `PulseHealthApplication.kt` & `di/AppContainer.kt` | Application process entry point and dependency container |
 | Activity | `MainActivity.kt` | Edge-to-edge Compose host |
-| Presentation | `ui/` | Composables, theme and `DashboardViewModel` |
+| Presentation | `ui/` | Composables, modular components, theme and `DashboardViewModel` |
 | Domain models | `data/HealthModels.kt` | Dashboard state, time range and metric values |
 | Local repository | `data/HealthDataRepository.kt` | Hydration validation and day-boundary logic |
-| Preferences | `data/UserPreferencesRepository.kt` | Hidden favorite-card IDs |
-| Health integration | `data/HealthConnectRepository.kt` | Availability, permissions and reads |
+| Preferences | `data/UserPreferencesRepository.kt` | Hidden favorite-card IDs and water goals |
+| Health integration | `data/HealthConnectRepository.kt` | Availability, permissions, period aggregations and writes |
+| Authentication | `data/SupabaseAuthRepository.kt` | Supabase auth client with EncryptedSharedPreferences (Keystore) |
+| Sync Engine | `data/sync/SupabaseSyncRepository.kt` | Two-way idempotent Room outbox sync and WorkManager scheduling |
 | Database | `data/local/` | Room database, entities and DAOs |
 
 ### Current limitations

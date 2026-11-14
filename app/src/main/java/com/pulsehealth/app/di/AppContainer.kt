@@ -10,6 +10,8 @@ import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.SupabaseAuthRepository
 import com.pulsehealth.app.data.UserPreferencesRepository
 import com.pulsehealth.app.data.local.PulseDatabase
+import com.pulsehealth.app.data.sync.SupabaseSyncRepository
+import com.pulsehealth.app.data.sync.SyncRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import java.time.Clock
@@ -20,6 +22,7 @@ interface AppContainer {
     val preferencesRepository: PreferencesRepository
     val healthConnectRepository: HealthConnectRepository
     val authRepository: AuthRepository
+    val syncRepository: SyncRepository
     val clock: Clock
     val zoneId: ZoneId
     val ioDispatcher: CoroutineDispatcher
@@ -39,6 +42,18 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
             context = applicationContext,
             supabaseUrl = com.pulsehealth.app.BuildConfig.SUPABASE_URL,
             supabaseKey = com.pulsehealth.app.BuildConfig.SUPABASE_KEY,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val syncRepository: SyncRepository by lazy {
+        SupabaseSyncRepository(
+            context = applicationContext,
+            hydrationDao = database.hydrationDao(),
+            authRepository = authRepository,
+            supabaseClientProvider = {
+                (authRepository as? SupabaseAuthRepository)?.client
+            },
             ioDispatcher = ioDispatcher
         )
     }

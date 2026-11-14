@@ -546,4 +546,40 @@ class DashboardViewModelTest {
         assertEquals(com.pulsehealth.app.data.AuthState.Unauthenticated, viewModel.uiState.value.authState)
         assertNull(viewModel.uiState.value.currentUser)
     }
+
+    @Test
+    fun syncCloudInvokesSyncRepository() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        val prefRepo = FakePreferencesRepository()
+        val healthRepo = FakeHealthConnectRepository()
+        var syncInvoked = false
+        val syncRepo = object : com.pulsehealth.app.data.sync.SyncRepository {
+            override val isSyncing = MutableStateFlow(false)
+            override val lastSyncedEpochMillis = MutableStateFlow<Long?>(null)
+            override val lastSyncError = MutableStateFlow<String?>(null)
+            override suspend fun sync(): com.pulsehealth.app.data.sync.SyncResult {
+                syncInvoked = true
+                return com.pulsehealth.app.data.sync.SyncResult.Success(1, 1)
+            }
+            override fun schedulePeriodicSync() {}
+            override fun triggerImmediateSync() {}
+        }
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = hydrationRepo,
+            preferencesRepository = prefRepo,
+            healthRepository = healthRepo,
+            syncRepository = syncRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.syncCloud()
+        advanceUntilIdle()
+
+        assertTrue(syncInvoked)
+    }
 }

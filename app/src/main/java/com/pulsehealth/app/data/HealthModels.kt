@@ -79,7 +79,10 @@ data class DashboardUiState(
     val isDemoMode: Boolean = false,
     val lastSyncedEpochMillis: Long? = null,
     val authState: AuthState = AuthState.Loading,
-    val currentUser: AuthUser? = null
+    val currentUser: AuthUser? = null,
+    val isCloudSyncing: Boolean = false,
+    val lastCloudSyncedEpochMillis: Long? = null,
+    val cloudSyncError: String? = null
 ) {
     val healthConnectAvailable: Boolean
         get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE
@@ -92,6 +95,12 @@ data class DashboardUiState(
     val freshnessLabel: String?
         get() {
             val millis = lastSyncedEpochMillis ?: metrics.lastUpdatedEpochMillis ?: return null
+            return formatFreshness(millis)
+        }
+
+    val cloudFreshnessLabel: String?
+        get() {
+            val millis = lastCloudSyncedEpochMillis ?: return null
             return formatFreshness(millis)
         }
 

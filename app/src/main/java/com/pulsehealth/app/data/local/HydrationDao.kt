@@ -12,6 +12,15 @@ interface HydrationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: HydrationEntryEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entries: List<HydrationEntryEntity>)
+
+    @Query("SELECT * FROM hydration_entries WHERE syncState = :syncState")
+    suspend fun getEntriesBySyncState(syncState: String): List<HydrationEntryEntity>
+
+    @Query("UPDATE hydration_entries SET syncState = :syncState WHERE id = :id")
+    suspend fun updateSyncState(id: String, syncState: String): Int
+
     @Delete
     suspend fun delete(entry: HydrationEntryEntity)
 
