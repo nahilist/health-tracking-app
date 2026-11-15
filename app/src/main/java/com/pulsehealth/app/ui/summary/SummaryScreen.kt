@@ -41,7 +41,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +80,7 @@ fun SummaryScreen(
     state: DashboardUiState,
     contentPadding: PaddingValues,
     onRange: (TimeRange) -> Unit,
-    onWater: () -> Unit,
+    onWater: (Int) -> Unit = {},
     onEdit: () -> Unit,
     onProfile: () -> Unit,
     onDetail: (String) -> Unit,
@@ -85,6 +88,7 @@ fun SummaryScreen(
     onRetry: () -> Unit,
     onDismissError: () -> Unit
 ) {
+    var showHydrationLogger by remember { mutableStateOf(false) }
     val locale = LocalLocale.current.platformLocale
     val sourceLabel = when (state.metrics.source) {
         DataSource.HEALTH_CONNECT -> "Health Connect"
@@ -204,7 +208,11 @@ fun SummaryScreen(
                                             FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
                                             FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
                                             FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                            FavoriteCardId.WATER -> WaterCard(state.metrics, onWater) { onDetail(card.metricRegistryId) }
+                                            FavoriteCardId.WATER -> WaterCard(
+                                                metrics = state.metrics,
+                                                onAdd = { showHydrationLogger = true },
+                                                onClick = { onDetail(card.metricRegistryId) }
+                                            )
                                         }
                                     }
                                 }
@@ -222,6 +230,17 @@ fun SummaryScreen(
                 item { WeeklyHydrationTrendCard(state) }
             }
         }
+    }
+
+    if (showHydrationLogger) {
+        LogHydrationBottomSheet(
+            currentWaterLiters = state.metrics.waterLiters,
+            waterGoalLiters = state.metrics.waterGoalLiters,
+            onLogWater = { amountMl ->
+                onWater(amountMl)
+            },
+            onDismiss = { showHydrationLogger = false }
+        )
     }
 }
 

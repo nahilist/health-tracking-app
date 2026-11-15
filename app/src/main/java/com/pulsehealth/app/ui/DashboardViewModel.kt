@@ -114,9 +114,16 @@ class DashboardViewModel(
         val cloudSyncError: String? = null
     )
 
+    private data class GoalsState(
+        val waterGoalLiters: Double = 2.0,
+        val stepGoal: Long = 10_000L,
+        val calorieGoal: Long = 500L,
+        val sleepGoalMinutes: Long = 480L
+    )
+
     private data class PreferencesState(
         val hiddenCards: Set<String>,
-        val waterGoalLiters: Double,
+        val goals: GoalsState = GoalsState(),
         val syncWaterToHealthConnect: Boolean,
         val onboardingCompleted: Boolean,
         val isDemoMode: Boolean,
@@ -127,6 +134,15 @@ class DashboardViewModel(
         val cloudSyncError: String? = null,
         val reminderSettings: ReminderSettings = ReminderSettings()
     )
+
+    private val goalsFlow = combine(
+        preferencesRepository.waterGoalLiters,
+        preferencesRepository.stepGoal,
+        preferencesRepository.calorieGoal,
+        preferencesRepository.sleepGoalMinutes
+    ) { water, steps, calories, sleep ->
+        GoalsState(water, steps, calories, sleep)
+    }
 
     private val appFlagsFlow = combine(
         preferencesRepository.onboardingCompleted,
@@ -161,14 +177,14 @@ class DashboardViewModel(
 
     private val preferencesFlow = combine(
         preferencesRepository.hiddenCards,
-        preferencesRepository.waterGoalLiters,
+        goalsFlow,
         preferencesRepository.syncWaterToHealthConnect,
         appAndReminderFlow,
         accountAndCloudFlow
-    ) { hidden, goal, syncWater, (onboarding, isDemo, reminders), account ->
+    ) { hidden, goals, syncWater, (onboarding, isDemo, reminders), account ->
         PreferencesState(
             hiddenCards = hidden,
-            waterGoalLiters = goal,
+            goals = goals,
             syncWaterToHealthConnect = syncWater,
             onboardingCompleted = onboarding,
             isDemoMode = isDemo,
@@ -198,12 +214,14 @@ class DashboardViewModel(
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
         val (streakInfo, weeklyProgress) = HydrationTrends.calculateStreaksAndProgress(
             entries = pastEntries,
-            goalLiters = pref.waterGoalLiters
+            goalLiters = pref.goals.waterGoalLiters
         )
         val effectiveMetrics = if (pref.isDemoMode) {
             DashboardMetrics.demo().copy(
                 waterLiters = if (water > 0.0) water else 1.5,
-                waterGoalLiters = pref.waterGoalLiters
+                waterGoalLiters = pref.goals.waterGoalLiters,
+                stepGoal = pref.goals.stepGoal,
+                calorieGoal = pref.goals.calorieGoal
             )
         } else {
             val source = if (sync.metrics.source == DataSource.NONE && water > 0.0) {
@@ -213,7 +231,9 @@ class DashboardViewModel(
             }
             sync.metrics.copy(
                 waterLiters = water,
-                waterGoalLiters = pref.waterGoalLiters,
+                waterGoalLiters = pref.goals.waterGoalLiters,
+                stepGoal = pref.goals.stepGoal,
+                calorieGoal = pref.goals.calorieGoal,
                 source = source
             )
         }
@@ -291,6 +311,18 @@ class DashboardViewModel(
 
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
+    }
+
+    fun setStepGoal(steps: Long) = viewModelScope.launch {
+        preferencesRepository.setStepGoal(steps)
+    }
+
+    fun setCalorieGoal(calories: Long) = viewModelScope.launch {
+        preferencesRepository.setCalorieGoal(calories)
+    }
+
+    fun setSleepGoalMinutes(minutes: Long) = viewModelScope.launch {
+        preferencesRepository.setSleepGoalMinutes(minutes)
     }
 
     fun setOnboardingCompleted(completed: Boolean) = viewModelScope.launch {
