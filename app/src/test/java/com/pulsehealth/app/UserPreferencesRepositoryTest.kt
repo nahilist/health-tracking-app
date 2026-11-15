@@ -66,6 +66,25 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun settingStepGoalPersistsNewValue() = runTest(testDispatcher) {
+        assertEquals(10_000L, repository.stepGoal.first())
+        repository.setStepGoal(12_500L)
+        assertEquals(12_500L, repository.stepGoal.first())
+    }
+
+    @Test
+    fun settingCalorieAndSleepGoalsPersistsNewValues() = runTest(testDispatcher) {
+        assertEquals(500L, repository.calorieGoal.first())
+        assertEquals(480L, repository.sleepGoalMinutes.first())
+
+        repository.setCalorieGoal(650L)
+        repository.setSleepGoalMinutes(510L)
+
+        assertEquals(650L, repository.calorieGoal.first())
+        assertEquals(510L, repository.sleepGoalMinutes.first())
+    }
+
+    @Test
     fun togglingSyncWaterToHealthConnectUpdatesState() = runTest(testDispatcher) {
         assertFalse(repository.syncWaterToHealthConnect.first())
         repository.setSyncWaterToHealthConnect(true)

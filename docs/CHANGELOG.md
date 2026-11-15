@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Customizable Daily Wellness Goals & Versatile Hydration Logging**:
+  - **Dynamic Goal Customization** (`GoalSettingsDialog.kt`):
+    - Configurable daily targets persisted in Jetpack DataStore: Water Goal (1.0L–5.0L), Step Goal (2,000–25,000 steps), Active Calories Goal (100–1,500 kcal), and Sleep Goal (5h–11h).
+    - Quick-reset to recommended baseline defaults and instant reactive propagation to dashboard activity rings, cards, and streak calculation engines.
+    - Integrated direct access tile in `PreferencesSectionScreen.kt` with live target summaries.
+  - **Versatile Hydration Logging Bottom Sheet** (`LogHydrationBottomSheet.kt`):
+    - Replaced hardcoded single-increment logging with an executive modal bottom sheet.
+    - Quick-select beverage presets: `☕ 150 mL (Cup)`, `🥛 250 mL (Glass)`, `🍶 500 mL (Bottle)`, and `🥤 750 mL (Flask)`.
+    - Stepper increments (+/- 50 mL) and manual custom numeric entry validated between 1 and 5,000 mL according to PRD requirements.
+    - Real-time projected daily hydration percentage preview and 48dp minimum accessible touch targets.
 - **Dedicated Modular Profile & Settings Architecture**:
   - Re-architected Profile & Settings into an executive, modular multi-screen experience with distinct, dedicated destinations for each domain:
     - **Account & Cloud Sync** (`AccountSectionScreen.kt`): User identity, sync freshness, Supabase PostgreSQL RLS security badge, instantaneous manual sync trigger, and secure auth actions.

@@ -1,6 +1,7 @@
 package com.pulsehealth.app.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Tune
@@ -29,6 +32,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -39,13 +46,17 @@ import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.WarmOrange
+import java.util.Locale
 
 @Composable
 fun PreferencesSectionScreen(
     state: DashboardUiState,
     onBack: () -> Unit,
-    onToggleDemo: () -> Unit
+    onToggleDemo: () -> Unit,
+    onSaveGoals: (waterLiters: Double, steps: Long, calories: Long, sleepMinutes: Long) -> Unit = { _, _, _, _ -> }
 ) {
+    var showGoalEditor by remember { mutableStateOf(false) }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -60,6 +71,49 @@ fun PreferencesSectionScreen(
             subtitle = "Preview simulator and application specifications",
             onBack = onBack
         )
+
+        // Personal Wellness Targets Card
+        HealthCard(Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showGoalEditor = true },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = PulsePink.copy(alpha = 0.12f),
+                    modifier = Modifier.size(54.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Flag,
+                            contentDescription = null,
+                            tint = PulsePink,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column(Modifier.weight(1f)) {
+                    Text("Daily Wellness Targets", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "Water: ${String.format(Locale.getDefault(), "%.1f", state.metrics.waterGoalLiters)}L • Steps: ${String.format(Locale.getDefault(), "%,d", state.metrics.stepGoal)}",
+                        fontSize = 12.sp,
+                        color = Muted
+                    )
+                }
+
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = "Edit personal goals",
+                    tint = Muted
+                )
+            }
+        }
 
         // Sandbox Simulator Card
         HealthCard(Modifier.fillMaxWidth()) {
@@ -150,6 +204,17 @@ fun PreferencesSectionScreen(
                     }
                 }
             }
+        }
+
+        if (showGoalEditor) {
+            GoalSettingsDialog(
+                initialWaterGoalLiters = state.metrics.waterGoalLiters,
+                initialStepGoal = state.metrics.stepGoal,
+                initialCalorieGoal = state.metrics.calorieGoal,
+                initialSleepGoalMinutes = 480L,
+                onSaveGoals = onSaveGoals,
+                onDismiss = { showGoalEditor = false }
+            )
         }
     }
 }

@@ -229,7 +229,13 @@ fun PulseHealthApp(
                         onToggleReminders = viewModel::setRemindersEnabled,
                         onSetReminderInterval = viewModel::setReminderIntervalHours,
                         onSetQuietHours = viewModel::setQuietHours,
-                        onSendTestReminder = { viewModel.sendTestReminder(context) }
+                        onSendTestReminder = { viewModel.sendTestReminder(context) },
+                        onSaveGoals = { water, steps, calories, sleep ->
+                            viewModel.setWaterGoal(water)
+                            viewModel.setStepGoal(steps)
+                            viewModel.setCalorieGoal(calories)
+                            viewModel.setSleepGoalMinutes(sleep)
+                        }
                     )
                 }
             }

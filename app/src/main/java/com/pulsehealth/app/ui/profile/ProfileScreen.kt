@@ -81,7 +81,8 @@ fun ProfileScreen(
     onToggleReminders: (Boolean) -> Unit = {},
     onSetReminderInterval: (Int) -> Unit = {},
     onSetQuietHours: (startHour: Int, endHour: Int) -> Unit = { _, _ -> },
-    onSendTestReminder: () -> Unit = {}
+    onSendTestReminder: () -> Unit = {},
+    onSaveGoals: (waterLiters: Double, steps: Long, calories: Long, sleepMinutes: Long) -> Unit = { _, _, _, _ -> }
 ) {
     var selectedSection by remember { mutableStateOf<ProfileSection?>(null) }
     var showRationaleDialog by remember { mutableStateOf(false) }
@@ -138,7 +139,8 @@ fun ProfileScreen(
                 PreferencesSectionScreen(
                     state = state,
                     onBack = { selectedSection = null },
-                    onToggleDemo = onToggleDemo
+                    onToggleDemo = onToggleDemo,
+                    onSaveGoals = onSaveGoals
                 )
             }
             null -> {

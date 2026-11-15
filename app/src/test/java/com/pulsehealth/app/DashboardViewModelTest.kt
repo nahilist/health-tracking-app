@@ -112,6 +112,15 @@ class DashboardViewModelTest {
         private val _goal = MutableStateFlow(initialGoal)
         override val waterGoalLiters: Flow<Double> = _goal.asStateFlow()
 
+        private val _stepGoal = MutableStateFlow(10_000L)
+        override val stepGoal: Flow<Long> = _stepGoal.asStateFlow()
+
+        private val _calorieGoal = MutableStateFlow(500L)
+        override val calorieGoal: Flow<Long> = _calorieGoal.asStateFlow()
+
+        private val _sleepGoalMinutes = MutableStateFlow(480L)
+        override val sleepGoalMinutes: Flow<Long> = _sleepGoalMinutes.asStateFlow()
+
         private val _syncWater = MutableStateFlow(initialSyncWater)
         override val syncWaterToHealthConnect: Flow<Boolean> = _syncWater.asStateFlow()
 
@@ -138,6 +147,18 @@ class DashboardViewModelTest {
 
         override suspend fun setWaterGoalLiters(goalLiters: Double) {
             _goal.value = goalLiters
+        }
+
+        override suspend fun setStepGoal(steps: Long) {
+            _stepGoal.value = steps
+        }
+
+        override suspend fun setCalorieGoal(calories: Long) {
+            _calorieGoal.value = calories
+        }
+
+        override suspend fun setSleepGoalMinutes(minutes: Long) {
+            _sleepGoalMinutes.value = minutes
         }
 
         override suspend fun setSyncWaterToHealthConnect(enabled: Boolean) {

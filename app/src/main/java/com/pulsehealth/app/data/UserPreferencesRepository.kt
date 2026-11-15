@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineDispatcher
@@ -23,6 +24,9 @@ class UserPreferencesRepository(
     private object Keys {
         val hiddenCards = stringSetPreferencesKey("hidden_cards")
         val waterGoalLiters = doublePreferencesKey("water_goal_liters")
+        val stepGoal = longPreferencesKey("step_goal")
+        val calorieGoal = longPreferencesKey("calorie_goal")
+        val sleepGoalMinutes = longPreferencesKey("sleep_goal_minutes")
         val syncWaterToHealthConnect = booleanPreferencesKey("sync_water_to_health_connect")
         val onboardingCompleted = booleanPreferencesKey("onboarding_completed")
         val remindersEnabled = booleanPreferencesKey("reminders_enabled")
@@ -39,6 +43,15 @@ class UserPreferencesRepository(
 
     override val waterGoalLiters: Flow<Double> =
         context.userDataStore.data.map { it[Keys.waterGoalLiters] ?: 2.0 }
+
+    override val stepGoal: Flow<Long> =
+        context.userDataStore.data.map { it[Keys.stepGoal] ?: 10_000L }
+
+    override val calorieGoal: Flow<Long> =
+        context.userDataStore.data.map { it[Keys.calorieGoal] ?: 500L }
+
+    override val sleepGoalMinutes: Flow<Long> =
+        context.userDataStore.data.map { it[Keys.sleepGoalMinutes] ?: 480L }
 
     override val syncWaterToHealthConnect: Flow<Boolean> =
         context.userDataStore.data.map { it[Keys.syncWaterToHealthConnect] ?: false }
@@ -73,6 +86,27 @@ class UserPreferencesRepository(
         require(goalLiters in 0.5..10.0) { "Water goal must be between 0.5 and 10.0 liters" }
         context.userDataStore.edit { preferences ->
             preferences[Keys.waterGoalLiters] = goalLiters
+        }
+    }
+
+    override suspend fun setStepGoal(steps: Long): Unit = withContext(ioDispatcher) {
+        require(steps in 1_000L..100_000L) { "Step goal must be between 1,000 and 100,000 steps" }
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.stepGoal] = steps
+        }
+    }
+
+    override suspend fun setCalorieGoal(calories: Long): Unit = withContext(ioDispatcher) {
+        require(calories in 50L..10_000L) { "Calorie goal must be between 50 and 10,000 kcal" }
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.calorieGoal] = calories
+        }
+    }
+
+    override suspend fun setSleepGoalMinutes(minutes: Long): Unit = withContext(ioDispatcher) {
+        require(minutes in 60L..1_440L) { "Sleep goal must be between 60 and 1,440 minutes" }
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.sleepGoalMinutes] = minutes
         }
     }
 
