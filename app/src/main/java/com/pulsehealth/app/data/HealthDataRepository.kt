@@ -1,11 +1,13 @@
 package com.pulsehealth.app.data
 
 import com.pulsehealth.app.data.local.DailyHealthSummaryDao
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationDao
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.Clock
@@ -19,7 +21,7 @@ class HealthDataRepository(
     private val clock: Clock = Clock.systemDefaultZone(),
     private val zoneId: ZoneId = ZoneId.systemDefault(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : HydrationRepository {
+) : HydrationRepository, DailySummaryRepository {
 
     override val todayWaterLiters: Flow<Double>
         get() {
@@ -134,6 +136,32 @@ class HealthDataRepository(
         }
     }
 
+    override fun observeDailySummary(epochDay: Long): Flow<DailyHealthSummaryEntity?> =
+        dailyHealthSummaryDao?.observeByDay(epochDay) ?: flowOf(null)
+
+    override fun observeSummaryRange(startEpochDay: Long, endEpochDay: Long): Flow<List<DailyHealthSummaryEntity>> =
+        dailyHealthSummaryDao?.observeRange(startEpochDay, endEpochDay) ?: flowOf(emptyList())
+
+    override suspend fun getSummary(epochDay: Long): DailyHealthSummaryEntity? = withContext(ioDispatcher) {
+        dailyHealthSummaryDao?.getByDay(epochDay)
+    }
+
+    override suspend fun saveDailySummary(summary: DailyHealthSummaryEntity) = withContext(ioDispatcher) {
+        dailyHealthSummaryDao?.upsert(summary) ?: Unit
+    }
+
+    override suspend fun saveDailySummaries(summaries: List<DailyHealthSummaryEntity>) = withContext(ioDispatcher) {
+        dailyHealthSummaryDao?.upsertAll(summaries) ?: Unit
+    }
+
+    override suspend fun getAllSummaries(): List<DailyHealthSummaryEntity> = withContext(ioDispatcher) {
+        dailyHealthSummaryDao?.getAllSummaries() ?: emptyList()
+    }
+
+    override suspend fun deleteAllSummaries(): Int = withContext(ioDispatcher) {
+        dailyHealthSummaryDao?.deleteAll() ?: 0
+    }
+
     private fun todayBounds(): Pair<Long, Long> {
         val today = Instant.ofEpochMilli(clock.millis()).atZone(zoneId).toLocalDate()
         val start = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
@@ -148,5 +176,36 @@ class HealthDataRepository(
         return start to end
     }
 }
+
+fun DailyHealthSummaryEntity.toDashboardMetrics(
+    waterLiters: Double = 0.0,
+    waterGoalLiters: Double = 2.0
+): DashboardMetrics = DashboardMetrics(
+    steps = steps,
+    heartRate = restingHeartRate,
+    sleepMinutes = sleepMinutes,
+    waterLiters = waterLiters,
+    waterGoalLiters = waterGoalLiters,
+    activeCalories = activeCalories,
+    exerciseMinutes = exerciseMinutes,
+    standHours = standHours,
+    source = DataSource.entries.firstOrNull { it.label == source } ?: DataSource.HEALTH_CONNECT,
+    lastUpdatedEpochMillis = updatedAtEpochMillis
+)
+
+fun DashboardMetrics.toDailyHealthSummary(
+    epochDay: Long,
+    sourceLabel: String = source.label
+): DailyHealthSummaryEntity = DailyHealthSummaryEntity(
+    epochDay = epochDay,
+    steps = steps ?: 0L,
+    restingHeartRate = heartRate,
+    sleepMinutes = sleepMinutes ?: 0L,
+    activeCalories = activeCalories ?: 0L,
+    exerciseMinutes = exerciseMinutes ?: 0L,
+    standHours = standHours ?: 0L,
+    source = sourceLabel,
+    updatedAtEpochMillis = lastUpdatedEpochMillis ?: System.currentTimeMillis()
+)
 
 typealias DefaultHydrationRepository = HealthDataRepository

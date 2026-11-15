@@ -13,6 +13,7 @@ import com.pulsehealth.app.data.AuthRepository
 import com.pulsehealth.app.data.AuthResult
 import com.pulsehealth.app.data.AuthState
 import com.pulsehealth.app.data.AuthUser
+import com.pulsehealth.app.data.DailySummaryRepository
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
@@ -22,6 +23,7 @@ import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.HydrationTrends
 import com.pulsehealth.app.data.NoOpAuthRepository
+import com.pulsehealth.app.data.NoOpDailySummaryRepository
 import com.pulsehealth.app.data.NoOpSharingRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.ShareDuration
@@ -29,7 +31,10 @@ import com.pulsehealth.app.data.ShareRelationship
 import com.pulsehealth.app.data.SharingRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.TrustedContact
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
+import com.pulsehealth.app.data.toDailyHealthSummary
+import com.pulsehealth.app.data.toDashboardMetrics
 import com.pulsehealth.app.data.sync.NoOpSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
 import com.pulsehealth.app.data.sync.SyncResult
@@ -54,7 +59,8 @@ class DashboardViewModel(
     val authRepository: AuthRepository = NoOpAuthRepository(),
     val syncRepository: SyncRepository = NoOpSyncRepository(),
     val reminderScheduler: ReminderScheduler = NoOpReminderScheduler(),
-    val sharingRepository: SharingRepository = NoOpSharingRepository()
+    val sharingRepository: SharingRepository = NoOpSharingRepository(),
+    val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -74,6 +80,12 @@ class DashboardViewModel(
     val weeklyWaterLiters: StateFlow<Double> =
         hydrationRepository.weeklyWaterLiters
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0.0)
+
+    val pastDailySummaries: StateFlow<List<DailyHealthSummaryEntity>> =
+        dailySummaryRepository.observeSummaryRange(
+            startEpochDay = java.time.LocalDate.now().minusDays(29).toEpochDay(),
+            endEpochDay = java.time.LocalDate.now().toEpochDay()
+        ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
     val lastCloudSyncedEpochMillis: StateFlow<Long?> = syncRepository.lastSyncedEpochMillis
@@ -335,6 +347,7 @@ class DashboardViewModel(
 
     fun deleteAllLocalData(onDeleted: () -> Unit = {}) = viewModelScope.launch {
         hydrationRepository.clearAllData()
+        dailySummaryRepository.deleteAllSummaries()
         preferencesRepository.clearAllPreferences()
         syncStateFlow.update {
             it.copy(
@@ -371,6 +384,22 @@ class DashboardViewModel(
         val availability = healthRepository.getAvailability()
         val readGranted = runCatching { healthRepository.hasPermissions() }.getOrDefault(false)
         val writeGranted = runCatching { healthRepository.hasWriteHydrationPermission() }.getOrDefault(false)
+
+        // Instant local cache load from Room for immediate UI availability
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        val cached = dailySummaryRepository.getSummary(todayEpochDay)
+        if (cached != null && syncStateFlow.value.metrics.steps == null) {
+            syncStateFlow.update {
+                it.copy(
+                    metrics = cached.toDashboardMetrics(
+                        waterLiters = it.metrics.waterLiters,
+                        waterGoalLiters = it.metrics.waterGoalLiters
+                    ),
+                    lastSyncedEpochMillis = cached.updatedAtEpochMillis
+                )
+            }
+        }
+
         syncStateFlow.update {
             it.copy(
                 healthConnectAvailability = availability,
@@ -384,6 +413,22 @@ class DashboardViewModel(
 
     fun sync() = viewModelScope.launch {
         val current = syncStateFlow.value
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+
+        // 1. Instant cache load if currently empty
+        val cached = dailySummaryRepository.getSummary(todayEpochDay)
+        if (cached != null && current.metrics.steps == null) {
+            syncStateFlow.update {
+                it.copy(
+                    metrics = cached.toDashboardMetrics(
+                        waterLiters = current.metrics.waterLiters,
+                        waterGoalLiters = current.metrics.waterGoalLiters
+                    ),
+                    lastSyncedEpochMillis = cached.updatedAtEpochMillis
+                )
+            }
+        }
+
         if (!current.hasHealthPermissions) return@launch
         syncStateFlow.update { it.copy(isSyncing = true, errorMessage = null) }
         val range = runCatching { TimeRange.valueOf(selectedRangeFlow.value) }.getOrDefault(TimeRange.TODAY)
@@ -394,6 +439,16 @@ class DashboardViewModel(
                         metrics = metrics,
                         isSyncing = false,
                         lastSyncedEpochMillis = System.currentTimeMillis()
+                    )
+                }
+
+                // 2. Persist normalized daily summary rollup into Room cache
+                if (metrics.steps != null || metrics.heartRate != null || metrics.sleepMinutes != null) {
+                    dailySummaryRepository.saveDailySummary(
+                        metrics.toDailyHealthSummary(
+                            epochDay = todayEpochDay,
+                            sourceLabel = metrics.source.label
+                        )
                     )
                 }
             }
@@ -529,7 +584,8 @@ class DashboardViewModel(
                     authRepository = app.container.authRepository,
                     syncRepository = app.container.syncRepository,
                     reminderScheduler = app.container.reminderScheduler,
-                    sharingRepository = app.container.sharingRepository
+                    sharingRepository = app.container.sharingRepository,
+                    dailySummaryRepository = app.container.dailySummaryRepository
                 )
             }
         }

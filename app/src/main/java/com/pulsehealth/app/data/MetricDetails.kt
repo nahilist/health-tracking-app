@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.SleepPurple
@@ -237,44 +238,91 @@ object MetricRegistry {
         metrics: DashboardMetrics,
         range: TimeRange,
         weeklyHydration: List<DailyHydrationProgress>,
-        locale: Locale = Locale.getDefault()
+        locale: Locale = Locale.getDefault(),
+        dailySummaries: List<DailyHealthSummaryEntity> = emptyList()
     ): MetricSummaryStats {
         val days = range.days.coerceAtLeast(1L)
         return when (normalizeId(id)) {
             "Steps" -> {
-                val current = metrics.steps ?: 0L
-                val avg = current / days
-                val high = (current * 1.15).toLong()
-                val low = (current * 0.72).toLong()
-                MetricSummaryStats(
-                    averageLabel = "${String.format(locale, "%,d", avg)} / day",
-                    totalLabel = "${String.format(locale, "%,d", current)} steps",
-                    highLabel = "${String.format(locale, "%,d", high)} steps",
-                    lowLabel = "${String.format(locale, "%,d", low)} steps",
-                    completionRateLabel = "${((current.toDouble() / metrics.stepGoal.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
-                )
+                if (dailySummaries.isNotEmpty()) {
+                    val count = dailySummaries.size.coerceAtLeast(1)
+                    val total = dailySummaries.sumOf { it.steps }
+                    val avg = total / count
+                    val high = dailySummaries.maxOf { it.steps }
+                    val low = dailySummaries.minOf { it.steps }
+                    val metCount = dailySummaries.count { it.steps >= metrics.stepGoal }
+                    MetricSummaryStats(
+                        averageLabel = "${String.format(locale, "%,d", avg)} / day",
+                        totalLabel = "${String.format(locale, "%,d", total)} steps",
+                        highLabel = "${String.format(locale, "%,d", high)} steps",
+                        lowLabel = "${String.format(locale, "%,d", low)} steps",
+                        completionRateLabel = "$metCount/$count days achieved"
+                    )
+                } else {
+                    val current = metrics.steps ?: 0L
+                    val avg = current / days
+                    val high = (current * 1.15).toLong()
+                    val low = (current * 0.72).toLong()
+                    MetricSummaryStats(
+                        averageLabel = "${String.format(locale, "%,d", avg)} / day",
+                        totalLabel = "${String.format(locale, "%,d", current)} steps",
+                        highLabel = "${String.format(locale, "%,d", high)} steps",
+                        lowLabel = "${String.format(locale, "%,d", low)} steps",
+                        completionRateLabel = "${((current.toDouble() / metrics.stepGoal.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
+                    )
+                }
             }
             "Active calories" -> {
-                val current = metrics.activeCalories ?: 0L
-                val avg = current / days
-                MetricSummaryStats(
-                    averageLabel = "${String.format(locale, "%,d", avg)} kcal / day",
-                    totalLabel = "${String.format(locale, "%,d", current)} kcal",
-                    highLabel = "${(current * 1.2).toLong()} kcal",
-                    lowLabel = "${(current * 0.65).toLong()} kcal",
-                    completionRateLabel = "${((current.toDouble() / metrics.calorieGoal.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
-                )
+                if (dailySummaries.isNotEmpty()) {
+                    val count = dailySummaries.size.coerceAtLeast(1)
+                    val total = dailySummaries.sumOf { it.activeCalories }
+                    val avg = total / count
+                    val high = dailySummaries.maxOf { it.activeCalories }
+                    val low = dailySummaries.minOf { it.activeCalories }
+                    MetricSummaryStats(
+                        averageLabel = "${String.format(locale, "%,d", avg)} kcal / day",
+                        totalLabel = "${String.format(locale, "%,d", total)} kcal",
+                        highLabel = "$high kcal",
+                        lowLabel = "$low kcal",
+                        completionRateLabel = "${((avg.toDouble() / metrics.calorieGoal.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
+                    )
+                } else {
+                    val current = metrics.activeCalories ?: 0L
+                    val avg = current / days
+                    MetricSummaryStats(
+                        averageLabel = "${String.format(locale, "%,d", avg)} kcal / day",
+                        totalLabel = "${String.format(locale, "%,d", current)} kcal",
+                        highLabel = "${(current * 1.2).toLong()} kcal",
+                        lowLabel = "${(current * 0.65).toLong()} kcal",
+                        completionRateLabel = "${((current.toDouble() / metrics.calorieGoal.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
+                    )
+                }
             }
             "Exercise" -> {
-                val current = metrics.exerciseMinutes ?: 0L
-                val avg = current / days
-                MetricSummaryStats(
-                    averageLabel = "$avg min / day",
-                    totalLabel = "$current min",
-                    highLabel = "${(current * 1.3).toLong()} min",
-                    lowLabel = "${(current * 0.5).toLong()} min",
-                    completionRateLabel = "${((current.toDouble() / metrics.exerciseGoalMinutes.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
-                )
+                if (dailySummaries.isNotEmpty()) {
+                    val count = dailySummaries.size.coerceAtLeast(1)
+                    val total = dailySummaries.sumOf { it.exerciseMinutes }
+                    val avg = total / count
+                    val high = dailySummaries.maxOf { it.exerciseMinutes }
+                    val low = dailySummaries.minOf { it.exerciseMinutes }
+                    MetricSummaryStats(
+                        averageLabel = "$avg min / day",
+                        totalLabel = "$total min",
+                        highLabel = "$high min",
+                        lowLabel = "$low min",
+                        completionRateLabel = "${((avg.toDouble() / metrics.exerciseGoalMinutes.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
+                    )
+                } else {
+                    val current = metrics.exerciseMinutes ?: 0L
+                    val avg = current / days
+                    MetricSummaryStats(
+                        averageLabel = "$avg min / day",
+                        totalLabel = "$current min",
+                        highLabel = "${(current * 1.3).toLong()} min",
+                        lowLabel = "${(current * 0.5).toLong()} min",
+                        completionRateLabel = "${((current.toDouble() / metrics.exerciseGoalMinutes.coerceAtLeast(1)) * 100).toInt().coerceIn(0, 100)}% of goal"
+                    )
+                }
             }
             "Stand" -> {
                 val current = metrics.standHours ?: 0L
@@ -287,25 +335,53 @@ object MetricRegistry {
                 )
             }
             "Heart rate" -> {
-                val hr = metrics.heartRate ?: 0L
-                MetricSummaryStats(
-                    averageLabel = if (hr > 0) "$hr bpm avg" else "—",
-                    highLabel = if (hr > 0) "${hr + 8} bpm" else "—",
-                    lowLabel = if (hr > 0) "${(hr - 6).coerceAtLeast(40)} bpm" else "—",
-                    completionRateLabel = if (hr in 60..100) "Normal resting range" else "Monitored"
-                )
+                val nonZeroHr = dailySummaries.mapNotNull { it.restingHeartRate }.filter { it > 0 }
+                if (nonZeroHr.isNotEmpty()) {
+                    val avg = nonZeroHr.average().toLong()
+                    val high = nonZeroHr.maxOrNull() ?: avg
+                    val low = nonZeroHr.minOrNull() ?: avg
+                    MetricSummaryStats(
+                        averageLabel = "$avg bpm avg",
+                        highLabel = "$high bpm",
+                        lowLabel = "$low bpm",
+                        completionRateLabel = if (avg in 60..100) "Normal resting range" else "Monitored"
+                    )
+                } else {
+                    val hr = metrics.heartRate ?: 0L
+                    MetricSummaryStats(
+                        averageLabel = if (hr > 0) "$hr bpm avg" else "—",
+                        highLabel = if (hr > 0) "${hr + 8} bpm" else "—",
+                        lowLabel = if (hr > 0) "${(hr - 6).coerceAtLeast(40)} bpm" else "—",
+                        completionRateLabel = if (hr in 60..100) "Normal resting range" else "Monitored"
+                    )
+                }
             }
             "Sleep" -> {
-                val sleep = metrics.sleepMinutes ?: 0L
-                val hours = sleep / 60
-                val mins = sleep % 60
-                MetricSummaryStats(
-                    averageLabel = if (sleep > 0) "${hours}h ${mins}m / day" else "—",
-                    totalLabel = if (sleep > 0) "${sleep / 60} hr total" else "—",
-                    highLabel = if (sleep > 0) "${(sleep + 45) / 60}h ${(sleep + 45) % 60}m" else "—",
-                    lowLabel = if (sleep > 0) "${(sleep - 50).coerceAtLeast(0) / 60}h ${(sleep - 50).coerceAtLeast(0) % 60}m" else "—",
-                    completionRateLabel = if (hours in 7..9) "Optimal range (7–9h)" else "Target: 7–9h"
-                )
+                if (dailySummaries.isNotEmpty()) {
+                    val count = dailySummaries.size.coerceAtLeast(1)
+                    val totalMins = dailySummaries.sumOf { it.sleepMinutes }
+                    val avgMins = totalMins / count
+                    val highMins = dailySummaries.maxOf { it.sleepMinutes }
+                    val lowMins = dailySummaries.minOf { it.sleepMinutes }
+                    MetricSummaryStats(
+                        averageLabel = "${avgMins / 60}h ${avgMins % 60}m / day",
+                        totalLabel = "${totalMins / 60} hr total",
+                        highLabel = "${highMins / 60}h ${highMins % 60}m",
+                        lowLabel = "${lowMins / 60}h ${lowMins % 60}m",
+                        completionRateLabel = if (avgMins / 60 in 7..9) "Optimal average (7–9h)" else "Target: 7–9h"
+                    )
+                } else {
+                    val sleep = metrics.sleepMinutes ?: 0L
+                    val hours = sleep / 60
+                    val mins = sleep % 60
+                    MetricSummaryStats(
+                        averageLabel = if (sleep > 0) "${hours}h ${mins}m / day" else "—",
+                        totalLabel = if (sleep > 0) "${sleep / 60} hr total" else "—",
+                        highLabel = if (sleep > 0) "${(sleep + 45) / 60}h ${(sleep + 45) % 60}m" else "—",
+                        lowLabel = if (sleep > 0) "${(sleep - 50).coerceAtLeast(0) / 60}h ${(sleep - 50).coerceAtLeast(0) % 60}m" else "—",
+                        completionRateLabel = if (hours in 7..9) "Optimal range (7–9h)" else "Target: 7–9h"
+                    )
+                }
             }
             "Water" -> {
                 val totalLiters = weeklyHydration.sumOf { it.waterLiters }
@@ -335,7 +411,8 @@ object MetricRegistry {
     fun getTrendPoints(
         id: String,
         metrics: DashboardMetrics,
-        weeklyHydration: List<DailyHydrationProgress>
+        weeklyHydration: List<DailyHydrationProgress>,
+        dailySummaries: List<DailyHealthSummaryEntity> = emptyList()
     ): List<TrendPoint> {
         val daysLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -367,121 +444,217 @@ object MetricRegistry {
                 }
             }
             "Steps" -> {
-                val steps = metrics.steps
-                if (steps == null || steps == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val factors = listOf(0.72f, 0.88f, 0.65f, 0.95f, 0.82f, 1.05f, 1.0f)
-                    val goal = metrics.stepGoal.toFloat().coerceAtLeast(1f)
-                    daysLabels.mapIndexed { index, day ->
-                        val daySteps = (steps * factors[index]).toLong()
-                        val ratio = daySteps / goal
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val goal = metrics.stepGoal.toFloat().coerceAtLeast(1f)
+                        val ratio = s.steps.toFloat() / goal
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
+                            label = dayLabel,
                             value = ratio.coerceIn(0.08f, 1.3f),
-                            displayValue = "${(daySteps / 1000f).let { String.format(Locale.getDefault(), "%.1fk", it) }}",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = daySteps >= metrics.stepGoal
+                            displayValue = if (s.steps >= 1000) String.format(Locale.getDefault(), "%.1fk", s.steps / 1000f) else "${s.steps}",
+                            isHighlighted = isToday,
+                            isGoalMet = s.steps >= metrics.stepGoal
                         )
+                    }
+                } else {
+                    val steps = metrics.steps
+                    if (steps == null || steps == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val factors = listOf(0.72f, 0.88f, 0.65f, 0.95f, 0.82f, 1.05f, 1.0f)
+                        val goal = metrics.stepGoal.toFloat().coerceAtLeast(1f)
+                        daysLabels.mapIndexed { index, day ->
+                            val daySteps = (steps * factors[index]).toLong()
+                            val ratio = daySteps / goal
+                            TrendPoint(
+                                label = day,
+                                value = ratio.coerceIn(0.08f, 1.3f),
+                                displayValue = "${(daySteps / 1000f).let { String.format(Locale.getDefault(), "%.1fk", it) }}",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = daySteps >= metrics.stepGoal
+                            )
+                        }
                     }
                 }
             }
             "Active calories" -> {
-                val cal = metrics.activeCalories
-                if (cal == null || cal == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val factors = listOf(0.68f, 0.92f, 0.85f, 1.10f, 0.76f, 0.94f, 1.0f)
-                    val goal = metrics.calorieGoal.toFloat().coerceAtLeast(1f)
-                    daysLabels.mapIndexed { index, day ->
-                        val dayCal = (cal * factors[index]).toLong()
-                        val ratio = dayCal / goal
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val goal = metrics.calorieGoal.toFloat().coerceAtLeast(1f)
+                        val ratio = s.activeCalories.toFloat() / goal
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
+                            label = dayLabel,
                             value = ratio.coerceIn(0.08f, 1.3f),
-                            displayValue = "$dayCal",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = dayCal >= metrics.calorieGoal
+                            displayValue = "${s.activeCalories}",
+                            isHighlighted = isToday,
+                            isGoalMet = s.activeCalories >= metrics.calorieGoal
                         )
+                    }
+                } else {
+                    val cal = metrics.activeCalories
+                    if (cal == null || cal == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val factors = listOf(0.68f, 0.92f, 0.85f, 1.10f, 0.76f, 0.94f, 1.0f)
+                        val goal = metrics.calorieGoal.toFloat().coerceAtLeast(1f)
+                        daysLabels.mapIndexed { index, day ->
+                            val dayCal = (cal * factors[index]).toLong()
+                            val ratio = dayCal / goal
+                            TrendPoint(
+                                label = day,
+                                value = ratio.coerceIn(0.08f, 1.3f),
+                                displayValue = "$dayCal",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = dayCal >= metrics.calorieGoal
+                            )
+                        }
                     }
                 }
             }
             "Exercise" -> {
-                val ex = metrics.exerciseMinutes
-                if (ex == null || ex == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val factors = listOf(0.6f, 1.0f, 0.8f, 1.2f, 0.7f, 1.3f, 1.0f)
-                    val goal = metrics.exerciseGoalMinutes.toFloat().coerceAtLeast(1f)
-                    daysLabels.mapIndexed { index, day ->
-                        val dayEx = (ex * factors[index]).toLong()
-                        val ratio = dayEx / goal
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val goal = metrics.exerciseGoalMinutes.toFloat().coerceAtLeast(1f)
+                        val ratio = s.exerciseMinutes.toFloat() / goal
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
-                            value = ratio.coerceIn(0.08f, 1.4f),
-                            displayValue = "${dayEx}m",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = dayEx >= metrics.exerciseGoalMinutes
+                            label = dayLabel,
+                            value = ratio.coerceIn(0.08f, 1.3f),
+                            displayValue = "${s.exerciseMinutes}m",
+                            isHighlighted = isToday,
+                            isGoalMet = s.exerciseMinutes >= metrics.exerciseGoalMinutes
                         )
+                    }
+                } else {
+                    val ex = metrics.exerciseMinutes
+                    if (ex == null || ex == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val factors = listOf(0.6f, 1.0f, 0.8f, 1.2f, 0.7f, 1.3f, 1.0f)
+                        val goal = metrics.exerciseGoalMinutes.toFloat().coerceAtLeast(1f)
+                        daysLabels.mapIndexed { index, day ->
+                            val dayEx = (ex * factors[index]).toLong()
+                            val ratio = dayEx / goal
+                            TrendPoint(
+                                label = day,
+                                value = ratio.coerceIn(0.08f, 1.3f),
+                                displayValue = "${dayEx}m",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = dayEx >= metrics.exerciseGoalMinutes
+                            )
+                        }
                     }
                 }
             }
             "Stand" -> {
-                val st = metrics.standHours
-                if (st == null || st == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val factors = listOf(0.75f, 0.85f, 0.9f, 1.0f, 0.8f, 0.7f, 1.0f)
-                    val goal = metrics.standGoalHours.toFloat().coerceAtLeast(1f)
-                    daysLabels.mapIndexed { index, day ->
-                        val daySt = (st * factors[index]).toLong()
-                        val ratio = daySt / goal
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val goal = metrics.standGoalHours.toFloat().coerceAtLeast(1f)
+                        val ratio = s.standHours.toFloat() / goal
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
+                            label = dayLabel,
                             value = ratio.coerceIn(0.08f, 1.2f),
-                            displayValue = "${daySt}h",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = daySt >= metrics.standGoalHours
+                            displayValue = "${s.standHours}h",
+                            isHighlighted = isToday,
+                            isGoalMet = s.standHours >= metrics.standGoalHours
                         )
+                    }
+                } else {
+                    val st = metrics.standHours
+                    if (st == null || st == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val factors = listOf(0.75f, 0.85f, 0.9f, 1.0f, 0.8f, 0.7f, 1.0f)
+                        val goal = metrics.standGoalHours.toFloat().coerceAtLeast(1f)
+                        daysLabels.mapIndexed { index, day ->
+                            val daySt = (st * factors[index]).toLong()
+                            val ratio = daySt / goal
+                            TrendPoint(
+                                label = day,
+                                value = ratio.coerceIn(0.08f, 1.2f),
+                                displayValue = "${daySt}h",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = daySt >= metrics.standGoalHours
+                            )
+                        }
                     }
                 }
             }
             "Heart rate" -> {
-                val hr = metrics.heartRate
-                if (hr == null || hr == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val deltas = listOf(-2, 3, -1, 4, 1, -3, 0)
-                    daysLabels.mapIndexed { index, day ->
-                        val valHr = hr + deltas[index]
-                        val normalized = ((valHr - 50).toFloat() / 50f).coerceIn(0.1f, 1.0f)
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val hr = s.restingHeartRate ?: metrics.heartRate ?: 0L
+                        val normalized = ((hr - 50).toFloat() / 50f).coerceIn(0.1f, 1.0f)
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
+                            label = dayLabel,
                             value = normalized,
-                            displayValue = "$valHr",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = valHr in 60..100
+                            displayValue = if (hr > 0L) "$hr" else "—",
+                            isHighlighted = isToday,
+                            isGoalMet = hr in 60..100
                         )
+                    }
+                } else {
+                    val hr = metrics.heartRate
+                    if (hr == null || hr == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val deltas = listOf(-2, 3, -1, 4, 1, -3, 0)
+                        daysLabels.mapIndexed { index, day ->
+                            val valHr = hr + deltas[index]
+                            val normalized = ((valHr - 50).toFloat() / 50f).coerceIn(0.1f, 1.0f)
+                            TrendPoint(
+                                label = day,
+                                value = normalized,
+                                displayValue = "$valHr",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = valHr in 60..100
+                            )
+                        }
                     }
                 }
             }
             "Sleep" -> {
-                val sleep = metrics.sleepMinutes
-                if (sleep == null || sleep == 0L) {
-                    daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
-                } else {
-                    val factors = listOf(0.85f, 0.95f, 1.05f, 0.90f, 0.80f, 1.15f, 1.0f)
-                    val target = 480f // 8 hours in minutes
-                    daysLabels.mapIndexed { index, day ->
-                        val daySleep = (sleep * factors[index]).toLong()
-                        val ratio = daySleep / target
+                if (dailySummaries.isNotEmpty()) {
+                    dailySummaries.takeLast(7).map { s ->
+                        val dayLabel = java.time.LocalDate.ofEpochDay(s.epochDay).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
+                        val target = 480f // 8 hours in minutes
+                        val ratio = s.sleepMinutes.toFloat() / target
+                        val isToday = s.epochDay == java.time.LocalDate.now().toEpochDay()
                         TrendPoint(
-                            label = day,
+                            label = dayLabel,
                             value = ratio.coerceIn(0.08f, 1.2f),
-                            displayValue = "${daySleep / 60}h",
-                            isHighlighted = index == daysLabels.lastIndex,
-                            isGoalMet = daySleep >= 420 // >= 7 hours
+                            displayValue = "${s.sleepMinutes / 60}h",
+                            isHighlighted = isToday,
+                            isGoalMet = s.sleepMinutes >= 420 // >= 7 hours
                         )
+                    }
+                } else {
+                    val sleep = metrics.sleepMinutes
+                    if (sleep == null || sleep == 0L) {
+                        daysLabels.map { TrendPoint(it, 0.05f, "—", false, false) }
+                    } else {
+                        val factors = listOf(0.85f, 0.95f, 1.05f, 0.90f, 0.80f, 1.15f, 1.0f)
+                        val target = 480f // 8 hours in minutes
+                        daysLabels.mapIndexed { index, day ->
+                            val daySleep = (sleep * factors[index]).toLong()
+                            val ratio = daySleep / target
+                            TrendPoint(
+                                label = day,
+                                value = ratio.coerceIn(0.08f, 1.2f),
+                                displayValue = "${daySleep / 60}h",
+                                isHighlighted = index == daysLabels.lastIndex,
+                                isGoalMet = daySleep >= 420 // >= 7 hours
+                            )
+                        }
                     }
                 }
             }
