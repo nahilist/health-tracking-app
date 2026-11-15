@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Health Connect Daily Summary Normalization & Offline Room Caching**:
+  - **Offline-First Room Caching** (`DailyHealthSummaryDao.kt`, `DailySummaryRepository.kt`, `HealthDataRepository.kt`):
+    - Added dedicated DAO queries (`getByDay`, `upsertAll`, `observeRange`) to query and persist daily health metrics.
+    - Decoupled Room persistence via `DailySummaryRepository` interface and integrated into dependency injection (`AppContainer.kt`).
+    - Bidirectional data mapping (`toDashboardMetrics` and `toDailyHealthSummary`) allowing seamless transformation between domain UI models and Room SQLite persistence.
+  - **Instant UI Launch & Cold-Start Acceleration** (`DashboardViewModel.kt`):
+    - Pre-fetches today's cached summary from Room on cold start (<20ms response time), rendering real health metrics immediately without waiting on Health Connect aggregate queries.
+    - Automatically normalizes and upserts aggregate metrics into Room upon successful Health Connect reads.
+    - Complete local erasure support via `deleteAllLocalData()` wiping cached summaries alongside hydration records and DataStore preferences.
+  - **Historical Trend Charting with Real Aggregates** (`MetricDetails.kt`, `DetailScreen.kt`, `PulseHealthApp.kt`):
+    - Passed real 30-day historical summaries into `MetricRegistry.getSummaryStats` and `MetricRegistry.getTrendPoints`.
+    - Enables accurate high/low/average and weekly/monthly trend graphs for Steps, Resting Heart Rate, Active Calories, and Sleep Duration.
 - **Customizable Daily Wellness Goals & Versatile Hydration Logging**:
   - **Dynamic Goal Customization** (`GoalSettingsDialog.kt`):
     - Configurable daily targets persisted in Jetpack DataStore: Water Goal (1.0L–5.0L), Step Goal (2,000–25,000 steps), Active Calories Goal (100–1,500 kcal), and Sleep Goal (5h–11h).

@@ -11,8 +11,14 @@ interface DailyHealthSummaryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(summary: DailyHealthSummaryEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(summaries: List<DailyHealthSummaryEntity>)
+
     @Query("SELECT * FROM daily_health_summaries WHERE epochDay = :epochDay")
     fun observeByDay(epochDay: Long): Flow<DailyHealthSummaryEntity?>
+
+    @Query("SELECT * FROM daily_health_summaries WHERE epochDay = :epochDay")
+    suspend fun getByDay(epochDay: Long): DailyHealthSummaryEntity?
 
     @Query(
         """

@@ -61,6 +61,7 @@ import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.HydrationStreakInfo
 import com.pulsehealth.app.data.MetricRegistry
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
@@ -87,6 +88,7 @@ fun DetailScreen(
     weeklyHydrationProgress: List<DailyHydrationProgress> = emptyList(),
     todayHydrationEntries: List<HydrationEntryEntity> = emptyList(),
     weeklyWaterLiters: Double = 0.0,
+    dailySummaries: List<DailyHealthSummaryEntity> = emptyList(),
     onAddWater: (Int) -> Unit = {},
     onEditWater: (String, Int) -> Unit = { _, _ -> },
     onDeleteWater: (String) -> Unit = {},
@@ -110,11 +112,11 @@ fun DetailScreen(
     val progressRatio = remember(type, metrics) {
         MetricRegistry.getProgressRatio(type, metrics)
     }
-    val summaryStats = remember(type, metrics, selectedRange, weeklyHydrationProgress, locale) {
-        MetricRegistry.getSummaryStats(type, metrics, selectedRange, weeklyHydrationProgress, locale)
+    val summaryStats = remember(type, metrics, selectedRange, weeklyHydrationProgress, dailySummaries, locale) {
+        MetricRegistry.getSummaryStats(type, metrics, selectedRange, weeklyHydrationProgress, locale, dailySummaries)
     }
-    val trendPoints = remember(type, metrics, weeklyHydrationProgress) {
-        MetricRegistry.getTrendPoints(type, metrics, weeklyHydrationProgress)
+    val trendPoints = remember(type, metrics, weeklyHydrationProgress, dailySummaries) {
+        MetricRegistry.getTrendPoints(type, metrics, weeklyHydrationProgress, dailySummaries)
     }
 
     LazyColumn(

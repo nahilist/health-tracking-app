@@ -3,8 +3,13 @@ package com.pulsehealth.app
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.pulsehealth.app.data.DashboardMetrics
+import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthDataRepository
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.PulseDatabase
+import com.pulsehealth.app.data.toDailyHealthSummary
+import com.pulsehealth.app.data.toDashboardMetrics
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -36,6 +41,7 @@ class HealthDataRepositoryTest {
             .build()
         repository = HealthDataRepository(
             hydrationDao = database.hydrationDao(),
+            dailyHealthSummaryDao = database.dailyHealthSummaryDao(),
             clock = Clock.fixed(fixedInstant, ZoneId.of("UTC")),
             zoneId = ZoneId.of("UTC")
         )
@@ -147,5 +153,113 @@ class HealthDataRepositoryTest {
         assertTrue(json.contains("\"hydrationEntriesCount\": 2"))
         assertTrue(json.contains("\"amountMilliliters\": 250"))
         assertTrue(json.contains("\"amountMilliliters\": 500"))
+    }
+
+    @Test
+    fun dailySummaryPersistsAndCanBeRetrievedByEpochDay() = runTest {
+        val epochDay = 20770L
+        val summary = DailyHealthSummaryEntity(
+            epochDay = epochDay,
+            steps = 8450L,
+            restingHeartRate = 64,
+            sleepMinutes = 450L,
+            activeCalories = 420L,
+            exerciseMinutes = 35L,
+            standHours = 9L,
+            source = "Health Connect",
+            updatedAtEpochMillis = 1731500000000L
+        )
+
+        repository.saveDailySummary(summary)
+
+        val retrieved = repository.getSummary(epochDay)
+        assertTrue(retrieved != null)
+        assertEquals(8450L, retrieved?.steps)
+        assertEquals(64L, retrieved?.restingHeartRate)
+        assertEquals(450L, retrieved?.sleepMinutes)
+
+        val observed = repository.observeDailySummary(epochDay).first()
+        assertEquals(8450L, observed?.steps)
+    }
+
+    @Test
+    fun observeSummaryRangeReturnsRecordsWithinBounds() = runTest {
+        val s1 = DailyHealthSummaryEntity(
+            epochDay = 100L,
+            steps = 5000L,
+            restingHeartRate = 60,
+            sleepMinutes = 400L,
+            activeCalories = 300L,
+            exerciseMinutes = 20L,
+            standHours = 6L,
+            source = "Health Connect",
+            updatedAtEpochMillis = 1000L
+        )
+        val s2 = DailyHealthSummaryEntity(
+            epochDay = 101L,
+            steps = 7500L,
+            restingHeartRate = 62,
+            sleepMinutes = 420L,
+            activeCalories = 350L,
+            exerciseMinutes = 25L,
+            standHours = 7L,
+            source = "Health Connect",
+            updatedAtEpochMillis = 2000L
+        )
+        val s3 = DailyHealthSummaryEntity(
+            epochDay = 105L,
+            steps = 10000L,
+            restingHeartRate = 58,
+            sleepMinutes = 480L,
+            activeCalories = 500L,
+            exerciseMinutes = 45L,
+            standHours = 10L,
+            source = "Health Connect",
+            updatedAtEpochMillis = 3000L
+        )
+
+        repository.saveDailySummaries(listOf(s1, s2, s3))
+
+        val inRange = repository.observeSummaryRange(100L, 102L).first()
+        assertEquals(2, inRange.size)
+        assertEquals(100L, inRange[0].epochDay)
+        assertEquals(101L, inRange[1].epochDay)
+
+        val all = repository.getAllSummaries()
+        assertEquals(3, all.size)
+
+        val deletedCount = repository.deleteAllSummaries()
+        assertEquals(3, deletedCount)
+        assertEquals(0, repository.getAllSummaries().size)
+    }
+
+    @Test
+    fun toDashboardMetricsAndToDailyHealthSummaryConversion() {
+        val epochDay = 20000L
+        val originalMetrics = DashboardMetrics(
+            steps = 9500L,
+            heartRate = 65,
+            sleepMinutes = 460L,
+            activeCalories = 480L,
+            exerciseMinutes = 40L,
+            standHours = 8L,
+            source = DataSource.HEALTH_CONNECT,
+            lastUpdatedEpochMillis = 123456789L
+        )
+
+        val summary = originalMetrics.toDailyHealthSummary(epochDay)
+        assertEquals(epochDay, summary.epochDay)
+        assertEquals(9500L, summary.steps)
+        assertEquals(65L, summary.restingHeartRate)
+        assertEquals(460L, summary.sleepMinutes)
+        assertEquals("Health Connect", summary.source)
+
+        val convertedBack = summary.toDashboardMetrics(waterLiters = 1.75, waterGoalLiters = 2.5)
+        assertEquals(9500L, convertedBack.steps)
+        assertEquals(65L, convertedBack.heartRate)
+        assertEquals(460L, convertedBack.sleepMinutes)
+        assertEquals(1.75, convertedBack.waterLiters, 0.001)
+        assertEquals(2.5, convertedBack.waterGoalLiters, 0.001)
+        assertEquals(DataSource.HEALTH_CONNECT, convertedBack.source)
     }
 }

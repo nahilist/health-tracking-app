@@ -2,6 +2,7 @@ package com.pulsehealth.app
 
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.lifecycle.SavedStateHandle
+import com.pulsehealth.app.data.DailySummaryRepository
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.HealthConnectAvailability
@@ -9,6 +10,7 @@ import com.pulsehealth.app.data.HealthConnectRepository
 import com.pulsehealth.app.data.HydrationRepository
 import com.pulsehealth.app.data.PreferencesRepository
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.ui.DashboardViewModel
 import kotlinx.coroutines.Dispatchers
@@ -222,6 +224,38 @@ class DashboardViewModelTest {
         override suspend fun writeHydration(amountMilliliters: Int, recordedAtEpochMillis: Long): Boolean {
             writtenHydration.add(amountMilliliters to recordedAtEpochMillis)
             return true
+        }
+    }
+
+    private class FakeDailySummaryRepository : DailySummaryRepository {
+        private val summaries = mutableMapOf<Long, DailyHealthSummaryEntity>()
+        private val _flow = MutableStateFlow<List<DailyHealthSummaryEntity>>(emptyList())
+
+        override fun observeDailySummary(epochDay: Long): Flow<DailyHealthSummaryEntity?> =
+            MutableStateFlow(summaries[epochDay]).asStateFlow()
+
+        override fun observeSummaryRange(startEpochDay: Long, endEpochDay: Long): Flow<List<DailyHealthSummaryEntity>> =
+            _flow.asStateFlow()
+
+        override suspend fun getSummary(epochDay: Long): DailyHealthSummaryEntity? = summaries[epochDay]
+
+        override suspend fun saveDailySummary(summary: DailyHealthSummaryEntity) {
+            summaries[summary.epochDay] = summary
+            _flow.value = summaries.values.toList()
+        }
+
+        override suspend fun saveDailySummaries(summaries: List<DailyHealthSummaryEntity>) {
+            summaries.forEach { this.summaries[it.epochDay] = it }
+            _flow.value = this.summaries.values.toList()
+        }
+
+        override suspend fun getAllSummaries(): List<DailyHealthSummaryEntity> = summaries.values.toList()
+
+        override suspend fun deleteAllSummaries(): Int {
+            val count = summaries.size
+            summaries.clear()
+            _flow.value = emptyList()
+            return count
         }
     }
 
@@ -674,5 +708,105 @@ class DashboardViewModelTest {
 
         assertFalse(viewModel.uiState.value.remindersEnabled)
         assertTrue(reminderScheduler.isCancelled)
+    }
+
+    @Test
+    fun cachedDailySummaryLoadsImmediatelyIntoState() = runTest {
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        val dailyRepo = FakeDailySummaryRepository()
+        dailyRepo.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = todayEpochDay,
+                steps = 6_800L,
+                restingHeartRate = 62,
+                sleepMinutes = 440L,
+                activeCalories = 380L,
+                exerciseMinutes = 28L,
+                standHours = 9L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1731500000000L
+            )
+        )
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository(hasPermissions = false),
+            dailySummaryRepository = dailyRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(6_800L, state.metrics.steps)
+        assertEquals(62L, state.metrics.heartRate)
+        assertEquals(440L, state.metrics.sleepMinutes)
+    }
+
+    @Test
+    fun successfulHealthConnectSyncPersistsDailySummary() = runTest {
+        val dailyRepo = FakeDailySummaryRepository()
+        val healthRepo = FakeHealthConnectRepository(
+            hasPermissions = true
+        )
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = healthRepo,
+            dailySummaryRepository = dailyRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        val allSummaries = dailyRepo.getAllSummaries()
+        assertEquals(1, allSummaries.size)
+        assertEquals(5_000L, allSummaries.first().steps)
+    }
+
+    @Test
+    fun deleteAllLocalDataClearsDailySummaries() = runTest {
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        val dailyRepo = FakeDailySummaryRepository()
+        dailyRepo.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = todayEpochDay,
+                steps = 5_000L,
+                restingHeartRate = 60,
+                sleepMinutes = 400L,
+                activeCalories = 300L,
+                exerciseMinutes = 20L,
+                standHours = 6L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1000L
+            )
+        )
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository(),
+            dailySummaryRepository = dailyRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(1, dailyRepo.getAllSummaries().size)
+
+        var deletedCalled = false
+        viewModel.deleteAllLocalData { deletedCalled = true }
+        advanceUntilIdle()
+
+        assertTrue(deletedCalled)
+        assertEquals(0, dailyRepo.getAllSummaries().size)
     }
 }

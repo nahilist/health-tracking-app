@@ -2,6 +2,7 @@ package com.pulsehealth.app.di
 
 import android.content.Context
 import com.pulsehealth.app.data.AuthRepository
+import com.pulsehealth.app.data.DailySummaryRepository
 import com.pulsehealth.app.data.DataStoreSharingRepository
 import com.pulsehealth.app.data.DefaultHealthConnectRepository
 import com.pulsehealth.app.data.HealthConnectRepository
@@ -23,6 +24,7 @@ import java.time.ZoneId
 
 interface AppContainer {
     val hydrationRepository: HydrationRepository
+    val dailySummaryRepository: DailySummaryRepository
     val preferencesRepository: PreferencesRepository
     val healthConnectRepository: HealthConnectRepository
     val authRepository: AuthRepository
@@ -68,7 +70,7 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
         )
     }
 
-    override val hydrationRepository: HydrationRepository by lazy {
+    private val healthDataRepo: HealthDataRepository by lazy {
         HealthDataRepository(
             hydrationDao = database.hydrationDao(),
             dailyHealthSummaryDao = database.dailyHealthSummaryDao(),
@@ -77,6 +79,9 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
             ioDispatcher = ioDispatcher
         )
     }
+
+    override val hydrationRepository: HydrationRepository get() = healthDataRepo
+    override val dailySummaryRepository: DailySummaryRepository get() = healthDataRepo
 
     override val preferencesRepository: PreferencesRepository by lazy {
         UserPreferencesRepository(
