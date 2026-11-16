@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.ui.components.HealthCard
+import com.pulsehealth.app.ui.components.NetworkStatusPill
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
@@ -143,6 +144,13 @@ fun AccountSectionScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            if (!state.isOnline) {
+                NetworkStatusPill(
+                    isOnline = false,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
+
             if (isSignedIn) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -150,13 +158,19 @@ fun AccountSectionScreen(
                 ) {
                     Button(
                         onClick = onSyncCloud,
-                        enabled = !state.isCloudSyncing,
+                        enabled = !state.isCloudSyncing && state.isOnline,
                         colors = ButtonDefaults.buttonColors(containerColor = PulsePink),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(if (state.isCloudSyncing) "Syncing..." else "Sync Now")
+                        Text(
+                            when {
+                                !state.isOnline -> "Offline"
+                                state.isCloudSyncing -> "Syncing..."
+                                else -> "Sync Now"
+                            }
+                        )
                     }
 
                     OutlinedButton(
@@ -208,6 +222,27 @@ fun AccountSectionScreen(
                         fontWeight = FontWeight.Medium,
                         fontSize = 13.sp,
                         color = if (state.cloudFreshnessLabel != null) ExerciseGreen else Muted
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Network Connectivity", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text("Real-time device internet status", color = Muted, fontSize = 11.sp)
+                    }
+                    Text(
+                        text = if (state.isOnline) "Connected" else "Offline",
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.sp,
+                        color = if (state.isOnline) ExerciseGreen else Muted
                     )
                 }
 

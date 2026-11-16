@@ -44,6 +44,8 @@ import com.pulsehealth.app.notifications.NoOpReminderScheduler
 import com.pulsehealth.app.notifications.NotificationHelper
 import com.pulsehealth.app.notifications.ReminderScheduler
 import com.pulsehealth.app.notifications.ReminderSettings
+import com.pulsehealth.app.util.NetworkMonitor
+import com.pulsehealth.app.util.NoOpNetworkMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -62,7 +64,8 @@ class DashboardViewModel(
     val syncRepository: SyncRepository = NoOpSyncRepository(),
     val reminderScheduler: ReminderScheduler = NoOpReminderScheduler(),
     val sharingRepository: SharingRepository = NoOpSharingRepository(),
-    val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository()
+    val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository(),
+    val networkMonitor: NetworkMonitor = NoOpNetworkMonitor()
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -120,12 +123,29 @@ class DashboardViewModel(
     val authState: StateFlow<AuthState> = authRepository.authState
     val currentUser: StateFlow<AuthUser?> = authRepository.currentUser
 
+    private data class SyncAndNetworkState(
+        val isSyncing: Boolean = false,
+        val lastSyncedEpochMillis: Long? = null,
+        val syncError: String? = null,
+        val isOnline: Boolean = true
+    )
+
+    private val syncAndNetworkFlow = combine(
+        syncRepository.isSyncing,
+        syncRepository.lastSyncedEpochMillis,
+        syncRepository.lastSyncError,
+        networkMonitor.isOnline
+    ) { syncing, lastSync, syncError, online ->
+        SyncAndNetworkState(syncing, lastSync, syncError, online)
+    }
+
     private data class AccountAndCloudState(
         val authState: AuthState = AuthState.Loading,
         val currentUser: AuthUser? = null,
         val isCloudSyncing: Boolean = false,
         val lastCloudSyncedEpochMillis: Long? = null,
-        val cloudSyncError: String? = null
+        val cloudSyncError: String? = null,
+        val isOnline: Boolean = true
     )
 
     private data class GoalsState(
@@ -146,7 +166,8 @@ class DashboardViewModel(
         val isCloudSyncing: Boolean = false,
         val lastCloudSyncedEpochMillis: Long? = null,
         val cloudSyncError: String? = null,
-        val reminderSettings: ReminderSettings = ReminderSettings()
+        val reminderSettings: ReminderSettings = ReminderSettings(),
+        val isOnline: Boolean = true
     )
 
     private val goalsFlow = combine(
@@ -182,11 +203,16 @@ class DashboardViewModel(
     private val accountAndCloudFlow = combine(
         authRepository.authState,
         authRepository.currentUser,
-        syncRepository.isSyncing,
-        syncRepository.lastSyncedEpochMillis,
-        syncRepository.lastSyncError
-    ) { authState, user, cloudSyncing, lastCloudSync, cloudError ->
-        AccountAndCloudState(authState, user, cloudSyncing, lastCloudSync, cloudError)
+        syncAndNetworkFlow
+    ) { authState, user, syncNet ->
+        AccountAndCloudState(
+            authState = authState,
+            currentUser = user,
+            isCloudSyncing = syncNet.isSyncing,
+            lastCloudSyncedEpochMillis = syncNet.lastSyncedEpochMillis,
+            cloudSyncError = syncNet.syncError,
+            isOnline = syncNet.isOnline
+        )
     }
 
     private val preferencesFlow = combine(
@@ -207,7 +233,8 @@ class DashboardViewModel(
             isCloudSyncing = account.isCloudSyncing,
             lastCloudSyncedEpochMillis = account.lastCloudSyncedEpochMillis,
             cloudSyncError = account.cloudSyncError,
-            reminderSettings = reminders
+            reminderSettings = reminders,
+            isOnline = account.isOnline
         )
     }
 
@@ -300,7 +327,8 @@ class DashboardViewModel(
             streakInfo = streakInfo,
             weeklyHydrationProgress = weeklyProgress,
             weeklyWellnessDigest = weeklyDigest,
-            trustedContacts = contacts
+            trustedContacts = contacts,
+            isOnline = pref.isOnline
         )
     }.stateIn(
         viewModelScope,
@@ -314,12 +342,29 @@ class DashboardViewModel(
             isCloudSyncing = syncRepository.isSyncing.value,
             lastCloudSyncedEpochMillis = syncRepository.lastSyncedEpochMillis.value,
             cloudSyncError = syncRepository.lastSyncError.value,
-            weeklyWellnessDigest = if (isDemoModeFlow.value) WeeklyDigestCalculator.calculateDemo() else null
+            weeklyWellnessDigest = if (isDemoModeFlow.value) WeeklyDigestCalculator.calculateDemo() else null,
+            isOnline = true
         )
     )
 
     init {
         refreshPermissionsAndSync()
+        observeNetworkConnectivity()
+    }
+
+    private fun observeNetworkConnectivity() {
+        viewModelScope.launch {
+            var previousOnline: Boolean? = null
+            networkMonitor.isOnline.collect { online ->
+                if (previousOnline == false && online) {
+                    val user = authRepository.currentUser.value
+                    if (user != null && !user.isAnonymous) {
+                        syncRepository.sync()
+                    }
+                }
+                previousOnline = online
+            }
+        }
     }
 
     fun selectRange(range: TimeRange) {
@@ -535,6 +580,10 @@ class DashboardViewModel(
     }
 
     fun syncCloud(onResult: (SyncResult) -> Unit = {}) = viewModelScope.launch {
+        if (!uiState.value.isOnline) {
+            onResult(SyncResult.Error("Device is offline. Changes saved locally."))
+            return@launch
+        }
         val result = syncRepository.sync()
         onResult(result)
     }
@@ -639,7 +688,8 @@ class DashboardViewModel(
                     syncRepository = app.container.syncRepository,
                     reminderScheduler = app.container.reminderScheduler,
                     sharingRepository = app.container.sharingRepository,
-                    dailySummaryRepository = app.container.dailySummaryRepository
+                    dailySummaryRepository = app.container.dailySummaryRepository,
+                    networkMonitor = app.container.networkMonitor
                 )
             }
         }

@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Real-Time Network Connectivity Monitor, Minimalist Offline Pill & Automatic Reconnect Cloud Sync**:
+  - **Network Monitoring Engine** (`NetworkMonitor.kt`, `LiveNetworkMonitor`, `NoOpNetworkMonitor`, `TestNetworkMonitor`):
+    - Uses Android `ConnectivityManager` callbacks with `callbackFlow` to reactively stream validated internet connectivity states (`isOnline: Flow<Boolean>`).
+    - Decoupled behind clean `NetworkMonitor` interface and injected through `AppContainer`.
+  - **Minimalist Offline & Sync Indicator** (`NetworkStatusPill.kt`):
+    - Designed according to top-10 app minimalist standards: unobtrusive floating capsule with soft rounded corners, smooth animated entry/exit transitions (`AnimatedVisibility`), and TalkBack accessibility support.
+    - Displays `Offline • Local records safe` during offline periods, reassuring users that their local health vault remains fully active.
+    - Displays `Syncing with cloud...` with animated indicator during active network reconciliation.
+    - Integrated into `SummaryScreen.kt` and `AccountSectionScreen.kt` with live connection metadata.
+  - **Auto-Sync On Reconnect & Safe Offline Handling** (`DashboardViewModel.kt`):
+    - Automatically detects offline-to-online transitions and triggers immediate cloud synchronization (`syncRepository.sync()`) for authenticated users, pushing pending outbox hydration entries to Supabase.
+    - Safe handling for guest users without attempting cloud connections.
+    - Immediate local feedback on manual sync while offline (`SyncResult.Error("Device is offline. Changes saved locally.")`) avoiding hanging timeouts.
 - **Weekly Wellness Digest & Metric Consistency Score**:
   - **Weekly Performance Aggregation** (`WeeklyWellnessDigest.kt`, `WeeklyDigestCalculator`):
     - Computes 7-day rollup statistics including total steps, average daily steps, step goal completion rate, total active calories, average nightly sleep, resting heart rate consistency status, and total hydration volume.

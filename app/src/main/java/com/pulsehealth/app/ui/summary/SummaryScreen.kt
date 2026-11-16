@@ -66,6 +66,7 @@ import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.FavoriteCardId
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.ui.components.HealthCard
+import com.pulsehealth.app.ui.components.NetworkStatusPill
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
@@ -159,6 +160,14 @@ fun SummaryScreen(
         if (state.isDemoMode) {
             item {
                 DemoModeBanner(onExit = onExitDemo)
+            }
+        }
+        if (!state.isOnline || state.isCloudSyncing) {
+            item {
+                NetworkStatusPill(
+                    isOnline = state.isOnline,
+                    isSyncing = state.isCloudSyncing
+                )
             }
         }
         if (state.errorMessage != null) {
