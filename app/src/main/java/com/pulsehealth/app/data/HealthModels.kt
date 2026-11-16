@@ -112,7 +112,8 @@ data class DashboardUiState(
     val streakInfo: HydrationStreakInfo = HydrationStreakInfo(),
     val weeklyHydrationProgress: List<DailyHydrationProgress> = emptyList(),
     val weeklyWellnessDigest: WeeklyWellnessDigest? = null,
-    val trustedContacts: List<TrustedContact> = emptyList()
+    val trustedContacts: List<TrustedContact> = emptyList(),
+    val isOnline: Boolean = true
 ) {
     val healthConnectAvailable: Boolean
         get() = healthConnectAvailability == HealthConnectAvailability.AVAILABLE

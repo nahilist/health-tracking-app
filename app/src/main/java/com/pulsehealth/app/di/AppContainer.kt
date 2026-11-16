@@ -17,6 +17,8 @@ import com.pulsehealth.app.data.sync.SupabaseSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
 import com.pulsehealth.app.notifications.ReminderScheduler
 import com.pulsehealth.app.notifications.WorkManagerReminderScheduler
+import com.pulsehealth.app.util.LiveNetworkMonitor
+import com.pulsehealth.app.util.NetworkMonitor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import java.time.Clock
@@ -31,6 +33,7 @@ interface AppContainer {
     val syncRepository: SyncRepository
     val reminderScheduler: ReminderScheduler
     val sharingRepository: SharingRepository
+    val networkMonitor: NetworkMonitor
     val clock: Clock
     val zoneId: ZoneId
     val ioDispatcher: CoroutineDispatcher
@@ -43,6 +46,10 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
 
     override val reminderScheduler: ReminderScheduler by lazy {
         WorkManagerReminderScheduler(applicationContext)
+    }
+
+    override val networkMonitor: NetworkMonitor by lazy {
+        LiveNetworkMonitor(applicationContext)
     }
 
     private val database: PulseDatabase by lazy {
