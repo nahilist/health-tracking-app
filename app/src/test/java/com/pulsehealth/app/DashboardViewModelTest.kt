@@ -936,4 +936,26 @@ class DashboardViewModelTest {
         assertTrue(csv.contains("Date,Amount_mL"))
         assertTrue(report.contains("PULSE HEALTH WELLNESS REPORT"))
     }
+
+    @Test
+    fun weeklyWellnessDigestPopulatedInDemoMode() = runTest {
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository()
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.setDemoMode(true)
+        advanceUntilIdle()
+
+        val digest = viewModel.uiState.value.weeklyWellnessDigest
+        assertTrue(digest != null)
+        assertEquals(88, digest?.consistencyScore)
+        assertTrue(digest?.totalSteps ?: 0L > 50_000L)
+    }
 }
