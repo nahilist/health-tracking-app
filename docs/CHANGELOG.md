@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Weekly Wellness Digest & Metric Consistency Score**:
+  - **Weekly Performance Aggregation** (`WeeklyWellnessDigest.kt`, `WeeklyDigestCalculator`):
+    - Computes 7-day rollup statistics including total steps, average daily steps, step goal completion rate, total active calories, average nightly sleep, resting heart rate consistency status, and total hydration volume.
+    - Deterministic 0–100 consistency score evaluating habit momentum across physical activity, rest, and hydration.
+    - Contextual, non-diagnostic wellness reinforcement messages celebrating consistency milestones.
+  - **Executive Summary Dashboard Card** (`WeeklyDigestCard.kt`, `SummaryScreen.kt`):
+    - Added minimalist 2x2 metric pillars with icon badges, consistency score pill, and milestone summary banner on the main Summary dashboard.
+    - Fully accessible TalkBack semantics, high-contrast dark/light styling, and 200% dynamic font scale support.
 - **Remote Cloud Account Deletion & Multi-Format Health Export (CSV & Doctor Summary)**:
   - **Permanent Cloud Account Deletion** (`AuthRepository.kt`, `SupabaseAuthRepository.kt`, `DashboardViewModel.kt`, `AccountSectionScreen.kt`):
     - Added `deleteAccount()` to purge user's remote cloud records in Supabase PostgreSQL, revoke authentication tokens, clear Keystore encrypted credentials, and cancel periodic background sync.

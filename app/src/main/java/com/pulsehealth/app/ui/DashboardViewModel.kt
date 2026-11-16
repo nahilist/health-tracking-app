@@ -31,6 +31,8 @@ import com.pulsehealth.app.data.ShareRelationship
 import com.pulsehealth.app.data.SharingRepository
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.TrustedContact
+import com.pulsehealth.app.data.WeeklyDigestCalculator
+import com.pulsehealth.app.data.WeeklyWellnessDigest
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.toDailyHealthSummary
@@ -216,18 +218,40 @@ class DashboardViewModel(
         todayWater to pastEntries
     }
 
-    val uiState: StateFlow<DashboardUiState> = combine(
+    private val healthAndSummaryFlow = combine(
         syncStateFlow,
+        pastDailySummaries
+    ) { sync, summaries ->
+        sync to summaries
+    }
+
+    val uiState: StateFlow<DashboardUiState> = combine(
+        healthAndSummaryFlow,
         hydrationFlow,
         selectedRangeFlow,
         preferencesFlow,
         sharingRepository.contacts
-    ) { sync, (water, pastEntries), rangeName, pref, contacts ->
+    ) { (sync, pastSummaries), (water, pastEntries), rangeName, pref, contacts ->
         val range = runCatching { TimeRange.valueOf(rangeName) }.getOrDefault(TimeRange.TODAY)
         val (streakInfo, weeklyProgress) = HydrationTrends.calculateStreaksAndProgress(
             entries = pastEntries,
             goalLiters = pref.goals.waterGoalLiters
         )
+        val weeklyDigest = if (pref.isDemoMode) {
+            WeeklyDigestCalculator.calculateDemo(
+                stepGoal = pref.goals.stepGoal,
+                waterGoalLiters = pref.goals.waterGoalLiters
+            )
+        } else {
+            WeeklyDigestCalculator.calculate(
+                summaries = pastSummaries,
+                weeklyHydration = weeklyProgress,
+                stepGoal = pref.goals.stepGoal,
+                calorieGoal = pref.goals.calorieGoal,
+                sleepGoalMinutes = pref.goals.sleepGoalMinutes,
+                waterGoalLiters = pref.goals.waterGoalLiters
+            )
+        }
         val effectiveMetrics = if (pref.isDemoMode) {
             DashboardMetrics.demo().copy(
                 waterLiters = if (water > 0.0) water else 1.5,
@@ -275,6 +299,7 @@ class DashboardViewModel(
             quietHoursEndHour = pref.reminderSettings.quietHoursEndHour,
             streakInfo = streakInfo,
             weeklyHydrationProgress = weeklyProgress,
+            weeklyWellnessDigest = weeklyDigest,
             trustedContacts = contacts
         )
     }.stateIn(
@@ -288,7 +313,8 @@ class DashboardViewModel(
             currentUser = authRepository.currentUser.value,
             isCloudSyncing = syncRepository.isSyncing.value,
             lastCloudSyncedEpochMillis = syncRepository.lastSyncedEpochMillis.value,
-            cloudSyncError = syncRepository.lastSyncError.value
+            cloudSyncError = syncRepository.lastSyncError.value,
+            weeklyWellnessDigest = if (isDemoModeFlow.value) WeeklyDigestCalculator.calculateDemo() else null
         )
     )
 

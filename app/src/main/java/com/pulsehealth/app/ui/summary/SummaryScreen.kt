@@ -226,6 +226,10 @@ fun SummaryScreen(
                 }
             }
 
+            if (state.weeklyWellnessDigest != null) {
+                item { WeeklyDigestCard(digest = state.weeklyWellnessDigest) }
+            }
+
             if (state.weeklyHydrationProgress.isNotEmpty()) {
                 item { WeeklyHydrationTrendCard(state) }
             }

@@ -111,6 +111,7 @@ data class DashboardUiState(
     val quietHoursEndHour: Int = 8,
     val streakInfo: HydrationStreakInfo = HydrationStreakInfo(),
     val weeklyHydrationProgress: List<DailyHydrationProgress> = emptyList(),
+    val weeklyWellnessDigest: WeeklyWellnessDigest? = null,
     val trustedContacts: List<TrustedContact> = emptyList()
 ) {
     val healthConnectAvailable: Boolean
