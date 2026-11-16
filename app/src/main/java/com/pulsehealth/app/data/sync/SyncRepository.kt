@@ -26,6 +26,11 @@ interface SyncRepository {
      * Triggers a one-time immediate synchronization worker.
      */
     fun triggerImmediateSync()
+
+    /**
+     * Cancels scheduled background sync workers upon sign-out or account deletion.
+     */
+    fun cancelPeriodicSync()
 }
 
 /**
@@ -39,4 +44,5 @@ class NoOpSyncRepository : SyncRepository {
     override suspend fun sync(): SyncResult = SyncResult.Success(0, 0)
     override fun schedulePeriodicSync() {}
     override fun triggerImmediateSync() {}
+    override fun cancelPeriodicSync() {}
 }

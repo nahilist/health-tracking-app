@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 class HealthDataRepository(
@@ -133,6 +136,94 @@ class HealthDataRepository(
             }
             append("  ]\n")
             append("}")
+        }
+    }
+
+    override suspend fun exportDataCsv(): String = withContext(ioDispatcher) {
+        val entries = hydrationDao.getAllEntries()
+        val summaries = dailyHealthSummaryDao?.getAllSummaries() ?: emptyList()
+        val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+
+        buildString {
+            append("# Pulse Health Export (CSV)\n")
+            append("# Generated: ${Instant.ofEpochMilli(clock.millis()).atZone(zoneId)}\n\n")
+
+            append("# --- Daily Summaries ---\n")
+            append("Date,EpochDay,Steps,RestingHeartRate_Bpm,Sleep_Minutes,ActiveCalories_kcal,Exercise_Minutes,Stand_Hours,Source\n")
+            summaries.forEach { s ->
+                val dateStr = LocalDate.ofEpochDay(s.epochDay).format(dateFormatter)
+                append("$dateStr,${s.epochDay},${s.steps},${s.restingHeartRate ?: ""},${s.sleepMinutes},${s.activeCalories},${s.exerciseMinutes},${s.standHours},\"${s.source}\"\n")
+            }
+
+            append("\n# --- Hydration Entries ---\n")
+            append("ID,Date,Time,Amount_mL,Amount_L,Source,SyncState\n")
+            entries.forEach { e ->
+                val zdt = Instant.ofEpochMilli(e.recordedAtEpochMillis).atZone(zoneId)
+                val dateStr = zdt.toLocalDate().format(dateFormatter)
+                val timeStr = zdt.toLocalTime().format(timeFormatter)
+                val litersStr = String.format(Locale.US, "%.2f", e.amountMilliliters / 1000.0)
+                append("${e.id},$dateStr,$timeStr,${e.amountMilliliters},$litersStr,\"${e.source}\",\"${e.syncState}\"\n")
+            }
+        }
+    }
+
+    override suspend fun exportClinicalSummary(): String = withContext(ioDispatcher) {
+        val entries = hydrationDao.getAllEntries()
+        val summaries = dailyHealthSummaryDao?.getAllSummaries() ?: emptyList()
+        val now = Instant.ofEpochMilli(clock.millis()).atZone(zoneId)
+
+        val totalEntries = entries.size
+        val totalWaterLitres = entries.sumOf { it.amountMilliliters } / 1000.0
+        val avgSteps = if (summaries.isNotEmpty()) summaries.map { it.steps }.average().toLong() else 0L
+        val maxSteps = if (summaries.isNotEmpty()) summaries.maxOf { it.steps } else 0L
+        val hrList = summaries.mapNotNull { it.restingHeartRate }.filter { it > 0 }
+        val avgHr = if (hrList.isNotEmpty()) hrList.average().toInt() else null
+        val minHr = if (hrList.isNotEmpty()) hrList.minOrNull() else null
+        val maxHr = if (hrList.isNotEmpty()) hrList.maxOrNull() else null
+        val avgSleepMin = if (summaries.isNotEmpty()) summaries.map { it.sleepMinutes }.average().toLong() else 0L
+        val avgCalories = if (summaries.isNotEmpty()) summaries.map { it.activeCalories }.average().toLong() else 0L
+        val avgExerciseMin = if (summaries.isNotEmpty()) summaries.map { it.exerciseMinutes }.average().toLong() else 0L
+
+        buildString {
+            append("====================================================\n")
+            append("              PULSE HEALTH WELLNESS REPORT          \n")
+            append("====================================================\n")
+            append("Generated on: ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))} (${zoneId.id})\n")
+            append("Application: Pulse Health v1.0.0 (Local-First Android)\n\n")
+            append("CLINICAL & CONSULTATION DISCLAIMER:\n")
+            append("This document contains self-tracked wellness data collected via\n")
+            append("on-device sensors and manual entries. It is intended solely for\n")
+            append("personal tracking and consultation with qualified medical professionals.\n")
+            append("It does NOT constitute medical diagnosis, treatment, or clinical advice.\n\n")
+
+            append("1. ACTIVITY & CARDIOVASCULAR SUMMARY\n")
+            append("----------------------------------------------------\n")
+            append("Days Recorded:               ${summaries.size} day(s)\n")
+            append("Average Daily Steps:         ${String.format(Locale.US, "%,d", avgSteps)} steps\n")
+            append("Peak Daily Steps:            ${String.format(Locale.US, "%,d", maxSteps)} steps\n")
+            if (avgHr != null) {
+                append("Resting Heart Rate Average:  $avgHr bpm (Range: $minHr - $maxHr bpm)\n")
+            } else {
+                append("Resting Heart Rate Average:  No readings recorded\n")
+            }
+            append("Average Active Calories:     $avgCalories kcal/day\n")
+            append("Average Exercise Duration:   $avgExerciseMin minutes/day\n\n")
+
+            append("2. SLEEP REST PROFILE\n")
+            append("----------------------------------------------------\n")
+            val sleepHours = avgSleepMin / 60
+            val sleepRemMinutes = avgSleepMin % 60
+            append("Average Nightly Sleep:       $sleepHours hr $sleepRemMinutes min (${avgSleepMin} min)\n\n")
+
+            append("3. HYDRATION PROFILE\n")
+            append("----------------------------------------------------\n")
+            append("Total Logged Volume:         ${String.format(Locale.US, "%.2f", totalWaterLitres)} Liters\n")
+            append("Total Logged Entries:        $totalEntries record(s)\n\n")
+
+            append("====================================================\n")
+            append("End of Wellness Report - Pulse Health\n")
+            append("====================================================\n")
         }
     }
 

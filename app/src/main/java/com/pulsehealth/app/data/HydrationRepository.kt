@@ -17,4 +17,6 @@ interface HydrationRepository {
     suspend fun getAllEntries(): List<HydrationEntryEntity>
     suspend fun clearAllData()
     suspend fun exportDataJson(): String
+    suspend fun exportDataCsv(): String
+    suspend fun exportClinicalSummary(): String
 }

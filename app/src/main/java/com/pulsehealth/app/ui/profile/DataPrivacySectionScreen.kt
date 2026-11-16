@@ -20,11 +20,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,11 +57,24 @@ import com.pulsehealth.app.ui.theme.PulsePink
 fun DataPrivacySectionScreen(
     onBack: () -> Unit,
     onExportData: ((String) -> Unit) -> Unit,
+    onExportCsv: ((String) -> Unit) -> Unit = {},
+    onExportClinicalSummary: ((String) -> Unit) -> Unit = {},
     onDeleteAllData: () -> Unit
 ) {
     val context = LocalContext.current
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    fun shareExportedText(text: String, chooserTitle: String) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, text)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
+        shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(shareIntent) }
+    }
 
     Column(
         Modifier
@@ -140,14 +155,7 @@ fun DataPrivacySectionScreen(
                 Button(
                     onClick = {
                         onExportData { jsonString ->
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, jsonString)
-                                type = "text/plain"
-                            }
-                            val shareIntent = Intent.createChooser(sendIntent, "Export Health Data")
-                            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            runCatching { context.startActivity(shareIntent) }
+                            shareExportedText(jsonString, "Export Health Data (JSON)")
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -156,6 +164,36 @@ fun DataPrivacySectionScreen(
                     Icon(Icons.Default.FileDownload, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Export All Data (JSON)")
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        onExportCsv { csvString ->
+                            shareExportedText(csvString, "Export Health Data (CSV)")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.TableChart, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export Spreadsheets (CSV)")
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        onExportClinicalSummary { reportString ->
+                            shareExportedText(reportString, "Export Doctor Summary Report")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Description, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export Doctor Summary Report (TXT)")
                 }
             }
         }

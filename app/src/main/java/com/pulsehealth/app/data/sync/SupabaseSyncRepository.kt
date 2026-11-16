@@ -152,6 +152,13 @@ class SupabaseSyncRepository(
         }
     }
 
+    override fun cancelPeriodicSync() {
+        runCatching {
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME_PERIODIC)
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME_IMMEDIATE)
+        }
+    }
+
     companion object {
         const val TABLE_HYDRATION = "hydration_entries"
         const val STATE_PENDING = "pending"
