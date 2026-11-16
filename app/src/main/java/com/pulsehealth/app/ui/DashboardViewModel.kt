@@ -345,6 +345,34 @@ class DashboardViewModel(
         return hydrationRepository.exportDataJson()
     }
 
+    suspend fun exportDataCsv(): String {
+        return hydrationRepository.exportDataCsv()
+    }
+
+    suspend fun exportClinicalSummary(): String {
+        return hydrationRepository.exportClinicalSummary()
+    }
+
+    fun deleteAccount(alsoDeleteLocalData: Boolean = true, onCompleted: (Result<Unit>) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.deleteAccount()
+        if (result.isSuccess) {
+            syncRepository.cancelPeriodicSync()
+            if (alsoDeleteLocalData) {
+                hydrationRepository.clearAllData()
+                dailySummaryRepository.deleteAllSummaries()
+                preferencesRepository.clearAllPreferences()
+                syncStateFlow.update {
+                    it.copy(
+                        metrics = DashboardMetrics(),
+                        lastSyncedEpochMillis = null,
+                        errorMessage = null
+                    )
+                }
+            }
+        }
+        onCompleted(result)
+    }
+
     fun deleteAllLocalData(onDeleted: () -> Unit = {}) = viewModelScope.launch {
         hydrationRepository.clearAllData()
         dailySummaryRepository.deleteAllSummaries()

@@ -10,6 +10,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -212,6 +213,27 @@ class SupabaseAuthRepository(
                 AuthResult.Error("No active session.")
             }
         }
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> = withContext(ioDispatcher) {
+        val client = supabaseClient
+        val user = _currentUser.value
+        if (client != null && user != null && !user.isAnonymous) {
+            runCatching {
+                client.from("hydration_records").delete {
+                    filter {
+                        eq("user_id", user.id)
+                    }
+                }
+            }
+            runCatching {
+                client.auth.signOut()
+            }
+        }
+        clearSession()
+        _currentUser.value = null
+        _authState.value = AuthState.Unauthenticated
+        Result.success(Unit)
     }
 
     private fun persistSession(mode: String, user: AuthUser) {

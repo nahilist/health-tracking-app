@@ -156,6 +156,60 @@ class HealthDataRepositoryTest {
     }
 
     @Test
+    fun exportDataCsvProducesValidStructuredCsv() = runTest {
+        repository.addWater(250)
+        repository.addWater(500)
+        repository.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = 20000L,
+                steps = 7500L,
+                restingHeartRate = 62L,
+                sleepMinutes = 440L,
+                activeCalories = 350L,
+                exerciseMinutes = 30L,
+                standHours = 8L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1000L
+            )
+        )
+
+        val csv = repository.exportDataCsv()
+
+        assertTrue(csv.contains("# Pulse Health Export (CSV)"))
+        assertTrue(csv.contains("Date,EpochDay,Steps,RestingHeartRate_Bpm,Sleep_Minutes,ActiveCalories_kcal,Exercise_Minutes,Stand_Hours,Source"))
+        assertTrue(csv.contains("7500"))
+        assertTrue(csv.contains("250"))
+        assertTrue(csv.contains("500"))
+    }
+
+    @Test
+    fun exportClinicalSummaryProducesFormattedConsultationReport() = runTest {
+        repository.addWater(500)
+        repository.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = 20000L,
+                steps = 8200L,
+                restingHeartRate = 60L,
+                sleepMinutes = 460L,
+                activeCalories = 400L,
+                exerciseMinutes = 35L,
+                standHours = 9L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1000L
+            )
+        )
+
+        val report = repository.exportClinicalSummary()
+
+        assertTrue(report.contains("PULSE HEALTH WELLNESS REPORT"))
+        assertTrue(report.contains("CLINICAL & CONSULTATION DISCLAIMER"))
+        assertTrue(report.contains("Average Daily Steps:"))
+        assertTrue(report.contains("8,200 steps"))
+        assertTrue(report.contains("Resting Heart Rate Average:  60 bpm"))
+        assertTrue(report.contains("Total Logged Volume:         0.50 Liters"))
+    }
+
+    @Test
     fun dailySummaryPersistsAndCanBeRetrievedByEpochDay() = runTest {
         val epochDay = 20770L
         val summary = DailyHealthSummaryEntity(

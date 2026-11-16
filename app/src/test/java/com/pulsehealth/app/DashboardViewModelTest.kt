@@ -100,6 +100,12 @@ class DashboardViewModelTest {
 
         override suspend fun exportDataJson(): String =
             "{\"app\":\"Pulse Health\",\"hydrationEntriesCount\":${_entries.value.size}}"
+
+        override suspend fun exportDataCsv(): String =
+            "Date,Amount_mL\n2026-11-13,${_entries.value.size}"
+
+        override suspend fun exportClinicalSummary(): String =
+            "PULSE HEALTH WELLNESS REPORT - Entries: ${_entries.value.size}"
     }
 
     private class FakePreferencesRepository(
@@ -650,6 +656,7 @@ class DashboardViewModelTest {
             }
             override fun schedulePeriodicSync() {}
             override fun triggerImmediateSync() {}
+            override fun cancelPeriodicSync() {}
         }
 
         val viewModel = DashboardViewModel(
@@ -808,5 +815,125 @@ class DashboardViewModelTest {
 
         assertTrue(deletedCalled)
         assertEquals(0, dailyRepo.getAllSummaries().size)
+    }
+
+    @Test
+    fun deleteAccountPurgesAuthAndWipesLocalDataWhenRequested() = runTest {
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        val dailyRepo = FakeDailySummaryRepository()
+        dailyRepo.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = todayEpochDay,
+                steps = 5_000L,
+                restingHeartRate = 60L,
+                sleepMinutes = 400L,
+                activeCalories = 300L,
+                exerciseMinutes = 20L,
+                standHours = 6L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1000L
+            )
+        )
+        val hydrationRepo = FakeHydrationRepository(initialWater = 1.5)
+        val authRepo = com.pulsehealth.app.data.NoOpAuthRepository(
+            com.pulsehealth.app.data.AuthState.Authenticated(
+                com.pulsehealth.app.data.AuthUser(id = "user_del", email = "delete@pulsehealth.app")
+            )
+        )
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = hydrationRepo,
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository(),
+            authRepository = authRepo,
+            dailySummaryRepository = dailyRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.authState is com.pulsehealth.app.data.AuthState.Authenticated)
+        assertEquals(1, dailyRepo.getAllSummaries().size)
+
+        var completedCalled = false
+        viewModel.deleteAccount(alsoDeleteLocalData = true) {
+            completedCalled = true
+        }
+        advanceUntilIdle()
+
+        assertTrue(completedCalled)
+        assertEquals(com.pulsehealth.app.data.AuthState.Unauthenticated, viewModel.uiState.value.authState)
+        assertNull(viewModel.uiState.value.currentUser)
+        assertEquals(0, dailyRepo.getAllSummaries().size)
+        assertEquals(0, hydrationRepo.getAllEntries().size)
+    }
+
+    @Test
+    fun deleteAccountKeepsLocalDataWhenRequested() = runTest {
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        val dailyRepo = FakeDailySummaryRepository()
+        dailyRepo.saveDailySummary(
+            DailyHealthSummaryEntity(
+                epochDay = todayEpochDay,
+                steps = 5_000L,
+                restingHeartRate = 60L,
+                sleepMinutes = 400L,
+                activeCalories = 300L,
+                exerciseMinutes = 20L,
+                standHours = 6L,
+                source = "Health Connect",
+                updatedAtEpochMillis = 1000L
+            )
+        )
+        val hydrationRepo = FakeHydrationRepository(initialWater = 1.0)
+        val authRepo = com.pulsehealth.app.data.NoOpAuthRepository(
+            com.pulsehealth.app.data.AuthState.Authenticated(
+                com.pulsehealth.app.data.AuthUser(id = "user_keep", email = "keep@pulsehealth.app")
+            )
+        )
+
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = hydrationRepo,
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository(),
+            authRepository = authRepo,
+            dailySummaryRepository = dailyRepo
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        var completedCalled = false
+        viewModel.deleteAccount(alsoDeleteLocalData = false) {
+            completedCalled = true
+        }
+        advanceUntilIdle()
+
+        assertTrue(completedCalled)
+        assertEquals(com.pulsehealth.app.data.AuthState.Unauthenticated, viewModel.uiState.value.authState)
+        assertNull(viewModel.uiState.value.currentUser)
+        assertEquals(1, dailyRepo.getAllSummaries().size)
+    }
+
+    @Test
+    fun exportDataCsvAndClinicalSummaryProduceExpectedContent() = runTest {
+        val hydrationRepo = FakeHydrationRepository()
+        hydrationRepo.addWater(250)
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = hydrationRepo,
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository()
+        )
+
+        val csv = viewModel.exportDataCsv()
+        val report = viewModel.exportClinicalSummary()
+
+        assertTrue(csv.contains("Date,Amount_mL"))
+        assertTrue(report.contains("PULSE HEALTH WELLNESS REPORT"))
     }
 }

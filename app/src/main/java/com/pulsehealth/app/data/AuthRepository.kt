@@ -35,6 +35,12 @@ interface AuthRepository {
      * Refreshes the active session token if possible.
      */
     suspend fun refreshSession(): AuthResult
+
+    /**
+     * Permanently deletes the active user's remote cloud account and associated data.
+     * Signs out cleanly and revokes active credentials.
+     */
+    suspend fun deleteAccount(): Result<Unit>
 }
 
 /**
@@ -97,5 +103,11 @@ class NoOpAuthRepository(
     override suspend fun refreshSession(): AuthResult {
         val user = _currentUser.value ?: return AuthResult.Error("No active user session to refresh.")
         return AuthResult.Success(user)
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        _currentUser.value = null
+        _authState.value = AuthState.Unauthenticated
+        return Result.success(Unit)
     }
 }

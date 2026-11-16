@@ -152,4 +152,16 @@ class AuthRepositoryTest {
             SupabaseAuthRepository.sanitizeAuthError(networkException)
         )
     }
+
+    @Test
+    fun deleteAccountClearsSessionAndPurgesCredentials() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        repository.signInWithEmail("delete_me@example.com", "mypassword123")
+        assertEquals(AuthState.Authenticated::class, repository.authState.value::class)
+
+        val deleteResult = repository.deleteAccount()
+        assertTrue(deleteResult.isSuccess)
+        assertEquals(AuthState.Unauthenticated, repository.authState.value)
+        assertNull(repository.currentUser.value)
+    }
 }

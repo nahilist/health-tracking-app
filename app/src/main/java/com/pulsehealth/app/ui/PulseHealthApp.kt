@@ -200,8 +200,23 @@ fun PulseHealthApp(
                                 onResult(json)
                             }
                         },
+                        onExportDataCsv = { onResult ->
+                            coroutineScope.launch {
+                                val csv = viewModel.exportDataCsv()
+                                onResult(csv)
+                            }
+                        },
+                        onExportClinicalSummary = { onResult ->
+                            coroutineScope.launch {
+                                val report = viewModel.exportClinicalSummary()
+                                onResult(report)
+                            }
+                        },
                         onDeleteAllData = {
                             viewModel.deleteAllLocalData()
+                        },
+                        onDeleteAccount = { alsoDeleteLocalData ->
+                            viewModel.deleteAccount(alsoDeleteLocalData)
                         },
                         onSignIn = { email, password, onError ->
                             viewModel.signInWithEmail(email, password) { result ->

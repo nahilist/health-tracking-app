@@ -72,7 +72,10 @@ fun ProfileScreen(
     onToggleSyncWater: (Boolean) -> Unit = {},
     onRequestWritePermissions: () -> Unit = {},
     onExportData: ((String) -> Unit) -> Unit = {},
+    onExportDataCsv: ((String) -> Unit) -> Unit = {},
+    onExportClinicalSummary: ((String) -> Unit) -> Unit = {},
     onDeleteAllData: () -> Unit = {},
+    onDeleteAccount: (alsoDeleteLocalData: Boolean) -> Unit = {},
     onSignIn: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onSignUp: (email: String, password: String, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onSignInAsGuest: () -> Unit = {},
@@ -105,7 +108,8 @@ fun ProfileScreen(
                     onBack = { selectedSection = null },
                     onSyncCloud = onSyncCloud,
                     onSignOut = onSignOut,
-                    onOpenAuth = { showAuthDialog = true }
+                    onOpenAuth = { showAuthDialog = true },
+                    onDeleteAccount = onDeleteAccount
                 )
             }
             ProfileSection.HEALTH_CONNECT -> {
@@ -132,6 +136,8 @@ fun ProfileScreen(
                 DataPrivacySectionScreen(
                     onBack = { selectedSection = null },
                     onExportData = onExportData,
+                    onExportCsv = onExportDataCsv,
+                    onExportClinicalSummary = onExportClinicalSummary,
                     onDeleteAllData = onDeleteAllData
                 )
             }

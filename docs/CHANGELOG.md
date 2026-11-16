@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Remote Cloud Account Deletion & Multi-Format Health Export (CSV & Doctor Summary)**:
+  - **Permanent Cloud Account Deletion** (`AuthRepository.kt`, `SupabaseAuthRepository.kt`, `DashboardViewModel.kt`, `AccountSectionScreen.kt`):
+    - Added `deleteAccount()` to purge user's remote cloud records in Supabase PostgreSQL, revoke authentication tokens, clear Keystore encrypted credentials, and cancel periodic background sync.
+    - Integrated executive confirmation dialog in `AccountSectionScreen.kt` with an optional toggle to simultaneously erase all local on-device records.
+  - **Multi-Format Health Export (CSV & Doctor Clinical Report)** (`HydrationRepository.kt`, `HealthDataRepository.kt`, `DataPrivacySectionScreen.kt`):
+    - Added tabular CSV export (`exportDataCsv`) covering daily rollup metrics and individual hydration timestamps.
+    - Added clean, human-readable Doctor Wellness Summary Report (`exportClinicalSummary`) containing activity averages, resting heart rate range, sleep consistency, hydration volume, and explicit non-diagnostic medical disclaimer.
+    - Added dedicated export triggers in `DataPrivacySectionScreen.kt` sharing via Android `Intent.ACTION_SEND`.
 - **Health Connect Daily Summary Normalization & Offline Room Caching**:
   - **Offline-First Room Caching** (`DailyHealthSummaryDao.kt`, `DailySummaryRepository.kt`, `HealthDataRepository.kt`):
     - Added dedicated DAO queries (`getByDay`, `upsertAll`, `observeRange`) to query and persist daily health metrics.

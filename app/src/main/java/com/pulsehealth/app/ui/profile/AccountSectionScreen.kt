@@ -20,12 +20,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,8 +37,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -53,10 +61,13 @@ fun AccountSectionScreen(
     onBack: () -> Unit,
     onSyncCloud: () -> Unit,
     onSignOut: () -> Unit,
-    onOpenAuth: () -> Unit
+    onOpenAuth: () -> Unit,
+    onDeleteAccount: (alsoDeleteLocalData: Boolean) -> Unit = {}
 ) {
     val user = state.currentUser
     val isSignedIn = user != null && !user.isAnonymous
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var alsoDeleteLocalData by remember { mutableStateOf(true) }
 
     Column(
         Modifier
@@ -266,5 +277,99 @@ fun AccountSectionScreen(
                 }
             }
         }
+
+        if (isSignedIn) {
+            Column {
+                Text(
+                    "ACCOUNT ACTIONS",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                )
+
+                HealthCard(
+                    Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text("Delete Cloud Account", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(
+                        "Permanently delete your cloud account from Supabase, remove remote backups, and revoke active sessions.",
+                        color = Muted,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Button(
+                        onClick = { showDeleteAccountDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Icon(Icons.Default.DeleteForever, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Permanently Delete Cloud Account")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteAccountDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountDialog = false },
+            title = {
+                Text("Delete Cloud Account?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "This will permanently delete your user profile and cloud-synced records from Supabase. This operation cannot be undone.",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = alsoDeleteLocalData,
+                            onCheckedChange = { alsoDeleteLocalData = it },
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.error)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Also wipe all local health records from this device",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteAccountDialog = false
+                        onDeleteAccount(alsoDeleteLocalData)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
