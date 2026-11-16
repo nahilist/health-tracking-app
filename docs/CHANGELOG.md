@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Robolectric Compose UI Test Suite & Credential Leak Prevention Validation**:
+  - **Local JVM Compose UI Test Infrastructure** (`build.gradle.kts`):
+    - Configured `androidx.compose.ui:ui-test-junit4` with Robolectric 4.16.1, enabling full Compose semantic tree testing directly on the local JVM and GitHub Actions CI without requiring a hardware device or emulator.
+  - **Authentication Dialog & Credential Leak Security Test Suite** (`AuthDialogComposeTest.kt`):
+    - Automated verification guaranteeing that raw technical errors (such as Supabase URL headers, `Bearer` tokens, and `apikey` publishable keys) are completely intercepted and sanitized before rendering in the UI.
+    - Tests tab switching between Sign In and Create Account, form field validation, and local-only guest session continuation.
+  - **Biometric Lock Overlay Test Suite** (`BiometricLockOverlayComposeTest.kt`):
+    - Tests auto-prompt triggering on initial mount and manual authentication retry button click.
+  - **Hydration Logging Bottom Sheet Test Suite** (`LogHydrationBottomSheetComposeTest.kt`):
+    - Tests quick preset selection (Cup, Glass, Bottle, Flask) and dynamic button state updates.
+  - **Dashboard Summary Screen Test Suite** (`SummaryScreenComposeTest.kt`):
+    - Tests greeting and time range tab navigation (Day, Week, Month), minimal offline status pill rendering, and weekly wellness digest card presentation.
 - **Biometric App Lock & Sensitive Health Vault Security**:
   - **Hardware-Backed Biometric Authentication Engine** (`BiometricAuthManager.kt`):
     - Uses AndroidX `BiometricPrompt` and `BiometricManager` with `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` authenticators.

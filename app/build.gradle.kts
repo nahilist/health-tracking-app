@@ -183,6 +183,7 @@ dependencies {
     testImplementation("androidx.work:work-testing:2.10.0")
     testImplementation("androidx.test:core-ktx:1.7.0")
     testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
