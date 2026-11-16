@@ -49,6 +49,7 @@ import com.pulsehealth.app.util.NoOpNetworkMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -123,6 +124,9 @@ class DashboardViewModel(
     val authState: StateFlow<AuthState> = authRepository.authState
     val currentUser: StateFlow<AuthUser?> = authRepository.currentUser
 
+    private val _isAppUnlocked = MutableStateFlow(true)
+    val isAppUnlocked: StateFlow<Boolean> = _isAppUnlocked.asStateFlow()
+
     private data class SyncAndNetworkState(
         val isSyncing: Boolean = false,
         val lastSyncedEpochMillis: Long? = null,
@@ -161,6 +165,8 @@ class DashboardViewModel(
         val syncWaterToHealthConnect: Boolean,
         val onboardingCompleted: Boolean,
         val isDemoMode: Boolean,
+        val biometricLockEnabled: Boolean = false,
+        val isAppUnlocked: Boolean = true,
         val authState: AuthState = AuthState.Loading,
         val currentUser: AuthUser? = null,
         val isCloudSyncing: Boolean = false,
@@ -179,10 +185,21 @@ class DashboardViewModel(
         GoalsState(water, steps, calories, sleep)
     }
 
+    private data class AppFlags(
+        val onboardingCompleted: Boolean,
+        val isDemoMode: Boolean,
+        val biometricLockEnabled: Boolean,
+        val isAppUnlocked: Boolean
+    )
+
     private val appFlagsFlow = combine(
         preferencesRepository.onboardingCompleted,
-        isDemoModeFlow
-    ) { onboarding, isDemo -> onboarding to isDemo }
+        isDemoModeFlow,
+        preferencesRepository.biometricLockEnabled,
+        _isAppUnlocked
+    ) { onboarding, isDemo, biometricLock, isUnlocked ->
+        AppFlags(onboarding, isDemo, biometricLock, isUnlocked)
+    }
 
     private val reminderSettingsFlow = combine(
         preferencesRepository.remindersEnabled,
@@ -196,8 +213,8 @@ class DashboardViewModel(
     private val appAndReminderFlow = combine(
         appFlagsFlow,
         reminderSettingsFlow
-    ) { (onboarding, isDemo), reminders ->
-        Triple(onboarding, isDemo, reminders)
+    ) { flags, reminders ->
+        flags to reminders
     }
 
     private val accountAndCloudFlow = combine(
@@ -221,13 +238,15 @@ class DashboardViewModel(
         preferencesRepository.syncWaterToHealthConnect,
         appAndReminderFlow,
         accountAndCloudFlow
-    ) { hidden, goals, syncWater, (onboarding, isDemo, reminders), account ->
+    ) { hidden, goals, syncWater, (flags, reminders), account ->
         PreferencesState(
             hiddenCards = hidden,
             goals = goals,
             syncWaterToHealthConnect = syncWater,
-            onboardingCompleted = onboarding,
-            isDemoMode = isDemo,
+            onboardingCompleted = flags.onboardingCompleted,
+            isDemoMode = flags.isDemoMode,
+            biometricLockEnabled = flags.biometricLockEnabled,
+            isAppUnlocked = flags.isAppUnlocked,
             authState = account.authState,
             currentUser = account.currentUser,
             isCloudSyncing = account.isCloudSyncing,
@@ -328,7 +347,9 @@ class DashboardViewModel(
             weeklyHydrationProgress = weeklyProgress,
             weeklyWellnessDigest = weeklyDigest,
             trustedContacts = contacts,
-            isOnline = pref.isOnline
+            isOnline = pref.isOnline,
+            biometricLockEnabled = pref.biometricLockEnabled,
+            isAppUnlocked = pref.isAppUnlocked
         )
     }.stateIn(
         viewModelScope,
@@ -343,13 +364,49 @@ class DashboardViewModel(
             lastCloudSyncedEpochMillis = syncRepository.lastSyncedEpochMillis.value,
             cloudSyncError = syncRepository.lastSyncError.value,
             weeklyWellnessDigest = if (isDemoModeFlow.value) WeeklyDigestCalculator.calculateDemo() else null,
-            isOnline = true
+            isOnline = true,
+            biometricLockEnabled = false,
+            isAppUnlocked = true
         )
     )
 
     init {
         refreshPermissionsAndSync()
         observeNetworkConnectivity()
+        observeBiometricLockPreference()
+    }
+
+    private fun observeBiometricLockPreference() {
+        viewModelScope.launch {
+            var isInitial = true
+            preferencesRepository.biometricLockEnabled.collect { enabled ->
+                if (isInitial) {
+                    if (enabled) {
+                        _isAppUnlocked.value = false
+                    }
+                    isInitial = false
+                } else if (!enabled) {
+                    _isAppUnlocked.value = true
+                }
+            }
+        }
+    }
+
+    fun unlockApp() {
+        _isAppUnlocked.value = true
+    }
+
+    fun lockApp() {
+        if (uiState.value.biometricLockEnabled) {
+            _isAppUnlocked.value = false
+        }
+    }
+
+    fun setBiometricLockEnabled(enabled: Boolean) = viewModelScope.launch {
+        preferencesRepository.setBiometricLockEnabled(enabled)
+        if (enabled) {
+            _isAppUnlocked.value = true
+        }
     }
 
     private fun observeNetworkConnectivity() {

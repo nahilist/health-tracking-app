@@ -117,4 +117,20 @@ class UserPreferencesRepositoryTest {
         assertEquals(23, repository.quietHoursStartHour.first())
         assertEquals(7, repository.quietHoursEndHour.first())
     }
+
+    @Test
+    fun biometricLockPreferenceCanBeUpdatedAndCleared() = runTest(testDispatcher) {
+        assertFalse(repository.biometricLockEnabled.first())
+
+        repository.setBiometricLockEnabled(true)
+        assertTrue(repository.biometricLockEnabled.first())
+
+        repository.setBiometricLockEnabled(false)
+        assertFalse(repository.biometricLockEnabled.first())
+
+        repository.setBiometricLockEnabled(true)
+        assertTrue(repository.biometricLockEnabled.first())
+        repository.clearAllPreferences()
+        assertFalse(repository.biometricLockEnabled.first())
+    }
 }

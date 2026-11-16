@@ -33,6 +33,7 @@ class UserPreferencesRepository(
         val reminderIntervalHours = intPreferencesKey("reminder_interval_hours")
         val quietHoursStartHour = intPreferencesKey("quiet_hours_start_hour")
         val quietHoursEndHour = intPreferencesKey("quiet_hours_end_hour")
+        val biometricLockEnabled = booleanPreferencesKey("biometric_lock_enabled")
     }
 
     override val hiddenCards: Flow<Set<String>> =
@@ -70,6 +71,9 @@ class UserPreferencesRepository(
 
     override val quietHoursEndHour: Flow<Int> =
         context.userDataStore.data.map { it[Keys.quietHoursEndHour] ?: 8 }
+
+    override val biometricLockEnabled: Flow<Boolean> =
+        context.userDataStore.data.map { it[Keys.biometricLockEnabled] ?: false }
 
     override suspend fun toggleCard(id: String): Unit = withContext(ioDispatcher) {
         val canonical = FavoriteCardId.normalize(id)
@@ -140,6 +144,12 @@ class UserPreferencesRepository(
         context.userDataStore.edit { preferences ->
             preferences[Keys.quietHoursStartHour] = startHour
             preferences[Keys.quietHoursEndHour] = endHour
+        }
+    }
+
+    override suspend fun setBiometricLockEnabled(enabled: Boolean): Unit = withContext(ioDispatcher) {
+        context.userDataStore.edit { preferences ->
+            preferences[Keys.biometricLockEnabled] = enabled
         }
     }
 

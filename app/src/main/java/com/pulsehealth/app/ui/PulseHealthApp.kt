@@ -21,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -50,7 +55,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pulsehealth.app.data.AuthResult
+import com.pulsehealth.app.security.BiometricAuthManager
+import com.pulsehealth.app.security.BiometricAuthResult
 import com.pulsehealth.app.ui.browse.BrowseScreen
+import com.pulsehealth.app.ui.components.BiometricLockOverlay
 import com.pulsehealth.app.ui.components.EmptyStateScreen
 import com.pulsehealth.app.ui.detail.DetailScreen
 import com.pulsehealth.app.ui.sharing.SharingScreen
@@ -70,7 +78,20 @@ fun PulseHealthApp(
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.lockApp()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     val todayHydration by viewModel.todayHydrationEntries.collectAsStateWithLifecycle()
     val weeklyWater by viewModel.weeklyWaterLiters.collectAsStateWithLifecycle()
     val pastSummaries by viewModel.pastDailySummaries.collectAsStateWithLifecycle()
@@ -88,7 +109,27 @@ fun PulseHealthApp(
 
     val isTopLevelDestination = TopLevelDestination.entries.any { it.route == currentRoute }
 
-    if (!state.onboardingCompleted) {
+    val fragmentActivity = context as? FragmentActivity
+
+    if (state.biometricLockEnabled && !state.isAppUnlocked) {
+        BiometricLockOverlay(
+            onTriggerUnlock = {
+                if (fragmentActivity != null) {
+                    BiometricAuthManager.authenticate(
+                        activity = fragmentActivity,
+                        title = "Unlock Pulse Health",
+                        subtitle = "Verify your identity to access health records"
+                    ) { result ->
+                        if (result is BiometricAuthResult.Success) {
+                            viewModel.unlockApp()
+                        }
+                    }
+                } else {
+                    viewModel.unlockApp()
+                }
+            }
+        )
+    } else if (!state.onboardingCompleted) {
         OnboardingScreen(
             onComplete = { viewModel.setOnboardingCompleted(true) },
             onRequestPermissions = { permissionLauncher.launch(viewModel.healthRepository.readPermissions) }
@@ -252,7 +293,8 @@ fun PulseHealthApp(
                             viewModel.setStepGoal(steps)
                             viewModel.setCalorieGoal(calories)
                             viewModel.setSleepGoalMinutes(sleep)
-                        }
+                        },
+                        onToggleBiometricLock = viewModel::setBiometricLockEnabled
                     )
                 }
             }

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
@@ -35,6 +36,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,6 +59,8 @@ import com.pulsehealth.app.ui.theme.PulsePink
 @Composable
 fun DataPrivacySectionScreen(
     onBack: () -> Unit,
+    biometricLockEnabled: Boolean = false,
+    onToggleBiometricLock: (Boolean) -> Unit = {},
     onExportData: ((String) -> Unit) -> Unit,
     onExportCsv: ((String) -> Unit) -> Unit = {},
     onExportClinicalSummary: ((String) -> Unit) -> Unit = {},
@@ -125,6 +130,67 @@ fun DataPrivacySectionScreen(
                 fontSize = 12.sp,
                 lineHeight = 17.sp
             )
+        }
+
+        // Biometric Security Card
+        Column {
+            Text(
+                "VAULT ACCESS CONTROL",
+                color = Muted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+
+            HealthCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = PulsePink.copy(alpha = 0.12f),
+                        modifier = Modifier.size(54.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Fingerprint,
+                                contentDescription = null,
+                                tint = PulsePink,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(16.dp))
+
+                    Column(Modifier.weight(1f)) {
+                        Text("Biometric Vault Lock", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Spacer(Modifier.height(3.dp))
+                        StatusDotBadge(
+                            label = if (biometricLockEnabled) "App Lock Active" else "Screen Lock Disabled",
+                            color = if (biometricLockEnabled) PulsePink else Muted
+                        )
+                    }
+
+                    Switch(
+                        checked = biometricLockEnabled,
+                        onCheckedChange = { targetState ->
+                            onToggleBiometricLock(targetState)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = PulsePink,
+                            checkedTrackColor = PulsePink.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "When enabled, Pulse Health requires biometric authentication (Fingerprint, Face Unlock, or Device PIN) before revealing health metrics whenever the app is opened.",
+                    color = Muted,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
+                )
+            }
         }
 
         // Export Data Package Card
