@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Biometric App Lock & Sensitive Health Vault Security**:
+  - **Hardware-Backed Biometric Authentication Engine** (`BiometricAuthManager.kt`):
+    - Uses AndroidX `BiometricPrompt` and `BiometricManager` with `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` authenticators.
+    - Seamlessly supports fingerprint, face unlock, and device screen lock (PIN, Pattern, Password) fallbacks.
+    - Decoupled into `BiometricStatus` and `BiometricAuthResult` sealed states for clean, testable UI interaction.
+  - **Executive Full-Screen Security Gating** (`BiometricLockOverlay.kt`):
+    - Completely restricts rendering and memory accessibility of all sensitive health metrics until successful biometric authentication.
+    - Features automatic authentication prompt presentation on cold start and foreground resume, accompanied by a dedicated manual retry button.
+    - Styled with Pulse Health's executive minimalist aesthetic, TalkBack accessibility role semantics, and 48dp touch targets.
+  - **Automatic Session Auto-Lock on App Backgrounding** (`PulseHealthApp.kt`):
+    - Uses `LifecycleEventObserver` listening for `Lifecycle.Event.ON_STOP` to immediately lock the health vault when the user backgrounds or switches away from Pulse Health.
+  - **Encrypted Preferences & User Setting Controls** (`DataPrivacySectionScreen.kt`, `UserPreferencesRepository.kt`, `DashboardViewModel.kt`):
+    - Toggleable biometric lock control in Data & Privacy section persisted in DataStore.
+    - Upgraded `MainActivity` to `FragmentActivity` enabling native `BiometricPrompt` support while maintaining edge-to-edge Jetpack Compose.
 - **Real-Time Network Connectivity Monitor, Minimalist Offline Pill & Automatic Reconnect Cloud Sync**:
   - **Network Monitoring Engine** (`NetworkMonitor.kt`, `LiveNetworkMonitor`, `NoOpNetworkMonitor`, `TestNetworkMonitor`):
     - Uses Android `ConnectivityManager` callbacks with `callbackFlow` to reactively stream validated internet connectivity states (`isOnline: Flow<Boolean>`).

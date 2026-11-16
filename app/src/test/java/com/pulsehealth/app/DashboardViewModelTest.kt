@@ -147,6 +147,9 @@ class DashboardViewModelTest {
         private val _quietEnd = MutableStateFlow(8)
         override val quietHoursEndHour: Flow<Int> = _quietEnd.asStateFlow()
 
+        private val _biometricLock = MutableStateFlow(false)
+        override val biometricLockEnabled: Flow<Boolean> = _biometricLock.asStateFlow()
+
         override suspend fun toggleCard(id: String) {
             val current = _hidden.value.toMutableSet()
             if (!current.add(id)) current.remove(id)
@@ -190,6 +193,10 @@ class DashboardViewModelTest {
             _quietEnd.value = endHour
         }
 
+        override suspend fun setBiometricLockEnabled(enabled: Boolean) {
+            _biometricLock.value = enabled
+        }
+
         override suspend fun clearAllPreferences() {
             _hidden.value = emptySet()
             _goal.value = 2.0
@@ -199,6 +206,7 @@ class DashboardViewModelTest {
             _interval.value = 2
             _quietStart.value = 22
             _quietEnd.value = 8
+            _biometricLock.value = false
         }
     }
 
@@ -957,5 +965,62 @@ class DashboardViewModelTest {
         assertTrue(digest != null)
         assertEquals(88, digest?.consistencyScore)
         assertTrue(digest?.totalSteps ?: 0L > 50_000L)
+    }
+
+    @Test
+    fun biometricLockDisabledByDefault_appIsUnlocked() = runTest {
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = FakePreferencesRepository(),
+            healthRepository = FakeHealthConnectRepository()
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.biometricLockEnabled)
+        assertTrue(viewModel.uiState.value.isAppUnlocked)
+    }
+
+    @Test
+    fun biometricLockEnabled_lockAppLocksApp_unlockAppUnlocksApp() = runTest {
+        val prefs = FakePreferencesRepository()
+        val viewModel = DashboardViewModel(
+            savedStateHandle = SavedStateHandle(),
+            hydrationRepository = FakeHydrationRepository(),
+            preferencesRepository = prefs,
+            healthRepository = FakeHealthConnectRepository()
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        viewModel.setBiometricLockEnabled(true)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.biometricLockEnabled)
+        assertTrue(viewModel.uiState.value.isAppUnlocked)
+
+        // Calling lockApp when enabled locks the app
+        viewModel.lockApp()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isAppUnlocked)
+
+        // Calling unlockApp restores unlocked state
+        viewModel.unlockApp()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isAppUnlocked)
+
+        // Disabling biometric lock unlocks app automatically
+        viewModel.lockApp()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isAppUnlocked)
+
+        viewModel.setBiometricLockEnabled(false)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.biometricLockEnabled)
+        assertTrue(viewModel.uiState.value.isAppUnlocked)
     }
 }

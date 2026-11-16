@@ -156,6 +156,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.datastore:datastore-preferences:1.2.0")
     implementation("androidx.security:security-crypto:1.0.0")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation(platform("io.github.jan-tennert.supabase:bom:3.1.1"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
