@@ -12,6 +12,7 @@ sealed class PulseDestination(val route: String) {
     data object Browse : PulseDestination("browse")
     data object Profile : PulseDestination("profile")
     data object Onboarding : PulseDestination("onboarding")
+    data object Auth : PulseDestination("auth")
     data object Detail : PulseDestination("detail/{metricType}") {
         const val ARG_METRIC_TYPE = "metricType"
         fun createRoute(metricType: String): String = "detail/$metricType"

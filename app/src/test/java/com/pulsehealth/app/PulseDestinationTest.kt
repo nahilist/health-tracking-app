@@ -15,6 +15,7 @@ class PulseDestinationTest {
         assertEquals("browse", PulseDestination.Browse.route)
         assertEquals("profile", PulseDestination.Profile.route)
         assertEquals("onboarding", PulseDestination.Onboarding.route)
+        assertEquals("auth", PulseDestination.Auth.route)
         assertEquals("detail/{metricType}", PulseDestination.Detail.route)
         assertEquals("detail/Steps", PulseDestination.Detail.createRoute("Steps"))
         assertEquals("detail/Hydration", PulseDestination.Detail.createRoute("Hydration"))

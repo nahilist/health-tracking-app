@@ -86,11 +86,20 @@ fun ProfileScreen(
     onSetQuietHours: (startHour: Int, endHour: Int) -> Unit = { _, _ -> },
     onSendTestReminder: () -> Unit = {},
     onSaveGoals: (waterLiters: Double, steps: Long, calories: Long, sleepMinutes: Long) -> Unit = { _, _, _, _ -> },
-    onToggleBiometricLock: (Boolean) -> Unit = {}
+    onToggleBiometricLock: (Boolean) -> Unit = {},
+    onOpenAuth: (() -> Unit)? = null
 ) {
     var selectedSection by remember { mutableStateOf<ProfileSection?>(null) }
     var showRationaleDialog by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
+
+    val launchAuth = {
+        if (onOpenAuth != null) {
+            onOpenAuth()
+        } else {
+            showAuthDialog = true
+        }
+    }
 
     // Intercept hardware / system back navigation when drilled into a section
     BackHandler(enabled = selectedSection != null) {
@@ -109,7 +118,7 @@ fun ProfileScreen(
                     onBack = { selectedSection = null },
                     onSyncCloud = onSyncCloud,
                     onSignOut = onSignOut,
-                    onOpenAuth = { showAuthDialog = true },
+                    onOpenAuth = launchAuth,
                     onDeleteAccount = onDeleteAccount
                 )
             }
@@ -157,7 +166,7 @@ fun ProfileScreen(
                     state = state,
                     onBack = onBack,
                     onOpenSection = { targetSection -> selectedSection = targetSection },
-                    onOpenAuth = { showAuthDialog = true }
+                    onOpenAuth = launchAuth
                 )
             }
         }

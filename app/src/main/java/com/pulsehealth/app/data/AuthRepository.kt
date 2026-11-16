@@ -37,6 +37,21 @@ interface AuthRepository {
     suspend fun refreshSession(): AuthResult
 
     /**
+     * Sends a password reset verification code / link to the specified email address.
+     */
+    suspend fun sendPasswordResetOtp(email: String): AuthResult
+
+    /**
+     * Verifies a recovery OTP token sent to the user's email.
+     */
+    suspend fun verifyPasswordResetOtp(email: String, token: String): AuthResult
+
+    /**
+     * Updates the password for the current recovery session.
+     */
+    suspend fun updatePassword(newPassword: String): AuthResult
+
+    /**
      * Permanently deletes the active user's remote cloud account and associated data.
      * Signs out cleanly and revokes active credentials.
      */
@@ -102,6 +117,25 @@ class NoOpAuthRepository(
 
     override suspend fun refreshSession(): AuthResult {
         val user = _currentUser.value ?: return AuthResult.Error("No active user session to refresh.")
+        return AuthResult.Success(user)
+    }
+
+    override suspend fun sendPasswordResetOtp(email: String): AuthResult {
+        if (email.isBlank()) return AuthResult.Error("Please enter your email address.")
+        return AuthResult.Success(AuthUser("mock_recovery", email, "Recovery User", false))
+    }
+
+    override suspend fun verifyPasswordResetOtp(email: String, token: String): AuthResult {
+        if (token.length < 4) return AuthResult.Error("Please enter a valid verification code.")
+        val user = AuthUser("mock_recovery", email, "Recovery User", false)
+        _currentUser.value = user
+        _authState.value = AuthState.Authenticated(user)
+        return AuthResult.Success(user)
+    }
+
+    override suspend fun updatePassword(newPassword: String): AuthResult {
+        if (newPassword.length < 6) return AuthResult.Error("Password must be at least 6 characters.")
+        val user = _currentUser.value ?: AuthUser("mock_recovery", "recovered@example.com", "Recovered", false)
         return AuthResult.Success(user)
     }
 

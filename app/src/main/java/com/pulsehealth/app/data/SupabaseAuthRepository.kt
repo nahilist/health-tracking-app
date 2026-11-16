@@ -215,6 +215,70 @@ class SupabaseAuthRepository(
         }
     }
 
+    override suspend fun sendPasswordResetOtp(email: String): AuthResult = withContext(ioDispatcher) {
+        val trimmed = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(trimmed).matches()) {
+            return@withContext AuthResult.Error("Please enter a valid email address.")
+        }
+        val client = supabaseClient
+        if (client != null) {
+            try {
+                client.auth.resetPasswordForEmail(trimmed)
+                AuthResult.Success(AuthUser(id = "reset_pending", email = trimmed, displayName = trimmed.substringBefore("@"), isAnonymous = false))
+            } catch (e: Exception) {
+                AuthResult.Error(sanitizeAuthError(e, "Unable to send verification code. Please check your address."), e)
+            }
+        } else {
+            AuthResult.Success(AuthUser(id = "mock_reset", email = trimmed, displayName = trimmed.substringBefore("@"), isAnonymous = false))
+        }
+    }
+
+    override suspend fun verifyPasswordResetOtp(email: String, token: String): AuthResult = withContext(ioDispatcher) {
+        val trimmedEmail = email.trim()
+        val trimmedToken = token.trim()
+        if (trimmedToken.length < 4) {
+            return@withContext AuthResult.Error("Please enter the complete verification code.")
+        }
+        val client = supabaseClient
+        if (client != null) {
+            try {
+                client.auth.verifyEmailOtp(
+                    type = io.github.jan.supabase.auth.OtpType.Email.RECOVERY,
+                    email = trimmedEmail,
+                    token = trimmedToken
+                )
+                val remoteUser = client.auth.currentUserOrNull()
+                handleSuccessfulAuth(trimmedEmail, remoteUser?.id)
+            } catch (e: Exception) {
+                AuthResult.Error(sanitizeAuthError(e, "Invalid or expired verification code. Please try again."), e)
+            }
+        } else {
+            handleSuccessfulAuth(trimmedEmail)
+        }
+    }
+
+    override suspend fun updatePassword(newPassword: String): AuthResult = withContext(ioDispatcher) {
+        if (newPassword.length < 6) {
+            return@withContext AuthResult.Error("Password must be at least 6 characters.")
+        }
+        val client = supabaseClient
+        if (client != null) {
+            try {
+                client.auth.updateUser {
+                    password = newPassword
+                }
+                val remoteUser = client.auth.currentUserOrNull()
+                val currentEmail = remoteUser?.email ?: _currentUser.value?.email ?: "user@pulsehealth.app"
+                handleSuccessfulAuth(currentEmail, remoteUser?.id)
+            } catch (e: Exception) {
+                AuthResult.Error(sanitizeAuthError(e, "Failed to update password. Please try again."), e)
+            }
+        } else {
+            val user = _currentUser.value ?: AuthUser(id = "user_recovered", email = "recovered@pulsehealth.app", displayName = "Recovered", isAnonymous = false)
+            AuthResult.Success(user)
+        }
+    }
+
     override suspend fun deleteAccount(): Result<Unit> = withContext(ioDispatcher) {
         val client = supabaseClient
         val user = _currentUser.value

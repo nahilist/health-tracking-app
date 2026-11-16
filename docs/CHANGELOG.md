@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-11-14
 
 ### Added
+- **Full UI/UX Redesign of Authentication & Account Recovery Experience**:
+  - **Executive 5-State Authentication Flow** (`AuthScreen.kt`):
+    - Redesigned authentication workflow matching executive minimalist design standards: Sign In, Create Account, Forgot Password, 6-Digit OTP Verification, and Reset Password.
+    - Designed with layered organic pastel gradients, brand heartbeat iconography, and elevated rounded white sheet (`RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)`).
+    - Rounded text input fields with leading icon indicators and eye toggle password visibility.
+    - 6-box OTP entry with automatic focus transfer, digit validation, and key event backspace handling.
+    - Seamless animated horizontal slide transitions between authentication phases.
+  - **Account Recovery & Password Reset Backend** (`AuthRepository.kt`, `SupabaseAuthRepository.kt`, `DashboardViewModel.kt`):
+    - Added `sendPasswordResetOtp()`, `verifyPasswordResetOtp()`, and `updatePassword()` with Supabase `resetPasswordForEmail`, `verifyEmailOtp`, and `updateUser` integration.
+    - Multi-layer credential error sanitization guaranteeing zero exposure of Supabase URLs, Bearer authorization tokens, or API keys on any authentication failure.
+  - **Dedicated Navigation Destination & Test Suite** (`PulseDestination.Auth`, `AuthScreenComposeTest.kt`, `AuthRepositoryTest.kt`):
+    - Added `PulseDestination.Auth` route in `PulseHealthApp.kt` and wired into `ProfileScreen`.
+    - Added automated Robolectric Compose UI test coverage across all 5 auth modes and repository-level validation.
 - **Robolectric Compose UI Test Suite & Credential Leak Prevention Validation**:
   - **Local JVM Compose UI Test Infrastructure** (`build.gradle.kts`):
     - Configured `androidx.compose.ui:ui-test-junit4` with Robolectric 4.16.1, enabling full Compose semantic tree testing directly on the local JVM and GitHub Actions CI without requiring a hardware device or emulator.

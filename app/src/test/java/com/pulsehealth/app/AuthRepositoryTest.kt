@@ -164,4 +164,36 @@ class AuthRepositoryTest {
         assertEquals(AuthState.Unauthenticated, repository.authState.value)
         assertNull(repository.currentUser.value)
     }
+
+    @Test
+    fun passwordResetValidationAndMockExecution() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        // 1. Invalid email validation
+        val invalidEmailResult = repository.sendPasswordResetOtp("not-an-email")
+        assertTrue(invalidEmailResult is AuthResult.Error)
+        assertEquals("Please enter a valid email address.", (invalidEmailResult as AuthResult.Error).message)
+
+        // 2. Valid email request
+        val sendResult = repository.sendPasswordResetOtp("valid@pulsehealth.app")
+        assertTrue(sendResult is AuthResult.Success)
+
+        // 3. Short OTP validation
+        val shortOtpResult = repository.verifyPasswordResetOtp("valid@pulsehealth.app", "12")
+        assertTrue(shortOtpResult is AuthResult.Error)
+        assertEquals("Please enter the complete verification code.", (shortOtpResult as AuthResult.Error).message)
+
+        // 4. Valid OTP verification
+        val verifyResult = repository.verifyPasswordResetOtp("valid@pulsehealth.app", "123456")
+        assertTrue(verifyResult is AuthResult.Success)
+
+        // 5. Short new password validation
+        val shortPasswordResult = repository.updatePassword("123")
+        assertTrue(shortPasswordResult is AuthResult.Error)
+        assertEquals("Password must be at least 6 characters.", (shortPasswordResult as AuthResult.Error).message)
+
+        // 6. Valid password update
+        val updateResult = repository.updatePassword("newSecurePass123")
+        assertTrue(updateResult is AuthResult.Success)
+    }
 }
