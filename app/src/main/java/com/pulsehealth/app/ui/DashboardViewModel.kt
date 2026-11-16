@@ -650,6 +650,21 @@ class DashboardViewModel(
         onResult(result)
     }
 
+    fun sendPasswordResetOtp(email: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.sendPasswordResetOtp(email)
+        onResult(result)
+    }
+
+    fun verifyPasswordResetOtp(email: String, token: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.verifyPasswordResetOtp(email, token)
+        onResult(result)
+    }
+
+    fun updatePassword(newPassword: String, onResult: (AuthResult) -> Unit = {}) = viewModelScope.launch {
+        val result = authRepository.updatePassword(newPassword)
+        onResult(result)
+    }
+
     fun signOut(onComplete: () -> Unit = {}) = viewModelScope.launch {
         authRepository.signOut()
         onComplete()

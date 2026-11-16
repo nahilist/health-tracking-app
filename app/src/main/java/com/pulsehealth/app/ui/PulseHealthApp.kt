@@ -57,6 +57,7 @@ import androidx.navigation.navArgument
 import com.pulsehealth.app.data.AuthResult
 import com.pulsehealth.app.security.BiometricAuthManager
 import com.pulsehealth.app.security.BiometricAuthResult
+import com.pulsehealth.app.ui.auth.AuthScreen
 import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.BiometricLockOverlay
 import com.pulsehealth.app.ui.components.EmptyStateScreen
@@ -294,7 +295,64 @@ fun PulseHealthApp(
                             viewModel.setCalorieGoal(calories)
                             viewModel.setSleepGoalMinutes(sleep)
                         },
-                        onToggleBiometricLock = viewModel::setBiometricLockEnabled
+                        onToggleBiometricLock = viewModel::setBiometricLockEnabled,
+                        onOpenAuth = { navController.navigate(PulseDestination.Auth.route) }
+                    )
+                }
+                composable(PulseDestination.Auth.route) {
+                    AuthScreen(
+                        onBack = { navController.navigateUp() },
+                        onSignIn = { email, password, onError ->
+                            viewModel.signInWithEmail(email, password) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        onError("")
+                                        navController.navigateUp()
+                                    }
+                                    is AuthResult.Error -> onError(result.message)
+                                }
+                            }
+                        },
+                        onSignUp = { email, password, onError ->
+                            viewModel.signUpWithEmail(email, password) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        onError("")
+                                        navController.navigateUp()
+                                    }
+                                    is AuthResult.Error -> onError(result.message)
+                                }
+                            }
+                        },
+                        onSendResetOtp = { email, onResult ->
+                            viewModel.sendPasswordResetOtp(email) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> onResult(true, null)
+                                    is AuthResult.Error -> onResult(false, result.message)
+                                }
+                            }
+                        },
+                        onVerifyOtp = { email, otp, onResult ->
+                            viewModel.verifyPasswordResetOtp(email, otp) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> onResult(true, null)
+                                    is AuthResult.Error -> onResult(false, result.message)
+                                }
+                            }
+                        },
+                        onUpdatePassword = { newPassword, onResult ->
+                            viewModel.updatePassword(newPassword) { result ->
+                                when (result) {
+                                    is AuthResult.Success -> onResult(true, null)
+                                    is AuthResult.Error -> onResult(false, result.message)
+                                }
+                            }
+                        },
+                        onSignInAsGuest = {
+                            viewModel.signInAsGuest {
+                                navController.navigateUp()
+                            }
+                        }
                     )
                 }
             }
