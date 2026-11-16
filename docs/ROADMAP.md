@@ -147,7 +147,7 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | No Room migration beyond v1 | Future update risk | High before schema change |
 | No secure session layer | Blocks authentication | Resolved in PR 10 |
 | Placeholder Sharing/Browse | Incomplete product flows | Resolved in PR 14 & 15 |
-| No instrumented UI suite | Regression risk | Medium |
+| No instrumented UI suite | Regression risk | Resolved in PR 28 |
 
 ## 8. Recommended next step
 
