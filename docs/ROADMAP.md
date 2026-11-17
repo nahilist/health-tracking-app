@@ -161,6 +161,15 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Workout session history list, source pills, and delete actions on `DetailScreen` for Activity and Exercise
 - [x] Room migration unit tests (`RoomMigration1To2Test`), `WorkoutRepositoryTest`, and `LogWorkoutBottomSheetComposeTest`
 
+### PR 31: Android Jetpack Glance home screen widgets (Completed)
+
+- [x] Jetpack Glance AppWidget architecture (`androidx.glance:glance-appwidget:1.1.1` and `glance-material3:1.1.1`)
+- [x] `PulseHealthWidget` Glance implementation displaying brand header, today's water intake & progress, steps, active calories, and 1-tap quick action
+- [x] `WidgetDataProvider` for Room database hydration and daily health summary loading
+- [x] `QuickAddWaterActionCallback` for zero-friction `+250 mL` logging straight from the home screen
+- [x] `PulseHealthWidgetReceiver` with `updateAllWidgets` broadcasting on hydration updates from app, notifications, and widget
+- [x] Robolectric unit tests in `PulseHealthWidgetTest` validating data calculation, percentage clamping, and action callback persistence
+
 ## 9. Recommended next step
 
-Proceed with the next Phase 5 milestone: **Android Jetpack Glance Home Screen Widgets** or **Deep Sleep Staging & Breakdown**.
+Proceed with the next Phase 5 milestone: **Deep Sleep Staging & Breakdown** (parsing and charting REM, Deep, Light, and Awake intervals from Health Connect) or **Custom Target & Goal Setting Dialogs**.

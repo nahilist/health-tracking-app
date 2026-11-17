@@ -48,5 +48,16 @@
         <receiver
             android:name=".notifications.HydrationActionReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".widget.PulseHealthWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/pulse_health_widget_info" />
+        </receiver>
     </application>
 </manifest>

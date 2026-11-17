@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.pulsehealth.app.PulseHealthApplication
+import com.pulsehealth.app.widget.PulseHealthWidgetReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,9 @@ class HydrationActionReceiver : BroadcastReceiver() {
                         container.healthConnectRepository.writeHydration(amountMl, System.currentTimeMillis())
                     }
                 }
+
+                // Update Glance home screen widgets
+                PulseHealthWidgetReceiver.updateAllWidgets(context)
             } finally {
                 pendingResult.finish()
             }

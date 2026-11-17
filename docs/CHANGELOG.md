@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Android Jetpack Glance Home Screen Widgets & Quick Water Logging**:
+  - **Glance AppWidget Framework Integration** (`build.gradle.kts`, `AndroidManifest.xml`):
+    - Added `androidx.glance:glance-appwidget:1.1.1` and `androidx.glance:glance-material3:1.1.1` dependencies.
+    - Configured widget XML metadata provider (`pulse_health_widget_info.xml`), initial layout preview (`pulse_widget_initial_layout.xml`), and 16dp rounded card background (`pulse_widget_background.xml`).
+  - **Glance Home Screen Widget** (`PulseHealthWidget.kt`, `WidgetDataProvider.kt`):
+    - Created `PulseHealthWidget` displaying executive brand badge, today's water intake with dynamic target percentage and linear progress bar, and at-a-glance steps & active calories metrics.
+    - Integrated direct app launch on card tap via `actionStartActivity<MainActivity>()`.
+    - Added `WidgetDataProvider` fetching today's Room database hydration records and daily health summary efficiently with fallback defaults.
+  - **Zero-Friction Quick Water Action Callback** (`QuickAddWaterActionCallback.kt`):
+    - Implemented `ActionCallback` handling 1-tap `+250 mL` quick-add water logging directly from the home screen widget without requiring full app navigation.
+    - Automatically persists new `HydrationEntryEntity` to Room and broadcasts widget refresh.
+  - **Automatic Widget Synchronization & Invalidation** (`PulseHealthWidgetReceiver.kt`, `DashboardViewModel.kt`, `HydrationActionReceiver.kt`):
+    - Implemented `PulseHealthWidgetReceiver.updateAllWidgets(context)` companion helper.
+    - Broadcasts widget state updates whenever water is logged, edited, or deleted in `DashboardViewModel` or via notification quick-actions in `HydrationActionReceiver`.
+  - **Robolectric Widget Test Suite** (`PulseHealthWidgetTest.kt`):
+    - Validates data computation, progress percentage clamping (e.g. 0% to 100%+ bounds), and `QuickAddWaterActionCallback` Room persistence under Robolectric.
 - **Detailed Workout & Exercise Session Tracking**:
   - **Room Database Version 2 Migration & Exported Schema** (`PulseDatabase.kt`, `2.json`):
     - Added `MIGRATION_1_2` non-destructive schema migration creating `workout_sessions` table with index on `startTimeEpochMillis`.
