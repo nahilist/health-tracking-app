@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Deep Sleep Staging, Hypnogram Visualization & Restfulness Breakdown**:
+  - **Room Database Version 3 Migration & Exported Schema** (`PulseDatabase.kt`, `3.json`):
+    - Added `MIGRATION_2_3` non-destructive schema migration creating `sleep_sessions` and `sleep_stages` tables with cascade deletion, indices, and exported schema `3.json`.
+    - Tested via `RoomMigration2To3Test` guaranteeing full preservation of hydration, daily summaries, and workout sessions.
+  - **Sleep Staging Models & Repository Layer** (`SleepModels.kt`, `SleepSessionEntity.kt`, `SleepStageEntity.kt`, `SleepDao.kt`, `SleepRepository.kt`):
+    - Full domain representation for `SleepStageType` (`DEEP`, `LIGHT`, `REM`, `AWAKE`, `UNKNOWN`) with color mapping and stage interval calculations.
+    - `SleepBreakdownSummary` computing restorative sleep minutes, in-bed minutes, stage percentages, and sleep efficiency rating.
+    - Decoupled `SleepRepository` & `DefaultSleepRepository` injected cleanly via `AppContainer`.
+  - **Health Connect Granular Sleep Stage Ingestion** (`HealthConnectRepository.kt`, `DashboardViewModel.kt`):
+    - Added `readSleepSessions(range: TimeRange)` querying platform `SleepSessionRecord` and extracting individual `Stage` intervals with normalization into `SleepSessionWithStages`.
+  - **Executive Sleep Staging & Hypnogram UI on DetailScreen** (`SleepStagingComponents.kt`, `DetailScreen.kt`):
+    - `SleepHypnogramCard`: Color-coded timeline displaying transitions between Deep (purple), Light (blue), REM (teal), and Awake (amber) stages throughout the night, with start/end time markers, efficiency badge, and TalkBack accessibility descriptions.
+    - `SleepStageBreakdownCard`: Multi-segment stacked distribution bar and 4-stage breakdown rows with duration and percentage of night.
+    - `SleepEfficiencyCard`: Restfulness score (% efficiency, optimal/good rating), time asleep vs. in bed, and restorative duration.
+    - `SleepEmptyStateCard`: Educational placeholder when no wearable sleep staging data is recorded.
+  - **Comprehensive Test Suite** (`RoomMigration2To3Test.kt`, `SleepRepositoryTest.kt`, `SleepStagingComposeTest.kt`):
+    - Automated unit tests covering Room v3 migration, repository queries/deletion, stage duration math, and Robolectric Compose UI rendering.
 - **Android Jetpack Glance Home Screen Widgets & Quick Water Logging**:
   - **Glance AppWidget Framework Integration** (`build.gradle.kts`, `AndroidManifest.xml`):
     - Added `androidx.glance:glance-appwidget:1.1.1` and `androidx.glance:glance-material3:1.1.1` dependencies.

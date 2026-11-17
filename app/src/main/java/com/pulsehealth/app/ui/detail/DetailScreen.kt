@@ -66,6 +66,7 @@ import com.pulsehealth.app.data.WorkoutType
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.local.WorkoutSessionEntity
+import com.pulsehealth.app.data.local.SleepSessionWithStages
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
 import com.pulsehealth.app.ui.summary.ActivityRings
@@ -94,6 +95,7 @@ fun DetailScreen(
     weeklyWaterLiters: Double = 0.0,
     dailySummaries: List<DailyHealthSummaryEntity> = emptyList(),
     todayWorkouts: List<WorkoutSessionEntity> = emptyList(),
+    todaySleepSession: SleepSessionWithStages? = null,
     onAddWater: (Int) -> Unit = {},
     onEditWater: (String, Int) -> Unit = { _, _ -> },
     onDeleteWater: (String) -> Unit = {},
@@ -391,6 +393,28 @@ fun DetailScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Deep Sleep Staging, Hypnogram & Restfulness (for Sleep)
+        if (normalizedId == "Sleep") {
+            item {
+                SleepHypnogramCard(
+                    sessionWithStages = todaySleepSession,
+                    isDemo = isDemo
+                )
+            }
+            item {
+                SleepStageBreakdownCard(
+                    sessionWithStages = todaySleepSession,
+                    isDemo = isDemo
+                )
+            }
+            item {
+                SleepEfficiencyCard(
+                    sessionWithStages = todaySleepSession,
+                    isDemo = isDemo
+                )
             }
         }
 
