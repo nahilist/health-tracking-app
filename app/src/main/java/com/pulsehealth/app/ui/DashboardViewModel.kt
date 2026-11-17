@@ -33,8 +33,12 @@ import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.TrustedContact
 import com.pulsehealth.app.data.WeeklyDigestCalculator
 import com.pulsehealth.app.data.WeeklyWellnessDigest
+import com.pulsehealth.app.data.WorkoutRepository
+import com.pulsehealth.app.data.NoOpWorkoutRepository
+import com.pulsehealth.app.data.WorkoutType
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
+import com.pulsehealth.app.data.local.WorkoutSessionEntity
 import com.pulsehealth.app.data.toDailyHealthSummary
 import com.pulsehealth.app.data.toDashboardMetrics
 import com.pulsehealth.app.data.sync.NoOpSyncRepository
@@ -66,6 +70,7 @@ class DashboardViewModel(
     val reminderScheduler: ReminderScheduler = NoOpReminderScheduler(),
     val sharingRepository: SharingRepository = NoOpSharingRepository(),
     val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository(),
+    val workoutRepository: WorkoutRepository = NoOpWorkoutRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor()
 ) : ViewModel() {
 
@@ -92,6 +97,10 @@ class DashboardViewModel(
             startEpochDay = java.time.LocalDate.now().minusDays(29).toEpochDay(),
             endEpochDay = java.time.LocalDate.now().toEpochDay()
         ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val todayWorkouts: StateFlow<List<WorkoutSessionEntity>> =
+        workoutRepository.observeTodayWorkouts()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
     val lastCloudSyncedEpochMillis: StateFlow<Long?> = syncRepository.lastSyncedEpochMillis
@@ -449,6 +458,57 @@ class DashboardViewModel(
         syncRepository.triggerImmediateSync()
     }
 
+    fun logWorkout(
+        workoutType: WorkoutType,
+        title: String? = null,
+        durationMinutes: Long,
+        activeCalories: Int? = null,
+        distanceMeters: Double? = null,
+        notes: String? = null
+    ) = viewModelScope.launch {
+        val logged = workoutRepository.logWorkout(
+            workoutType = workoutType,
+            title = title,
+            durationMinutes = durationMinutes,
+            activeCalories = activeCalories,
+            distanceMeters = distanceMeters,
+            notes = notes
+        )
+        val todayEpoch = java.time.LocalDate.now().toEpochDay()
+        val existing = dailySummaryRepository.getSummary(todayEpoch)
+        val updatedCalories = (existing?.activeCalories ?: syncStateFlow.value.metrics.activeCalories ?: 0L) + (logged.activeCalories?.toLong() ?: 0L)
+        val updatedExerciseMin = (existing?.exerciseMinutes ?: syncStateFlow.value.metrics.exerciseMinutes ?: 0L) + logged.durationMinutes
+        val updatedSummary = existing?.copy(
+            activeCalories = updatedCalories,
+            exerciseMinutes = updatedExerciseMin,
+            updatedAtEpochMillis = System.currentTimeMillis()
+        ) ?: DailyHealthSummaryEntity(
+            epochDay = todayEpoch,
+            steps = syncStateFlow.value.metrics.steps ?: 0L,
+            restingHeartRate = syncStateFlow.value.metrics.heartRate,
+            sleepMinutes = syncStateFlow.value.metrics.sleepMinutes ?: 0L,
+            activeCalories = updatedCalories,
+            exerciseMinutes = updatedExerciseMin,
+            standHours = syncStateFlow.value.metrics.standHours ?: 0L,
+            source = "local",
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+        dailySummaryRepository.saveDailySummary(updatedSummary)
+        syncStateFlow.update {
+            it.copy(
+                metrics = it.metrics.copy(
+                    activeCalories = updatedCalories,
+                    exerciseMinutes = updatedExerciseMin,
+                    source = if (it.metrics.source == DataSource.NONE) DataSource.LOCAL else it.metrics.source
+                )
+            )
+        }
+    }
+
+    fun deleteWorkout(id: String) = viewModelScope.launch {
+        workoutRepository.deleteWorkout(id)
+    }
+
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
     }
@@ -488,6 +548,7 @@ class DashboardViewModel(
             if (alsoDeleteLocalData) {
                 hydrationRepository.clearAllData()
                 dailySummaryRepository.deleteAllSummaries()
+                workoutRepository.deleteAllWorkouts()
                 preferencesRepository.clearAllPreferences()
                 syncStateFlow.update {
                     it.copy(
@@ -504,6 +565,7 @@ class DashboardViewModel(
     fun deleteAllLocalData(onDeleted: () -> Unit = {}) = viewModelScope.launch {
         hydrationRepository.clearAllData()
         dailySummaryRepository.deleteAllSummaries()
+        workoutRepository.deleteAllWorkouts()
         preferencesRepository.clearAllPreferences()
         syncStateFlow.update {
             it.copy(
@@ -606,6 +668,12 @@ class DashboardViewModel(
                             sourceLabel = metrics.source.label
                         )
                     )
+                }
+
+                // 3. Ingest exercise sessions into Room
+                val exerciseSessions = runCatching { healthRepository.readExerciseSessions(range) }.getOrDefault(emptyList())
+                if (exerciseSessions.isNotEmpty()) {
+                    workoutRepository.importHealthConnectWorkouts(exerciseSessions)
                 }
             }
             .onFailure {
@@ -761,6 +829,7 @@ class DashboardViewModel(
                     reminderScheduler = app.container.reminderScheduler,
                     sharingRepository = app.container.sharingRepository,
                     dailySummaryRepository = app.container.dailySummaryRepository,
+                    workoutRepository = app.container.workoutRepository,
                     networkMonitor = app.container.networkMonitor
                 )
             }

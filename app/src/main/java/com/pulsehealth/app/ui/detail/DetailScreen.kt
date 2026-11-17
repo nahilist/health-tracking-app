@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -61,11 +62,14 @@ import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.HydrationStreakInfo
 import com.pulsehealth.app.data.MetricRegistry
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.WorkoutType
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
+import com.pulsehealth.app.data.local.WorkoutSessionEntity
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
 import com.pulsehealth.app.ui.summary.ActivityRings
+import com.pulsehealth.app.ui.summary.LogWorkoutBottomSheet
 import com.pulsehealth.app.ui.summary.RangeSelector
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
@@ -89,10 +93,13 @@ fun DetailScreen(
     todayHydrationEntries: List<HydrationEntryEntity> = emptyList(),
     weeklyWaterLiters: Double = 0.0,
     dailySummaries: List<DailyHealthSummaryEntity> = emptyList(),
+    todayWorkouts: List<WorkoutSessionEntity> = emptyList(),
     onAddWater: (Int) -> Unit = {},
     onEditWater: (String, Int) -> Unit = { _, _ -> },
     onDeleteWater: (String) -> Unit = {},
     onSetWaterGoal: (Double) -> Unit = {},
+    onLogWorkout: (WorkoutType, String?, Long, Int?, Double?, String?) -> Unit = { _, _, _, _, _, _ -> },
+    onDeleteWorkout: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     val locale = LocalLocale.current.platformLocale
@@ -102,6 +109,7 @@ fun DetailScreen(
 
     var editingEntry by remember { mutableStateOf<HydrationEntryEntity?>(null) }
     var showGoalDialog by remember { mutableStateOf(false) }
+    var showWorkoutSheet by remember { mutableStateOf(false) }
 
     val formattedValue = remember(type, metrics, locale) {
         MetricRegistry.formatValue(type, metrics, locale)
@@ -270,6 +278,40 @@ fun DetailScreen(
                             ) {
                                 Text("+$amount mL", fontSize = 13.sp)
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Quick log button for workouts / exercise
+        if (normalizedId == "Exercise" || normalizedId == "Activity") {
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("LOG WORKOUT", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Record running, cycling, strength, yoga or custom exercise",
+                                color = Muted,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        FilledTonalButton(
+                            onClick = { showWorkoutSheet = true },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = WarmOrange.copy(alpha = 0.15f),
+                                contentColor = WarmOrange
+                            )
+                        ) {
+                            Text("+ Log Workout", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -485,6 +527,127 @@ fun DetailScreen(
             }
         }
 
+        // Today's Workouts List (for Exercise & Activity)
+        if (normalizedId == "Exercise" || normalizedId == "Activity") {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Today's Workouts (${todayWorkouts.size})",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (todayWorkouts.isEmpty()) {
+                item {
+                    HealthCard(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "No workout sessions recorded today.",
+                            color = Muted,
+                            fontSize = 13.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Tap '+ Log Workout' above to record an exercise session or sync with Health Connect.",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    HealthCard(
+                        Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        todayWorkouts.forEachIndexed { index, session ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 66.dp)
+                                )
+                            }
+                            val wType = WorkoutType.fromString(session.workoutType)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = WarmOrange.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            wType.icon,
+                                            contentDescription = null,
+                                            tint = WarmOrange,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = session.title,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 15.sp
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        val isHc = session.source.lowercase().contains("health")
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = if (isHc) ExerciseGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = if (isHc) "Health Connect" else "Manual",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isHc) ExerciseGreen else Muted,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    val timeStr = Instant.ofEpochMilli(session.startTimeEpochMillis)
+                                        .atZone(ZoneId.systemDefault())
+                                        .format(DateTimeFormatter.ofPattern("h:mm a", locale))
+                                    val detailsText = buildString {
+                                        append("${session.durationMinutes} min")
+                                        session.activeCalories?.let { append(" · $it kcal") }
+                                        session.distanceMeters?.let {
+                                            val km = it / 1000.0
+                                            append(" · %.1f km".format(locale, km))
+                                        }
+                                        append(" · $timeStr")
+                                    }
+                                    Text(
+                                        text = detailsText,
+                                        color = Muted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                if (!session.source.lowercase().contains("health")) {
+                                    IconButton(onClick = { onDeleteWorkout(session.id) }) {
+                                        Icon(
+                                            Icons.Default.DeleteOutline,
+                                            "Delete workout",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Educational Non-Diagnostic Section
         item {
             HealthCard(Modifier.fillMaxWidth()) {
@@ -560,6 +723,13 @@ fun DetailScreen(
                 onSetWaterGoal(newGoal)
                 showGoalDialog = false
             }
+        )
+    }
+
+    if (showWorkoutSheet) {
+        LogWorkoutBottomSheet(
+            onLogWorkout = onLogWorkout,
+            onDismiss = { showWorkoutSheet = false }
         )
     }
 }
