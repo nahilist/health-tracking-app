@@ -48,6 +48,7 @@ import com.pulsehealth.app.notifications.NoOpReminderScheduler
 import com.pulsehealth.app.notifications.NotificationHelper
 import com.pulsehealth.app.notifications.ReminderScheduler
 import com.pulsehealth.app.notifications.ReminderSettings
+import com.pulsehealth.app.widget.PulseHealthWidgetReceiver
 import com.pulsehealth.app.util.NetworkMonitor
 import com.pulsehealth.app.util.NoOpNetworkMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +72,8 @@ class DashboardViewModel(
     val sharingRepository: SharingRepository = NoOpSharingRepository(),
     val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository(),
     val workoutRepository: WorkoutRepository = NoOpWorkoutRepository(),
-    val networkMonitor: NetworkMonitor = NoOpNetworkMonitor()
+    val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
+    val applicationContext: Context? = null
 ) : ViewModel() {
 
     private val selectedRangeFlow: StateFlow<String> = savedStateHandle.getStateFlow(
@@ -441,6 +443,7 @@ class DashboardViewModel(
     fun addWater(amountMilliliters: Int = 250) = viewModelScope.launch {
         hydrationRepository.addWater(amountMilliliters)
         syncRepository.triggerImmediateSync()
+        applicationContext?.let { PulseHealthWidgetReceiver.updateAllWidgets(it) }
         if (uiState.value.syncWaterToHealthConnect && syncStateFlow.value.hasWriteHydrationPermission) {
             runCatching {
                 healthRepository.writeHydration(amountMilliliters, System.currentTimeMillis())
@@ -451,11 +454,13 @@ class DashboardViewModel(
     fun editWater(id: String, amountMilliliters: Int) = viewModelScope.launch {
         hydrationRepository.updateWater(id, amountMilliliters)
         syncRepository.triggerImmediateSync()
+        applicationContext?.let { PulseHealthWidgetReceiver.updateAllWidgets(it) }
     }
 
     fun deleteWater(id: String) = viewModelScope.launch {
         hydrationRepository.deleteWater(id)
         syncRepository.triggerImmediateSync()
+        applicationContext?.let { PulseHealthWidgetReceiver.updateAllWidgets(it) }
     }
 
     fun logWorkout(
@@ -830,7 +835,8 @@ class DashboardViewModel(
                     sharingRepository = app.container.sharingRepository,
                     dailySummaryRepository = app.container.dailySummaryRepository,
                     workoutRepository = app.container.workoutRepository,
-                    networkMonitor = app.container.networkMonitor
+                    networkMonitor = app.container.networkMonitor,
+                    applicationContext = app.applicationContext
                 )
             }
         }
