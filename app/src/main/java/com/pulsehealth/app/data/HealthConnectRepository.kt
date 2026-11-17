@@ -16,6 +16,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
+import com.pulsehealth.app.data.local.WorkoutSessionEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,6 +38,7 @@ interface HealthConnectRepository {
     suspend fun hasWriteHydrationPermission(): Boolean
     suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics
     suspend fun writeHydration(amountMilliliters: Int, recordedAtEpochMillis: Long): Boolean
+    suspend fun readExerciseSessions(range: TimeRange): List<WorkoutSessionEntity> = emptyList()
 }
 
 class DefaultHealthConnectRepository(
@@ -222,6 +224,63 @@ class DefaultHealthConnectRepository(
             client.insertRecords(listOf(record))
             true
         }.getOrDefault(false)
+    }
+
+    override suspend fun readExerciseSessions(range: TimeRange): List<WorkoutSessionEntity> = withContext(ioDispatcher) {
+        if (!hasPermissions()) return@withContext emptyList()
+        val client = HealthConnectClient.getOrCreate(context)
+        val now = Instant.ofEpochMilli(clock.millis())
+        val today = now.atZone(zoneId).toLocalDate()
+
+        val (startInstant, endInstant) = when (range) {
+            TimeRange.TODAY -> {
+                today.atStartOfDay(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+            TimeRange.WEEK -> {
+                today.minusDays(6).atStartOfDay(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+            TimeRange.MONTH -> {
+                today.minusDays(29).atStartOfDay(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+        }
+        val filter = TimeRangeFilter.between(startInstant, endInstant)
+
+        val exerciseRecords = runCatching {
+            client.readRecords(
+                ReadRecordsRequest(ExerciseSessionRecord::class, filter, pageSize = 100)
+            ).records
+        }.getOrDefault(emptyList())
+
+        exerciseRecords.map { record ->
+            val durationMinutes = Duration.between(record.startTime, record.endTime).toMinutes().coerceAtLeast(1)
+            val workoutType = when (record.exerciseType) {
+                ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> WorkoutType.RUNNING
+                ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> WorkoutType.WALKING
+                ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> WorkoutType.CYCLING
+                ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL,
+                ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> WorkoutType.SWIMMING
+                ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
+                ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+                ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> WorkoutType.STRENGTH
+                ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
+                ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> WorkoutType.YOGA
+                ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> WorkoutType.HIIT
+                else -> WorkoutType.OTHER
+            }
+            WorkoutSessionEntity(
+                id = "hc_${record.metadata.id}",
+                workoutType = workoutType.name,
+                title = record.title?.takeIf { it.isNotBlank() } ?: workoutType.defaultTitle,
+                startTimeEpochMillis = record.startTime.toEpochMilli(),
+                endTimeEpochMillis = record.endTime.toEpochMilli(),
+                durationMinutes = durationMinutes,
+                activeCalories = (durationMinutes * workoutType.defaultCaloriesPerMinute).toInt(),
+                distanceMeters = null,
+                source = "health_connect",
+                notes = record.notes,
+                syncState = "synced"
+            )
+        }
     }
 
     private fun formatPackageName(pkg: String): String = when (pkg) {

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Detailed Workout & Exercise Session Tracking**:
+  - **Room Database Version 2 Migration & Exported Schema** (`PulseDatabase.kt`, `2.json`):
+    - Added `MIGRATION_1_2` non-destructive schema migration creating `workout_sessions` table with index on `startTimeEpochMillis`.
+    - Tested via `RoomMigration1To2Test` ensuring full preservation of existing hydration records and daily health summaries.
+  - **Workout Persistence Layer & Models** (`WorkoutSessionEntity.kt`, `WorkoutDao.kt`, `WorkoutModels.kt`, `WorkoutRepository.kt`):
+    - Supports 8 distinct workout types (`RUNNING`, `WALKING`, `CYCLING`, `STRENGTH`, `SWIMMING`, `YOGA`, `HIIT`, `OTHER`) with automatic active calories estimation and distance tracking.
+    - Clean repository abstraction `WorkoutRepository` & `DefaultWorkoutRepository` decoupled and injected via `AppContainer`.
+  - **Health Connect Exercise Session Ingestion** (`HealthConnectRepository.kt`, `DashboardViewModel.kt`):
+    - Added `readExerciseSessions(range: TimeRange)` querying platform `ExerciseSessionRecord` items and normalizing them into `WorkoutSessionEntity` models during synchronization.
+  - **Executive Workout Logging Bottom Sheet** (`LogWorkoutBottomSheet.kt`):
+    - Material 3 modal bottom sheet with interactive category chips, steppers (+/- 5 min), quick duration presets (15m, 30m, 45m, 60m), and real-time active calories projection.
+    - Accessible TalkBack descriptions (`Role.Button`), 48dp minimum touch targets, and optional distance/notes inputs.
+  - **DetailScreen Workout History & Controls** (`DetailScreen.kt`, `PulseHealthApp.kt`):
+    - Added "+ Log Workout" quick-action card and today's workout session history list with source badges ("Manual" vs "Health Connect") and delete action.
+  - **Comprehensive Test Suite** (`RoomMigration1To2Test.kt`, `WorkoutRepositoryTest.kt`, `LogWorkoutBottomSheetComposeTest.kt`):
+    - Validates migration integrity, persistence logic, duration validation bounds, and Robolectric Compose UI user interactions.
+
+---
+
 ## [1.0.0] - 2026-11-14
 
 ### Added

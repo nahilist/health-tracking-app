@@ -4,6 +4,7 @@ import com.pulsehealth.app.data.local.DailyHealthSummaryDao
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationDao
 import com.pulsehealth.app.data.local.HydrationEntryEntity
+import com.pulsehealth.app.data.local.WorkoutDao
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,7 @@ import java.util.UUID
 class HealthDataRepository(
     private val hydrationDao: HydrationDao,
     private val dailyHealthSummaryDao: DailyHealthSummaryDao? = null,
+    private val workoutDao: WorkoutDao? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val zoneId: ZoneId = ZoneId.systemDefault(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -92,6 +94,7 @@ class HealthDataRepository(
     override suspend fun clearAllData() = withContext(ioDispatcher) {
         hydrationDao.deleteAll()
         dailyHealthSummaryDao?.deleteAll()
+        workoutDao?.deleteAll()
         Unit
     }
 

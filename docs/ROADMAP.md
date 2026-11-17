@@ -144,11 +144,23 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 | Monolithic `PulseHealthApp.kt` | Resolved in PR 2 | Resolved |
 | Manual dependency construction | Resolved in PR 2 | Resolved |
 | Display labels used as favorite IDs | Resolved in PR 18 | Resolved |
-| No Room migration beyond v1 | Future update risk | High before schema change |
+| No Room migration beyond v1 | Resolved in PR 30 | Resolved |
 | No secure session layer | Blocks authentication | Resolved in PR 10 |
 | Placeholder Sharing/Browse | Incomplete product flows | Resolved in PR 14 & 15 |
 | No instrumented UI suite | Regression risk | Resolved in PR 28 |
 
-## 8. Recommended next step
+## 8. Phase 5: post-launch expansion & advanced features
 
-Phase 4 roadmap milestones completed! The codebase is production-ready for tagging `v1.0.0` and distribution via Google Play Store tracks.
+### PR 30: detailed workout & exercise session tracking (Completed)
+
+- [x] Room database version 2 schema migration (`MIGRATION_1_2`) and exported schema `2.json`
+- [x] `WorkoutSessionEntity` and `WorkoutDao` supporting bounded range and today queries
+- [x] Domain `WorkoutRepository` & `DefaultWorkoutRepository` cleanly injected via `AppContainer`
+- [x] Android Health Connect `ExerciseSessionRecord` ingestion (`readExerciseSessions`)
+- [x] Executive `LogWorkoutBottomSheet` with activity chips, steppers, presets, and active calories calculation
+- [x] Workout session history list, source pills, and delete actions on `DetailScreen` for Activity and Exercise
+- [x] Room migration unit tests (`RoomMigration1To2Test`), `WorkoutRepositoryTest`, and `LogWorkoutBottomSheetComposeTest`
+
+## 9. Recommended next step
+
+Proceed with the next Phase 5 milestone: **Android Jetpack Glance Home Screen Widgets** or **Deep Sleep Staging & Breakdown**.
