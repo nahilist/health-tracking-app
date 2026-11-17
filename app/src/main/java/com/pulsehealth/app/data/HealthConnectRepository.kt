@@ -17,6 +17,9 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
 import com.pulsehealth.app.data.local.WorkoutSessionEntity
+import com.pulsehealth.app.data.local.SleepSessionEntity
+import com.pulsehealth.app.data.local.SleepStageEntity
+import com.pulsehealth.app.data.local.SleepSessionWithStages
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,6 +42,7 @@ interface HealthConnectRepository {
     suspend fun read(range: TimeRange, current: DashboardMetrics): DashboardMetrics
     suspend fun writeHydration(amountMilliliters: Int, recordedAtEpochMillis: Long): Boolean
     suspend fun readExerciseSessions(range: TimeRange): List<WorkoutSessionEntity> = emptyList()
+    suspend fun readSleepSessions(range: TimeRange): List<SleepSessionWithStages> = emptyList()
 }
 
 class DefaultHealthConnectRepository(
@@ -280,6 +284,94 @@ class DefaultHealthConnectRepository(
                 notes = record.notes,
                 syncState = "synced"
             )
+        }
+    }
+
+    override suspend fun readSleepSessions(range: TimeRange): List<SleepSessionWithStages> = withContext(ioDispatcher) {
+        if (!isAvailable() || !hasPermissions()) return@withContext emptyList()
+        val client = HealthConnectClient.getOrCreate(context)
+        val now = Instant.ofEpochMilli(clock.millis())
+        val today = now.atZone(zoneId).toLocalDate()
+
+        val (startInstant, endInstant) = when (range) {
+            TimeRange.TODAY -> {
+                // Sleep typically began the night before
+                today.minusDays(1).atTime(12, 0).atZone(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+            TimeRange.WEEK -> {
+                today.minusDays(6).atStartOfDay(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+            TimeRange.MONTH -> {
+                today.minusDays(29).atStartOfDay(zoneId).toInstant() to today.plusDays(1).atStartOfDay(zoneId).toInstant()
+            }
+        }
+        val filter = TimeRangeFilter.between(startInstant, endInstant)
+
+        val sleepRecords = runCatching {
+            client.readRecords(
+                ReadRecordsRequest(SleepSessionRecord::class, filter, pageSize = 100)
+            ).records
+        }.getOrDefault(emptyList())
+
+        sleepRecords.map { record ->
+            val durationMinutes = Duration.between(record.startTime, record.endTime).toMinutes().coerceAtLeast(1)
+            val sessionId = "hc_sleep_${record.metadata.id}"
+            val stagesList = mutableListOf<SleepStageEntity>()
+
+            if (record.stages.isNotEmpty()) {
+                record.stages.forEachIndexed { index, stageRecord ->
+                    val stageDuration = Duration.between(stageRecord.startTime, stageRecord.endTime).toMinutes().coerceAtLeast(1)
+                    val stageType = when (stageRecord.stage) {
+                        SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStageType.DEEP
+                        SleepSessionRecord.STAGE_TYPE_LIGHT -> SleepStageType.LIGHT
+                        SleepSessionRecord.STAGE_TYPE_REM -> SleepStageType.REM
+                        SleepSessionRecord.STAGE_TYPE_AWAKE,
+                        SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> SleepStageType.AWAKE
+                        SleepSessionRecord.STAGE_TYPE_SLEEPING -> SleepStageType.LIGHT
+                        else -> SleepStageType.UNKNOWN
+                    }
+                    stagesList.add(
+                        SleepStageEntity(
+                            id = "${sessionId}_stage_$index",
+                            sessionId = sessionId,
+                            stage = stageType.name,
+                            startTimeEpochMillis = stageRecord.startTime.toEpochMilli(),
+                            endTimeEpochMillis = stageRecord.endTime.toEpochMilli(),
+                            durationMinutes = stageDuration
+                        )
+                    )
+                }
+            } else {
+                stagesList.add(
+                    SleepStageEntity(
+                        id = "${sessionId}_stage_default",
+                        sessionId = sessionId,
+                        stage = SleepStageType.LIGHT.name,
+                        startTimeEpochMillis = record.startTime.toEpochMilli(),
+                        endTimeEpochMillis = record.endTime.toEpochMilli(),
+                        durationMinutes = durationMinutes
+                    )
+                )
+            }
+
+            val breakdown = SleepBreakdownSummary.fromStages(stagesList, durationMinutes)
+            val session = SleepSessionEntity(
+                id = sessionId,
+                title = record.title?.takeIf { it.isNotBlank() } ?: "Sleep Session",
+                startTimeEpochMillis = record.startTime.toEpochMilli(),
+                endTimeEpochMillis = record.endTime.toEpochMilli(),
+                durationMinutes = durationMinutes,
+                deepDurationMinutes = breakdown.deepMinutes,
+                lightDurationMinutes = breakdown.lightMinutes,
+                remDurationMinutes = breakdown.remMinutes,
+                awakeDurationMinutes = breakdown.awakeMinutes,
+                sleepEfficiencyPercentage = breakdown.sleepEfficiencyPercentage,
+                source = "health_connect",
+                notes = record.notes,
+                syncState = "synced"
+            )
+
+            SleepSessionWithStages(session, stagesList)
         }
     }
 

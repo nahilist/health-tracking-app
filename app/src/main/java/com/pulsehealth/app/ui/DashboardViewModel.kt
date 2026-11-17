@@ -36,9 +36,12 @@ import com.pulsehealth.app.data.WeeklyWellnessDigest
 import com.pulsehealth.app.data.WorkoutRepository
 import com.pulsehealth.app.data.NoOpWorkoutRepository
 import com.pulsehealth.app.data.WorkoutType
+import com.pulsehealth.app.data.SleepRepository
+import com.pulsehealth.app.data.NoOpSleepRepository
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.local.WorkoutSessionEntity
+import com.pulsehealth.app.data.local.SleepSessionWithStages
 import com.pulsehealth.app.data.toDailyHealthSummary
 import com.pulsehealth.app.data.toDashboardMetrics
 import com.pulsehealth.app.data.sync.NoOpSyncRepository
@@ -72,6 +75,7 @@ class DashboardViewModel(
     val sharingRepository: SharingRepository = NoOpSharingRepository(),
     val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository(),
     val workoutRepository: WorkoutRepository = NoOpWorkoutRepository(),
+    val sleepRepository: SleepRepository = NoOpSleepRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -103,6 +107,10 @@ class DashboardViewModel(
     val todayWorkouts: StateFlow<List<WorkoutSessionEntity>> =
         workoutRepository.observeTodayWorkouts()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val todaySleepSession: StateFlow<SleepSessionWithStages?> =
+        sleepRepository.observeTodaySleep()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
     val lastCloudSyncedEpochMillis: StateFlow<Long?> = syncRepository.lastSyncedEpochMillis
@@ -514,6 +522,22 @@ class DashboardViewModel(
         workoutRepository.deleteWorkout(id)
     }
 
+    fun logSleep(
+        startTimeEpochMillis: Long,
+        endTimeEpochMillis: Long,
+        notes: String? = null
+    ) = viewModelScope.launch {
+        sleepRepository.logManualSleep(
+            startTimeEpochMillis = startTimeEpochMillis,
+            endTimeEpochMillis = endTimeEpochMillis,
+            notes = notes
+        )
+    }
+
+    fun deleteSleepSession(id: String) = viewModelScope.launch {
+        sleepRepository.deleteSleepSession(id)
+    }
+
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
     }
@@ -554,6 +578,7 @@ class DashboardViewModel(
                 hydrationRepository.clearAllData()
                 dailySummaryRepository.deleteAllSummaries()
                 workoutRepository.deleteAllWorkouts()
+                sleepRepository.deleteAllSleep()
                 preferencesRepository.clearAllPreferences()
                 syncStateFlow.update {
                     it.copy(
@@ -571,6 +596,7 @@ class DashboardViewModel(
         hydrationRepository.clearAllData()
         dailySummaryRepository.deleteAllSummaries()
         workoutRepository.deleteAllWorkouts()
+        sleepRepository.deleteAllSleep()
         preferencesRepository.clearAllPreferences()
         syncStateFlow.update {
             it.copy(
@@ -679,6 +705,12 @@ class DashboardViewModel(
                 val exerciseSessions = runCatching { healthRepository.readExerciseSessions(range) }.getOrDefault(emptyList())
                 if (exerciseSessions.isNotEmpty()) {
                     workoutRepository.importHealthConnectWorkouts(exerciseSessions)
+                }
+
+                // 4. Ingest sleep sessions and granular stages into Room
+                val sleepSessions = runCatching { healthRepository.readSleepSessions(range) }.getOrDefault(emptyList())
+                if (sleepSessions.isNotEmpty()) {
+                    sleepRepository.importHealthConnectSleep(sleepSessions)
                 }
             }
             .onFailure {
@@ -835,6 +867,7 @@ class DashboardViewModel(
                     sharingRepository = app.container.sharingRepository,
                     dailySummaryRepository = app.container.dailySummaryRepository,
                     workoutRepository = app.container.workoutRepository,
+                    sleepRepository = app.container.sleepRepository,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )

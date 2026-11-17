@@ -170,6 +170,17 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] `PulseHealthWidgetReceiver` with `updateAllWidgets` broadcasting on hydration updates from app, notifications, and widget
 - [x] Robolectric unit tests in `PulseHealthWidgetTest` validating data calculation, percentage clamping, and action callback persistence
 
+### PR 32: Deep sleep staging, hypnogram visualization & sleep efficiency breakdown (Completed)
+
+- [x] Room database version 3 schema migration (`MIGRATION_2_3`) and exported schema `3.json`
+- [x] `SleepSessionEntity`, `SleepStageEntity`, and `SleepDao` with foreign key cascade support
+- [x] Clean repository abstraction `SleepRepository` & `DefaultSleepRepository` injected via `AppContainer`
+- [x] Health Connect `SleepSessionRecord` ingestion (`readSleepSessions`) parsing granular Deep, Light, REM, and Awake stages
+- [x] Executive `SleepHypnogramCard` timeline visualization with color-coded stage segments, time markers, and TalkBack descriptions
+- [x] `SleepStageBreakdownCard` multi-segment distribution bar and 4-stage duration metrics
+- [x] `SleepEfficiencyCard` restfulness scores, sleep efficiency rating, and time asleep vs in bed
+- [x] Room migration unit tests (`RoomMigration2To3Test`), `SleepRepositoryTest`, and `SleepStagingComposeTest`
+
 ## 9. Recommended next step
 
-Proceed with the next Phase 5 milestone: **Deep Sleep Staging & Breakdown** (parsing and charting REM, Deep, Light, and Awake intervals from Health Connect) or **Custom Target & Goal Setting Dialogs**.
+Proceed with the next Phase 5 milestone: **Custom Target & Goal Setting Dialogs** (user-configurable daily targets for steps, active calories, hydration, and sleep with DataStore/Room persistence and interactive edit dialogs) or **Weekly / Monthly Health Trends & Anomaly Insights**.

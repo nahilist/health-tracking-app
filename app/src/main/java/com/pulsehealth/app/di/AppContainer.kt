@@ -14,6 +14,8 @@ import com.pulsehealth.app.data.SupabaseAuthRepository
 import com.pulsehealth.app.data.UserPreferencesRepository
 import com.pulsehealth.app.data.WorkoutRepository
 import com.pulsehealth.app.data.DefaultWorkoutRepository
+import com.pulsehealth.app.data.SleepRepository
+import com.pulsehealth.app.data.DefaultSleepRepository
 import com.pulsehealth.app.data.local.PulseDatabase
 import com.pulsehealth.app.data.sync.SupabaseSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
@@ -36,6 +38,7 @@ interface AppContainer {
     val reminderScheduler: ReminderScheduler
     val sharingRepository: SharingRepository
     val workoutRepository: WorkoutRepository
+    val sleepRepository: SleepRepository
     val networkMonitor: NetworkMonitor
     val clock: Clock
     val zoneId: ZoneId
@@ -94,6 +97,15 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
     override val workoutRepository: WorkoutRepository by lazy {
         DefaultWorkoutRepository(
             workoutDao = database.workoutDao(),
+            clock = clock,
+            zoneId = zoneId,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val sleepRepository: SleepRepository by lazy {
+        DefaultSleepRepository(
+            sleepDao = database.sleepDao(),
             clock = clock,
             zoneId = zoneId,
             ioDispatcher = ioDispatcher
