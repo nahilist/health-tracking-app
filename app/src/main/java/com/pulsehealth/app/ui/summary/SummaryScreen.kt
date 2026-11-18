@@ -65,6 +65,8 @@ import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.FavoriteCardId
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.data.analytics.HealthInsight
+import com.pulsehealth.app.ui.insights.InsightsSection
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.NetworkStatusPill
 import com.pulsehealth.app.ui.theme.ExerciseGreen
@@ -80,6 +82,7 @@ import java.time.format.DateTimeFormatter
 fun SummaryScreen(
     state: DashboardUiState,
     contentPadding: PaddingValues,
+    insights: List<HealthInsight> = emptyList(),
     onRange: (TimeRange) -> Unit,
     onWater: (Int) -> Unit = {},
     onEdit: () -> Unit,
@@ -232,6 +235,17 @@ fun SummaryScreen(
                             }
                         }
                     }
+                }
+            }
+
+            if (insights.isNotEmpty()) {
+                item {
+                    InsightsSection(
+                        insights = insights,
+                        onInsightClick = { insight ->
+                            onDetail(insight.metricType)
+                        }
+                    )
                 }
             }
 

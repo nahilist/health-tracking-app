@@ -191,6 +191,20 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Vitals history list, context pills, and delete actions on `DetailScreen` for Blood Pressure and Heart Rate
 - [x] Room migration unit tests (`RoomMigration3To4Test`), `VitalsRepositoryTest`, `LogVitalBottomSheetComposeTest`, and `MetricDetailsTest`
 
+### PR 34: Health trends, baseline analytics & anomaly insights engine (Completed)
+
+- [x] Domain models for health insights (`HealthInsight`, `InsightSeverity`, `InsightCategory`, `InsightType`)
+- [x] Deterministic `HealthAnomalyDetector` computing 7-day and 30-day moving average baselines and standard deviation
+- [x] Resting heart rate spike and recovery detection
+- [x] Blood pressure pattern analysis and AHA wellness alignment
+- [x] Sleep deficit detection (<5h or >90m below baseline) and restorative deep sleep ratio calculation
+- [x] Activity surge (>= 140% of goal) and light movement recovery day notifications
+- [x] Hydration streaks (>= 3 consecutive days) and deficit alerts
+- [x] Domain `InsightsRepository` and `DefaultInsightsRepository` cleanly injected via `AppContainer`
+- [x] Executive `HealthInsightCard` with severity styling, delta chips, and expandable recommendations
+- [x] `InsightsSection` integrated on `SummaryScreen` and contextual metric insights on `DetailScreen`
+- [x] Automated unit and Robolectric Compose UI test suite (`HealthAnomalyDetectorTest`, `InsightsRepositoryTest`, `HealthInsightCardComposeTest`)
+
 ## 9. Recommended next step
 
-Proceed with the next Phase 5 milestone: **Custom Target & Goal Setting Dialogs** (user-configurable daily targets for steps, active calories, hydration, and sleep with DataStore/Room persistence and interactive edit dialogs) or **Weekly / Monthly Health Trends & Anomaly Insights**.
+Proceed with the next Phase 5 milestone: **Clinical / Personal Health Report PDF & CSV Export** (generating doctor-ready summaries of vitals, workouts, sleep, and hydration using Android's `PdfDocument` API with zero cloud leaks) or **Medication & Supplement Adherence Tracker**.

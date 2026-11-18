@@ -42,6 +42,9 @@ import com.pulsehealth.app.data.VitalsRepository
 import com.pulsehealth.app.data.NoOpVitalsRepository
 import com.pulsehealth.app.data.VitalType
 import com.pulsehealth.app.data.MeasurementContext
+import com.pulsehealth.app.data.analytics.HealthInsight
+import com.pulsehealth.app.data.analytics.InsightsRepository
+import com.pulsehealth.app.data.analytics.NoOpInsightsRepository
 import com.pulsehealth.app.data.local.VitalRecordEntity
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
@@ -82,6 +85,7 @@ class DashboardViewModel(
     val workoutRepository: WorkoutRepository = NoOpWorkoutRepository(),
     val sleepRepository: SleepRepository = NoOpSleepRepository(),
     val vitalsRepository: VitalsRepository = NoOpVitalsRepository(),
+    val insightsRepository: InsightsRepository = NoOpInsightsRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -120,6 +124,10 @@ class DashboardViewModel(
 
     val vitalRecords: StateFlow<List<VitalRecordEntity>> =
         vitalsRepository.observeRecentVitals()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val insights: StateFlow<List<HealthInsight>> =
+        insightsRepository.observeInsights()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
@@ -933,6 +941,7 @@ class DashboardViewModel(
                     workoutRepository = app.container.workoutRepository,
                     sleepRepository = app.container.sleepRepository,
                     vitalsRepository = app.container.vitalsRepository,
+                    insightsRepository = app.container.insightsRepository,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )

@@ -99,6 +99,7 @@ fun PulseHealthApp(
     val todayWorkouts by viewModel.todayWorkouts.collectAsStateWithLifecycle()
     val todaySleep by viewModel.todaySleepSession.collectAsStateWithLifecycle()
     val vitalRecords by viewModel.vitalRecords.collectAsStateWithLifecycle()
+    val insights by viewModel.insights.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = viewModel.healthRepository.permissionContract()
@@ -167,6 +168,7 @@ fun PulseHealthApp(
                     SummaryScreen(
                         state = state,
                         contentPadding = padding,
+                        insights = insights,
                         onRange = viewModel::selectRange,
                         onWater = viewModel::addWater,
                         onEdit = { editing = true },
@@ -225,6 +227,7 @@ fun PulseHealthApp(
                         todayWorkouts = todayWorkouts,
                         todaySleepSession = todaySleep,
                         vitalRecords = vitalRecords,
+                        insights = insights,
                         onAddWater = viewModel::addWater,
                         onEditWater = viewModel::editWater,
                         onDeleteWater = viewModel::deleteWater,

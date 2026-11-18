@@ -74,6 +74,8 @@ import com.pulsehealth.app.data.VitalType
 import com.pulsehealth.app.data.MeasurementContext
 import com.pulsehealth.app.data.BloodPressureClassification
 import com.pulsehealth.app.data.HeartRateClassification
+import com.pulsehealth.app.data.analytics.HealthInsight
+import com.pulsehealth.app.ui.insights.HealthInsightCard
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
 import com.pulsehealth.app.ui.summary.ActivityRings
@@ -105,6 +107,7 @@ fun DetailScreen(
     todayWorkouts: List<WorkoutSessionEntity> = emptyList(),
     todaySleepSession: SleepSessionWithStages? = null,
     vitalRecords: List<VitalRecordEntity> = emptyList(),
+    insights: List<HealthInsight> = emptyList(),
     onAddWater: (Int) -> Unit = {},
     onEditWater: (String, Int) -> Unit = { _, _ -> },
     onDeleteWater: (String) -> Unit = {},
@@ -171,6 +174,18 @@ fun DetailScreen(
     }
     val trendPoints = remember(type, metrics, weeklyHydrationProgress, dailySummaries) {
         MetricRegistry.getTrendPoints(type, metrics, weeklyHydrationProgress, dailySummaries)
+    }
+
+    val metricInsights = remember(insights, type) {
+        val targetName = when (type.lowercase()) {
+            "heart rate", "resting heart rate" -> "resting heart rate"
+            "blood pressure" -> "blood pressure"
+            "sleep" -> "sleep"
+            "steps" -> "steps"
+            "hydration", "water" -> "hydration"
+            else -> type.lowercase()
+        }
+        insights.filter { it.metricType.lowercase() == targetName }
     }
 
     LazyColumn(
@@ -435,6 +450,13 @@ fun DetailScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Relevant Metric Insights
+        if (metricInsights.isNotEmpty()) {
+            items(metricInsights, key = { it.id }) { insight ->
+                HealthInsightCard(insight = insight)
             }
         }
 
