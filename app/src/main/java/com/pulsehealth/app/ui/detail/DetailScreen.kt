@@ -25,8 +25,10 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,11 +69,17 @@ import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.local.WorkoutSessionEntity
 import com.pulsehealth.app.data.local.SleepSessionWithStages
+import com.pulsehealth.app.data.local.VitalRecordEntity
+import com.pulsehealth.app.data.VitalType
+import com.pulsehealth.app.data.MeasurementContext
+import com.pulsehealth.app.data.BloodPressureClassification
+import com.pulsehealth.app.data.HeartRateClassification
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
 import com.pulsehealth.app.ui.summary.ActivityRings
 import com.pulsehealth.app.ui.summary.LogWorkoutBottomSheet
 import com.pulsehealth.app.ui.summary.RangeSelector
+import com.pulsehealth.app.ui.vitals.LogVitalBottomSheet
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
@@ -96,12 +104,16 @@ fun DetailScreen(
     dailySummaries: List<DailyHealthSummaryEntity> = emptyList(),
     todayWorkouts: List<WorkoutSessionEntity> = emptyList(),
     todaySleepSession: SleepSessionWithStages? = null,
+    vitalRecords: List<VitalRecordEntity> = emptyList(),
     onAddWater: (Int) -> Unit = {},
     onEditWater: (String, Int) -> Unit = { _, _ -> },
     onDeleteWater: (String) -> Unit = {},
     onSetWaterGoal: (Double) -> Unit = {},
     onLogWorkout: (WorkoutType, String?, Long, Int?, Double?, String?) -> Unit = { _, _, _, _, _, _ -> },
     onDeleteWorkout: (String) -> Unit = {},
+    onLogBloodPressure: (systolic: Int, diastolic: Int, bpm: Int?, context: MeasurementContext, notes: String?) -> Unit = { _, _, _, _, _ -> },
+    onLogHeartRate: (bpm: Int, context: MeasurementContext, notes: String?) -> Unit = { _, _, _ -> },
+    onDeleteVital: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
     val locale = LocalLocale.current.platformLocale
@@ -112,6 +124,9 @@ fun DetailScreen(
     var editingEntry by remember { mutableStateOf<HydrationEntryEntity?>(null) }
     var showGoalDialog by remember { mutableStateOf(false) }
     var showWorkoutSheet by remember { mutableStateOf(false) }
+    var showLogVitalSheet by remember { mutableStateOf(false) }
+    var vitalSheetInitialType by remember { mutableStateOf(VitalType.BLOOD_PRESSURE) }
+    var deletingVitalId by remember { mutableStateOf<String?>(null) }
 
     val formattedValue = remember(type, metrics, locale) {
         MetricRegistry.formatValue(type, metrics, locale)
@@ -119,6 +134,35 @@ fun DetailScreen(
     val goalText = remember(type, metrics, locale) {
         MetricRegistry.getGoalText(type, metrics, locale)
     }
+    val latestBpRecord = remember(vitalRecords) {
+        vitalRecords.firstOrNull { it.vitalType == VitalType.BLOOD_PRESSURE.name }
+    }
+    val latestHrRecord = remember(vitalRecords) {
+        vitalRecords.firstOrNull { it.vitalType == VitalType.HEART_RATE.name }
+    }
+
+    val displayValue = remember(type, metrics, latestBpRecord, latestHrRecord, locale, formattedValue) {
+        when (normalizedId) {
+            "Blood pressure" -> latestBpRecord?.let { "${it.systolic} / ${it.diastolic} mmHg" } ?: "120 / 80 mmHg"
+            "Heart rate" -> metrics.heartRate?.let { "$it bpm" } ?: latestHrRecord?.heartRateBpm?.let { "$it bpm" } ?: "No data"
+            else -> formattedValue
+        }
+    }
+
+    val displayGoalText = remember(type, metrics, latestBpRecord, goalText) {
+        when (normalizedId) {
+            "Blood pressure" -> {
+                if (latestBpRecord?.systolic != null && latestBpRecord.diastolic != null) {
+                    val cat = BloodPressureClassification.classify(latestBpRecord.systolic, latestBpRecord.diastolic)
+                    "${cat.label} · Target: <120/<80"
+                } else {
+                    goalText
+                }
+            }
+            else -> goalText
+        }
+    }
+
     val progressRatio = remember(type, metrics) {
         MetricRegistry.getProgressRatio(type, metrics)
     }
@@ -222,13 +266,13 @@ fun DetailScreen(
                     ) {
                         Column {
                             Text(
-                                text = formattedValue,
+                                text = displayValue,
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            if (goalText != null) {
+                            if (displayGoalText != null) {
                                 Text(
-                                    text = goalText,
+                                    text = displayGoalText,
                                     color = Muted,
                                     fontSize = 13.sp
                                 )
@@ -314,6 +358,80 @@ fun DetailScreen(
                             )
                         ) {
                             Text("+ Log Workout", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Quick log button for Blood Pressure
+        if (normalizedId == "Blood pressure") {
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("LOG BLOOD PRESSURE", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Record systolic and diastolic pressure readings",
+                                color = Muted,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                vitalSheetInitialType = VitalType.BLOOD_PRESSURE
+                                showLogVitalSheet = true
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = PulsePink.copy(alpha = 0.15f),
+                                contentColor = PulsePink
+                            )
+                        ) {
+                            Text("+ Log Vital", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Quick log button for Heart Rate
+        if (normalizedId == "Heart rate") {
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("LOG HEART RATE", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Record resting or post-exercise pulse beats per minute",
+                                color = Muted,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                vitalSheetInitialType = VitalType.HEART_RATE
+                                showLogVitalSheet = true
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = PulsePink.copy(alpha = 0.15f),
+                                contentColor = PulsePink
+                            )
+                        ) {
+                            Text("+ Log Pulse", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -672,6 +790,241 @@ fun DetailScreen(
             }
         }
 
+        // Blood Pressure Readings History
+        if (normalizedId == "Blood pressure") {
+            val bpRecords = vitalRecords.filter { it.vitalType == VitalType.BLOOD_PRESSURE.name }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Recent Blood Pressure Readings (${bpRecords.size})",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (bpRecords.isEmpty()) {
+                item {
+                    HealthCard(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "No blood pressure records logged yet.",
+                            color = Muted,
+                            fontSize = 13.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Tap '+ Log Vital' above to record systolic and diastolic measurements.",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    HealthCard(
+                        Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        bpRecords.forEachIndexed { index, record ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 66.dp)
+                                )
+                            }
+                            val category = BloodPressureClassification.classify(
+                                record.systolic ?: 120,
+                                record.diastolic ?: 80
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = category.color.copy(alpha = 0.15f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.MonitorHeart,
+                                            contentDescription = null,
+                                            tint = category.color,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "${record.systolic ?: "—"} / ${record.diastolic ?: "—"} mmHg",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Surface(
+                                              shape = RoundedCornerShape(6.dp),
+                                              color = category.color.copy(alpha = 0.12f)
+                                        ) {
+                                            Text(
+                                                text = category.label,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = category.color,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    val timeStr = Instant.ofEpochMilli(record.recordedAtEpochMillis)
+                                        .atZone(ZoneId.systemDefault())
+                                        .format(DateTimeFormatter.ofPattern("MMM d, h:mm a", locale))
+                                    val detailsText = buildString {
+                                        append(record.measurementContext.lowercase(locale).replaceFirstChar { it.uppercase(locale) })
+                                        record.heartRateBpm?.let { append(" · $it bpm pulse") }
+                                        record.notes?.let { append(" · $it") }
+                                        append(" · $timeStr")
+                                    }
+                                    Text(
+                                        text = detailsText,
+                                        color = Muted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                IconButton(onClick = { deletingVitalId = record.id }) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete record",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Heart Rate Readings History
+        if (normalizedId == "Heart rate") {
+            val hrRecords = vitalRecords.filter { it.vitalType == VitalType.HEART_RATE.name }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Recent Heart Rate Readings (${hrRecords.size})",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            if (hrRecords.isEmpty()) {
+                item {
+                    HealthCard(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "No manual heart rate records logged yet.",
+                            color = Muted,
+                            fontSize = 13.sp
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Tap '+ Log Pulse' above to record resting or post-exercise heart rate readings.",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    HealthCard(
+                        Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        hrRecords.forEachIndexed { index, record ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 66.dp)
+                                )
+                            }
+                            val bpm = record.heartRateBpm ?: 72
+                            val status = HeartRateClassification.classifyRestingBpm(bpm)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = PulsePink.copy(alpha = 0.15f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Favorite,
+                                            contentDescription = null,
+                                            tint = PulsePink,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "$bpm bpm",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = PulsePink.copy(alpha = 0.12f)
+                                        ) {
+                                            Text(
+                                                text = status,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = PulsePink,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    val timeStr = Instant.ofEpochMilli(record.recordedAtEpochMillis)
+                                        .atZone(ZoneId.systemDefault())
+                                        .format(DateTimeFormatter.ofPattern("MMM d, h:mm a", locale))
+                                    val detailsText = buildString {
+                                        append(record.measurementContext.lowercase(locale).replaceFirstChar { it.uppercase(locale) })
+                                        record.notes?.let { append(" · $it") }
+                                        append(" · $timeStr")
+                                    }
+                                    Text(
+                                        text = detailsText,
+                                        color = Muted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                IconButton(onClick = { deletingVitalId = record.id }) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete record",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Educational Non-Diagnostic Section
         item {
             HealthCard(Modifier.fillMaxWidth()) {
@@ -754,6 +1107,39 @@ fun DetailScreen(
         LogWorkoutBottomSheet(
             onLogWorkout = onLogWorkout,
             onDismiss = { showWorkoutSheet = false }
+        )
+    }
+
+    if (showLogVitalSheet) {
+        LogVitalBottomSheet(
+            initialType = vitalSheetInitialType,
+            onLogBloodPressure = onLogBloodPressure,
+            onLogHeartRate = onLogHeartRate,
+            onDismiss = { showLogVitalSheet = false }
+        )
+    }
+
+    if (deletingVitalId != null) {
+        AlertDialog(
+            onDismissRequest = { deletingVitalId = null },
+            title = { Text("Delete Vital Record?") },
+            text = { Text("Are you sure you want to delete this recorded vital measurement?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        deletingVitalId?.let { onDeleteVital(it) }
+                        deletingVitalId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete", color = androidx.compose.ui.graphics.Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingVitalId = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

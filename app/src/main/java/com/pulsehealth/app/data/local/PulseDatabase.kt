@@ -13,9 +13,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DailyHealthSummaryEntity::class,
         WorkoutSessionEntity::class,
         SleepSessionEntity::class,
-        SleepStageEntity::class
+        SleepStageEntity::class,
+        VitalRecordEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class PulseDatabase : RoomDatabase() {
@@ -23,6 +24,7 @@ abstract class PulseDatabase : RoomDatabase() {
     abstract fun dailyHealthSummaryDao(): DailyHealthSummaryDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun sleepDao(): SleepDao
+    abstract fun vitalRecordDao(): VitalRecordDao
 
     companion object {
         @Volatile private var instance: PulseDatabase? = null
@@ -101,13 +103,41 @@ abstract class PulseDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `vital_records` (
+                        `id` TEXT NOT NULL,
+                        `vitalType` TEXT NOT NULL,
+                        `systolic` INTEGER,
+                        `diastolic` INTEGER,
+                        `heartRateBpm` INTEGER,
+                        `recordedAtEpochMillis` INTEGER NOT NULL,
+                        `measurementContext` TEXT NOT NULL,
+                        `notes` TEXT,
+                        `source` TEXT NOT NULL,
+                        `syncState` TEXT NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_vital_records_recordedAtEpochMillis` ON `vital_records` (`recordedAtEpochMillis`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_vital_records_vitalType` ON `vital_records` (`vitalType`)"
+                )
+            }
+        }
+
         fun get(context: Context): PulseDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 PulseDatabase::class.java,
                 "pulse_health.db"
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
             .also { instance = it }
         }
