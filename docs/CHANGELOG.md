@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Health Trends, Baseline Analytics & Anomaly Insights Engine**:
+  - **Domain & Baseline Anomaly Models** (`HealthInsightModels.kt`):
+    - Added `HealthInsight`, `InsightSeverity` (`POSITIVE`, `INFO`, `ATTENTION`), `InsightCategory` (`CARDIO`, `SLEEP`, `ACTIVITY`, `HYDRATION`, `RECOVERY`), and `InsightType`.
+  - **Deterministic Anomaly & Trends Detection Engine** (`HealthAnomalyDetector.kt`):
+    - Multi-metric statistical baseline modeling: 7-day and 30-day moving average, variance, and standard deviation calculations.
+    - Resting heart rate spike detection (>1.75 standard deviations & >= 8 bpm jump) and optimal recovery zone identification.
+    - Blood pressure trends pattern detection against AHA wellness standards.
+    - Sleep deficit detection (<5h or >90 mins below baseline) and restorative deep sleep ratio calculation (>= 25%).
+    - Activity surge detection (>= 140% of goal) and light movement recovery day notifications.
+    - Hydration streaks (>= 3 consecutive days) and deficit warnings.
+    - Strictly non-diagnostic, educational wellness insights adhering to product safety principles.
+  - **Repository & Reactive Flow Architecture** (`InsightsRepository.kt`, `AppContainer.kt`, `DashboardViewModel.kt`):
+    - `InsightsRepository` and `DefaultInsightsRepository` combining daily summaries, vitals, sleep, and hydration flows.
+    - Clean dependency injection via `AppContainer`.
+    - Exposed `insights: StateFlow<List<HealthInsight>>` in `DashboardViewModel`.
+  - **Executive UI Cards & Screen Integrations** (`HealthInsightCard.kt`, `InsightsSection.kt`, `SummaryScreen.kt`, `DetailScreen.kt`, `PulseHealthApp.kt`):
+    - `HealthInsightCard`: Executive card with severity badges (OPTIMAL, BASELINE, ATTENTION), category icons, current vs. baseline stats, delta pills, expandable actionable recommendations with non-clinical disclaimer, and TalkBack semantics.
+    - `InsightsSection`: Minimalist section on `SummaryScreen` featuring active insight counters and empty baseline state.
+    - `DetailScreen`: Contextually filters and surfaces metric-specific insights above trend charts.
+  - **Comprehensive Automated Test Suite** (`HealthAnomalyDetectorTest.kt`, `InsightsRepositoryTest.kt`, `HealthInsightCardComposeTest.kt`):
+    - Automated unit tests covering all anomaly types, metric filtering, and empty data guards.
+    - Robolectric Compose UI tests verifying card rendering, severity badges, expand/collapse interactions, and section counters.
 - **Vitals & Blood Pressure / Heart Rate Tracking (Room Schema v4 Migration & Interactive Logging)**:
   - **Room Database Version 4 Migration & Exported Schema** (`PulseDatabase.kt`, `4.json`):
     - Added `MIGRATION_3_4` non-destructive schema migration creating `vital_records` table with columns `id`, `vitalType`, `systolic`, `diastolic`, `heartRateBpm`, `recordedAtEpochMillis`, `measurementContext`, `notes`, `source`, `syncState`, and indices on `recordedAtEpochMillis` and `vitalType`.
