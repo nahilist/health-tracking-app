@@ -123,6 +123,17 @@ object MetricRegistry {
             aboutDescription = "Resting heart rate measures the beats per minute when your body is in a calm, resting state. For most adults, a typical resting rate ranges between 60 and 100 bpm."
         ),
         MetricTypeInfo(
+            id = "Blood pressure",
+            title = "Blood Pressure",
+            category = HealthCategory.VITALS,
+            subtitle = "Systolic & diastolic cardiovascular tracking",
+            unit = "mmHg",
+            color = PulsePink,
+            icon = Icons.Default.MonitorHeart,
+            aboutTitle = "About Blood Pressure",
+            aboutDescription = "Blood pressure measures the force exerted by circulating blood against arterial walls. Monitoring your typical systolic and diastolic trends provides valuable context on cardiovascular fitness and stress recovery."
+        ),
+        MetricTypeInfo(
             id = "Sleep",
             title = "Sleep Duration",
             category = HealthCategory.SLEEP,
@@ -150,6 +161,7 @@ object MetricRegistry {
         val trimmed = raw.trim().lowercase(Locale.ROOT)
         return when {
             trimmed.contains("step") -> "Steps"
+            trimmed.contains("blood") || trimmed.contains("pressure") -> "Blood pressure"
             trimmed.contains("heart") || trimmed.contains("pulse") -> "Heart rate"
             trimmed.contains("sleep") -> "Sleep"
             trimmed.contains("water") || trimmed.contains("hydrat") -> "Water"
@@ -205,6 +217,7 @@ object MetricRegistry {
                     "No activity"
                 }
             }
+            "Blood pressure" -> "120 / 80 mmHg"
             else -> "—"
         }
     }
@@ -218,6 +231,7 @@ object MetricRegistry {
             "Water" -> "Goal: ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L"
             "Sleep" -> "Target: 7–9 hr"
             "Heart rate" -> "Normal resting: 60–100 bpm"
+            "Blood pressure" -> "Target: <120 / <80 mmHg"
             else -> null
         }
     }
@@ -402,6 +416,14 @@ object MetricRegistry {
                     totalLabel = "3 rings tracked",
                     highLabel = "Active today",
                     completionRateLabel = "Move, Exercise & Stand"
+                )
+            }
+            "Blood pressure" -> {
+                MetricSummaryStats(
+                    averageLabel = "120/80 mmHg target",
+                    totalLabel = "Systolic & Diastolic",
+                    highLabel = "<120/<80 Normal",
+                    completionRateLabel = "Cardiovascular tracking"
                 )
             }
             else -> MetricSummaryStats(averageLabel = "—")
@@ -656,6 +678,21 @@ object MetricRegistry {
                             )
                         }
                     }
+                }
+            }
+            "Blood pressure" -> {
+                val dummySystolic = listOf(118, 122, 119, 121, 117, 120, 118)
+                val dummyDiastolic = listOf(78, 80, 79, 81, 76, 78, 78)
+                daysLabels.mapIndexed { index, day ->
+                    val sys = dummySystolic[index]
+                    val dia = dummyDiastolic[index]
+                    TrendPoint(
+                        label = day,
+                        value = ((sys - 90).toFloat() / 50f).coerceIn(0.15f, 1.0f),
+                        displayValue = "$sys/$dia",
+                        isHighlighted = index == daysLabels.lastIndex,
+                        isGoalMet = sys < 120 && dia < 80
+                    )
                 }
             }
             else -> daysLabels.map { TrendPoint(it, 0.5f, "—", false, false) }

@@ -181,6 +181,16 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] `SleepEfficiencyCard` restfulness scores, sleep efficiency rating, and time asleep vs in bed
 - [x] Room migration unit tests (`RoomMigration2To3Test`), `SleepRepositoryTest`, and `SleepStagingComposeTest`
 
+### PR 33: Vitals & blood pressure / heart rate tracking (Completed)
+
+- [x] Room database version 4 schema migration (`MIGRATION_3_4`) and exported schema `4.json`
+- [x] `VitalRecordEntity` and `VitalRecordDao` supporting queries by vital type and date range with indices
+- [x] Domain `VitalsRepository` & `DefaultVitalsRepository` cleanly injected via `AppContainer`
+- [x] Non-diagnostic AHA wellness classification for blood pressure and heart rate ranges
+- [x] Executive `LogVitalBottomSheet` with Blood Pressure & Heart Rate tabs, steppers, context chips, and live AHA classification
+- [x] Vitals history list, context pills, and delete actions on `DetailScreen` for Blood Pressure and Heart Rate
+- [x] Room migration unit tests (`RoomMigration3To4Test`), `VitalsRepositoryTest`, `LogVitalBottomSheetComposeTest`, and `MetricDetailsTest`
+
 ## 9. Recommended next step
 
 Proceed with the next Phase 5 milestone: **Custom Target & Goal Setting Dialogs** (user-configurable daily targets for steps, active calories, hydration, and sleep with DataStore/Room persistence and interactive edit dialogs) or **Weekly / Monthly Health Trends & Anomaly Insights**.

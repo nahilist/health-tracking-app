@@ -18,7 +18,7 @@ class MetricDetailsTest {
     @Test
     fun `allMetrics contains eight distinct health metrics with proper categories`() {
         val metrics = MetricRegistry.allMetrics
-        assertEquals(8, metrics.size)
+        assertEquals(9, metrics.size)
 
         val activityMetrics = metrics.filter { it.category == HealthCategory.ACTIVITY }
         assertEquals(5, activityMetrics.size)
@@ -29,8 +29,9 @@ class MetricDetailsTest {
         assertTrue(activityMetrics.any { it.id == "Stand" })
 
         val vitalsMetrics = metrics.filter { it.category == HealthCategory.VITALS }
-        assertEquals(1, vitalsMetrics.size)
-        assertEquals("Heart rate", vitalsMetrics.first().id)
+        assertEquals(2, vitalsMetrics.size)
+        assertTrue(vitalsMetrics.any { it.id == "Heart rate" })
+        assertTrue(vitalsMetrics.any { it.id == "Blood pressure" })
 
         val sleepMetrics = metrics.filter { it.category == HealthCategory.SLEEP }
         assertEquals(1, sleepMetrics.size)
@@ -56,19 +57,21 @@ class MetricDetailsTest {
         assertEquals("Exercise", MetricRegistry.normalizeId("exercise"))
         assertEquals("Stand", MetricRegistry.normalizeId("stand"))
         assertEquals("Activity", MetricRegistry.normalizeId("activity"))
+        assertEquals("Blood pressure", MetricRegistry.normalizeId("blood pressure"))
     }
 
     @Test
     fun `search filters metrics by keyword or category`() {
-        assertEquals(8, MetricRegistry.search("").size)
+        assertEquals(9, MetricRegistry.search("").size)
 
         val stepResults = MetricRegistry.search("step")
         assertEquals(1, stepResults.size)
         assertEquals("Steps", stepResults.first().id)
 
         val vitalsResults = MetricRegistry.search("vitals")
-        assertEquals(1, vitalsResults.size)
-        assertEquals("Heart rate", vitalsResults.first().id)
+        assertEquals(2, vitalsResults.size)
+        assertTrue(vitalsResults.any { it.id == "Heart rate" })
+        assertTrue(vitalsResults.any { it.id == "Blood pressure" })
 
         val emptyResults = MetricRegistry.search("nonexistentxyz")
         assertTrue(emptyResults.isEmpty())

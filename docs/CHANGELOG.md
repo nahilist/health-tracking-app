@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Vitals & Blood Pressure / Heart Rate Tracking (Room Schema v4 Migration & Interactive Logging)**:
+  - **Room Database Version 4 Migration & Exported Schema** (`PulseDatabase.kt`, `4.json`):
+    - Added `MIGRATION_3_4` non-destructive schema migration creating `vital_records` table with columns `id`, `vitalType`, `systolic`, `diastolic`, `heartRateBpm`, `recordedAtEpochMillis`, `measurementContext`, `notes`, `source`, `syncState`, and indices on `recordedAtEpochMillis` and `vitalType`.
+    - Tested via `RoomMigration3To4Test` guaranteeing full preservation of hydration, daily summaries, workouts, and sleep staging records.
+  - **Domain & Repository Architecture** (`VitalModels.kt`, `VitalRecordEntity.kt`, `VitalRecordDao.kt`, `VitalsRepository.kt`):
+    - Full domain representation for `VitalType` (`BLOOD_PRESSURE`, `HEART_RATE`), `MeasurementContext` (`RESTING`, `POST_EXERCISE`, `GENERAL`), `BloodPressureClassification` (AHA wellness ranges: Normal, Elevated, Stage 1, Stage 2, Critical), and `HeartRateClassification`.
+    - Clean repository abstraction `VitalsRepository` with `DefaultVitalsRepository` and `NoOpVitalsRepository` decoupled and injected via `AppContainer`.
+  - **DetailScreen Vitals Integration & Quick Actions** (`DetailScreen.kt`, `MetricDetails.kt`, `PulseHealthApp.kt`):
+    - Added Blood Pressure metric into the catalog (`normalizeId`, `formatValue`, `getGoalText`, `getSummaryStats`, `getTrendPoints`).
+    - Added "+ Log Vital" and "+ Log Pulse" quick log action buttons on Heart Rate and Blood Pressure detail screens.
+    - Added recent readings lists with measurement context pills, AHA classification badges, and confirmation deletion dialogs.
+  - **Executive Modal Bottom Sheet** (`LogVitalBottomSheet.kt`):
+    - Material 3 bottom sheet with tabs for Blood Pressure and Heart Rate, interactive numeric steppers (`-5`, `-1`, `+1`, `+5`), dynamic AHA classification banner, measurement context chips, notes field, and validation.
+  - **Automated Test Suite** (`RoomMigration3To4Test.kt`, `VitalsRepositoryTest.kt`, `LogVitalBottomSheetComposeTest.kt`, `MetricDetailsTest.kt`):
+    - Verified schema 3 to 4 migration and data preservation.
+    - Verified CRUD operations and validation rules for blood pressure and heart rate.
+    - Verified Compose UI rendering, tab switching, and callbacks under Robolectric.
 - **Deep Sleep Staging, Hypnogram Visualization & Restfulness Breakdown**:
   - **Room Database Version 3 Migration & Exported Schema** (`PulseDatabase.kt`, `3.json`):
     - Added `MIGRATION_2_3` non-destructive schema migration creating `sleep_sessions` and `sleep_stages` tables with cascade deletion, indices, and exported schema `3.json`.

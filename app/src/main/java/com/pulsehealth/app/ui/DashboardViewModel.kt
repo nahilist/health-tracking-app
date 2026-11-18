@@ -38,6 +38,11 @@ import com.pulsehealth.app.data.NoOpWorkoutRepository
 import com.pulsehealth.app.data.WorkoutType
 import com.pulsehealth.app.data.SleepRepository
 import com.pulsehealth.app.data.NoOpSleepRepository
+import com.pulsehealth.app.data.VitalsRepository
+import com.pulsehealth.app.data.NoOpVitalsRepository
+import com.pulsehealth.app.data.VitalType
+import com.pulsehealth.app.data.MeasurementContext
+import com.pulsehealth.app.data.local.VitalRecordEntity
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
 import com.pulsehealth.app.data.local.WorkoutSessionEntity
@@ -76,6 +81,7 @@ class DashboardViewModel(
     val dailySummaryRepository: DailySummaryRepository = NoOpDailySummaryRepository(),
     val workoutRepository: WorkoutRepository = NoOpWorkoutRepository(),
     val sleepRepository: SleepRepository = NoOpSleepRepository(),
+    val vitalsRepository: VitalsRepository = NoOpVitalsRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -111,6 +117,10 @@ class DashboardViewModel(
     val todaySleepSession: StateFlow<SleepSessionWithStages?> =
         sleepRepository.observeTodaySleep()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val vitalRecords: StateFlow<List<VitalRecordEntity>> =
+        vitalsRepository.observeRecentVitals()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
     val lastCloudSyncedEpochMillis: StateFlow<Long?> = syncRepository.lastSyncedEpochMillis
@@ -538,6 +548,60 @@ class DashboardViewModel(
         sleepRepository.deleteSleepSession(id)
     }
 
+    fun logBloodPressure(
+        systolic: Int,
+        diastolic: Int,
+        bpm: Int? = null,
+        context: MeasurementContext = MeasurementContext.GENERAL,
+        notes: String? = null
+    ) = viewModelScope.launch {
+        vitalsRepository.logVital(
+            type = VitalType.BLOOD_PRESSURE,
+            systolic = systolic,
+            diastolic = diastolic,
+            heartRateBpm = bpm,
+            context = context,
+            notes = notes
+        )
+        if (bpm != null && (context == MeasurementContext.RESTING || syncStateFlow.value.metrics.heartRate == null)) {
+            syncStateFlow.update {
+                it.copy(
+                    metrics = it.metrics.copy(
+                        heartRate = bpm.toLong(),
+                        source = if (it.metrics.source == DataSource.NONE) DataSource.LOCAL else it.metrics.source
+                    )
+                )
+            }
+        }
+    }
+
+    fun logHeartRate(
+        bpm: Int,
+        context: MeasurementContext = MeasurementContext.GENERAL,
+        notes: String? = null
+    ) = viewModelScope.launch {
+        vitalsRepository.logVital(
+            type = VitalType.HEART_RATE,
+            heartRateBpm = bpm,
+            context = context,
+            notes = notes
+        )
+        if (context == MeasurementContext.RESTING || syncStateFlow.value.metrics.heartRate == null) {
+            syncStateFlow.update {
+                it.copy(
+                    metrics = it.metrics.copy(
+                        heartRate = bpm.toLong(),
+                        source = if (it.metrics.source == DataSource.NONE) DataSource.LOCAL else it.metrics.source
+                    )
+                )
+            }
+        }
+    }
+
+    fun deleteVital(id: String) = viewModelScope.launch {
+        vitalsRepository.deleteVital(id)
+    }
+
     fun setWaterGoal(goalLiters: Double) = viewModelScope.launch {
         preferencesRepository.setWaterGoalLiters(goalLiters)
     }
@@ -868,6 +932,7 @@ class DashboardViewModel(
                     dailySummaryRepository = app.container.dailySummaryRepository,
                     workoutRepository = app.container.workoutRepository,
                     sleepRepository = app.container.sleepRepository,
+                    vitalsRepository = app.container.vitalsRepository,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )
