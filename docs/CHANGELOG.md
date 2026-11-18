@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Ultra-Modern Athletic & Health UI/UX Overhaul (Granger / High-Performance Aesthetics)**:
+  - **Modern Athletic Design Tokens & Palette** (`PulseTheme.kt`):
+    - Added high-energy athletic color tokens: `AthleticOrange` (`#FF5E1E`), `AthleticOrangeLight` (`#FFF0EB`), `AthleticCyan` (`#00ACC1`), `AthleticCyanLight` (`#E0F7FA`), `DeepCharcoal` (`#111827`), `SoftPillBackground` (`#F0F3F6`), and `CanvasBackground` (`#F4F6F8`).
+    - Swapped harsh default Material 3 pinks and cold greys for warm, premium athletic typography, soft ambient shadows, and crisp high-contrast surfaces.
+  - **Floating Luxury Card System** (`HealthCard.kt`):
+    - Upgraded core card container with `26.dp` luxury rounded corners, crisp pure white container (`#FFFFFF`), `2.5.dp` soft ambient drop shadow, and subtle `#EEF1F4` hairline border.
+  - **High-Performance Visualizations** (`SmoothSparklineChart.kt`, `DotMatrixConsistencyChart.kt`):
+    - Created `SmoothSparklineChart`: smooth cubic bezier trend curve with subtle dotted grid lines, ambient vertical gradient fill, and active glowing peak highlight dot.
+    - Created `DotMatrixConsistencyChart`: modern vertical bubble/circle grid stacks displaying daily volume and weekly training consistency.
+  - **Personalized Header & Category Filter System** (`SummaryScreen.kt`):
+    - Brand logo pod ("Pulse") with vitality flame emblem and circular profile avatar button with online sync indicator.
+    - Time-sensitive personalized greeting ("Hi, [Name]" + "Good Morning" / "Good Afternoon" / "Good Evening").
+    - Horizontal scrollable category pill filter bar (`All`, `Activity`, `Vitals`, `Heart`, `Sleep`, `Water`, `Meds`) with circular search action pod.
+    - Upgraded tactile segmented pill `RangeSelector` with floating white selected tab.
+  - **Hero Activity Card Redesign** (`ActivityCard.kt`):
+    - Giant metric headline (`2,780 Cal`), orange percentage completion pill (`• 87%`), embedded `SmoothSparklineChart`, and 3-column Move/Exercise/Stand pill breakdown row.
+  - **Metric Details & Navigation Modernization** (`DetailScreen.kt`, `PulseHealthApp.kt`):
+    - Floating circular white action pods for Back (`←`) and Add (`+`) navigation.
+    - Embedded `SmoothSparklineChart` on metric hero cards and `DotMatrixConsistencyChart` on training volume views.
+    - Redesigned curved floating bottom navigation bar with active orange pill indicators.
 - **Cardiovascular Insights: Heart Rate Zones & Sinus Cadence Analytics**:
   - **Physiological 5-Tier Heart Rate Zones & Tanaka Max HR Models** (`CardiovascularModels.kt`):
     - Added `HeartRateZone` enum defining the standard 5 exercise intensity tiers:

@@ -14,39 +14,49 @@ val StandCyan = Color(0xFF00C7BE)
 val WaterBlue = Color(0xFF0A84FF)
 val SleepPurple = Color(0xFF5E5CE6)
 val WarmOrange = Color(0xFFFF9500)
-val AppBackground = Color(0xFFF8F9FA)
-val Ink = Color(0xFF111216)
+val AppBackground = Color(0xFFF4F6F8)
+val Ink = Color(0xFF111827)
 val Muted = Color(0xFF8E8E93)
+
+// Ultra-Modern Athletic & Health Design Tokens (Granger / Strava / Apple Fitness UX)
+val AthleticOrange = Color(0xFFFF5E1E)
+val AthleticOrangeDark = Color(0xFFE04A0E)
+val AthleticOrangeLight = Color(0xFFFFF0EB)
+val AthleticCyan = Color(0xFF00ACC1)
+val AthleticCyanLight = Color(0xFFE0F7FA)
+val DeepCharcoal = Color(0xFF111827)
+val SoftPillBackground = Color(0xFFF0F3F6)
+val CanvasBackground = Color(0xFFF4F6F8)
 
 // Executive Forest Emerald & Warm Accent Palette (Design Spec Alignment)
 val ForestEmerald = Color(0xFF0D5C58)
 val ForestEmeraldDark = Color(0xFF094340)
 val ForestEmeraldLight = Color(0xFFE8F3F2)
-val WarmAccent = Color(0xFFE65100)
-val WarmAccentLight = Color(0xFFFFF3E0)
-val SoftCreamBackground = Color(0xFFFAF9F5)
+val WarmAccent = Color(0xFFFF5E1E)
+val WarmAccentLight = Color(0xFFFFF0EB)
+val SoftCreamBackground = Color(0xFFF4F6F8)
 
 // Minimalist Brushes
-val ActivityGradient = Brush.linearGradient(listOf(PulsePink, WarmOrange))
-val ExerciseGradient = Brush.linearGradient(listOf(ExerciseGreen, StandCyan))
+val ActivityGradient = Brush.linearGradient(listOf(AthleticOrange, WarmOrange))
+val ExerciseGradient = Brush.linearGradient(listOf(ExerciseGreen, AthleticCyan))
 val WaterGradient = Brush.linearGradient(listOf(WaterBlue, StandCyan))
-val SleepGradient = Brush.linearGradient(listOf(SleepPurple, PulsePink))
+val SleepGradient = Brush.linearGradient(listOf(SleepPurple, AthleticOrange))
 
 private val LightColors = lightColorScheme(
-    primary = PulsePink,
+    primary = AthleticOrange,
     onPrimary = Color.White,
-    secondary = StandCyan,
+    secondary = AthleticCyan,
     onSecondary = Color.White,
-    tertiary = ExerciseGreen,
+    tertiary = ForestEmerald,
     onTertiary = Color.White,
-    background = AppBackground,
-    onBackground = Ink,
+    background = CanvasBackground,
+    onBackground = DeepCharcoal,
     surface = Color.White,
-    onSurface = Ink,
-    surfaceVariant = Color(0xFFF2F2F7),
+    onSurface = DeepCharcoal,
+    surfaceVariant = SoftPillBackground,
     onSurfaceVariant = Muted,
-    outline = Color(0xFFE5E5EA),
-    outlineVariant = Color(0xFFEBEBF0),
+    outline = Color(0xFFE5E7EB),
+    outlineVariant = Color(0xFFEEF1F4),
     error = Color(0xFFFF3B30),
     onError = Color.White,
     errorContainer = Color(0xFFFFEEEE),

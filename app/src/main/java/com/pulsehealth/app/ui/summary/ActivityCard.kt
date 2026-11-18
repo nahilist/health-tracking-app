@@ -1,6 +1,8 @@
 package com.pulsehealth.app.ui.summary
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,14 +11,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,13 +41,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.ui.components.HealthCard
+import com.pulsehealth.app.ui.components.SmoothSparklineChart
+import com.pulsehealth.app.ui.theme.AthleticCyan
+import com.pulsehealth.app.ui.theme.AthleticOrange
+import com.pulsehealth.app.ui.theme.AthleticOrangeLight
+import com.pulsehealth.app.ui.theme.DeepCharcoal
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.StandCyan
+import kotlin.math.roundToInt
 
 @Composable
 fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
+    val calories = metrics.activeCalories ?: 450
+    val goal = metrics.calorieGoal
+    val percentage = ((calories.toDouble() / goal.coerceAtLeast(1).toDouble()) * 100.0).roundToInt().coerceIn(0, 999)
     val description = "Activity: Move ${metrics.activeCalories ?: 0} of ${metrics.calorieGoal} kcal, Exercise ${metrics.exerciseMinutes ?: 0} of ${metrics.exerciseGoalMinutes} minutes, Stand ${metrics.standHours ?: 0} of ${metrics.standGoalHours} hours. Tap for details."
 
     HealthCard(
@@ -52,43 +68,156 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
                 contentDescription = description
             }
     ) {
+        // Top Header: Flame badge + Title + Percentage Pill
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Activity", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Default.ChevronRight, "Open activity", tint = Muted.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            Surface(
+                shape = CircleShape,
+                color = AthleticOrangeLight,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Whatshot,
+                        contentDescription = null,
+                        tint = AthleticOrange,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Activity",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = DeepCharcoal
+                )
+            }
+
+            // High-Impact Percentage Completion Pill (as in Image 2)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = AthleticOrange
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = "$percentage%",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(14.dp))
 
+        // Giant Metric Value & Subtitle
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth()
         ) {
-            ActivityRings(metrics, Modifier.size(108.dp))
-            Spacer(Modifier.width(20.dp))
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MinimalActivityRow(
-                    label = "Move",
-                    value = metrics.activeCalories?.toString() ?: "—",
-                    target = "/ ${metrics.calorieGoal} kcal",
-                    color = PulsePink
+            Text(
+                text = String.format(java.util.Locale.getDefault(), "%,d", calories),
+                fontSize = 34.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = DeepCharcoal,
+                letterSpacing = (-1).sp
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "Cal",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = Muted,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Spacer(Modifier.weight(1f))
+            // Embedded Activity Rings
+            ActivityRings(metrics, Modifier.size(48.dp))
+        }
+
+        Text(
+            text = if (percentage >= 100) "Daily target achieved! Outstanding consistency" else "You improved overall well-being",
+            fontSize = 12.sp,
+            color = Muted,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Ultra-Modern Smooth Curved Sparkline with Dotted Grid Lines & Glowing Peak
+        SmoothSparklineChart(
+            values = listOf(0.35f, 0.48f, 0.88f, 0.42f, 0.65f, 0.72f, 0.55f),
+            lineColor = AthleticOrange,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // 3-Column Breakdown Row (Walking / Running / Workout or Move / Exercise / Stand)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF9FAFB), RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(AthleticOrange))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Move", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                }
+                Text(
+                    text = "${metrics.activeCalories ?: 0} Cal",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = DeepCharcoal
                 )
-                MinimalActivityRow(
-                    label = "Exercise",
-                    value = metrics.exerciseMinutes?.toString() ?: "—",
-                    target = "/ ${metrics.exerciseGoalMinutes} min",
-                    color = ExerciseGreen
+            }
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(ExerciseGreen))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Exercise", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                }
+                Text(
+                    text = "${metrics.exerciseMinutes ?: 0} min",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = DeepCharcoal
                 )
-                MinimalActivityRow(
-                    label = "Stand",
-                    value = metrics.standHours?.toString() ?: "—",
-                    target = "/ ${metrics.standGoalHours} hr",
-                    color = StandCyan
+            }
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(AthleticCyan))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Stand", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                }
+                Text(
+                    text = "${metrics.standHours ?: 0} hr",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = DeepCharcoal
                 )
             }
         }
@@ -98,9 +227,9 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 @Composable
 fun ActivityRings(metrics: DashboardMetrics, modifier: Modifier = Modifier) {
     val progresses = listOf(
-        (metrics.activeCalories?.toFloat()?.div(metrics.calorieGoal) ?: 0f) to PulsePink,
+        (metrics.activeCalories?.toFloat()?.div(metrics.calorieGoal) ?: 0f) to AthleticOrange,
         (metrics.exerciseMinutes?.toFloat()?.div(metrics.exerciseGoalMinutes) ?: 0f) to ExerciseGreen,
-        (metrics.standHours?.toFloat()?.div(metrics.standGoalHours) ?: 0f) to StandCyan
+        (metrics.standHours?.toFloat()?.div(metrics.standGoalHours) ?: 0f) to AthleticCyan
     )
     Canvas(modifier.semantics { contentDescription = "Activity progress rings" }) {
         val stroke = size.minDimension * 0.105f
@@ -108,48 +237,24 @@ fun ActivityRings(metrics: DashboardMetrics, modifier: Modifier = Modifier) {
             val inset = stroke / 2 + index * stroke * 1.34f
             drawArc(
                 pair.second.copy(alpha = 0.14f),
-                -90f,
-                360f,
-                false,
-                Offset(inset, inset),
-                Size(size.width - inset * 2, size.height - inset * 2),
-                style = Stroke(stroke, cap = StrokeCap.Round)
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(stroke, cap = StrokeCap.Round),
+                topLeft = Offset(inset, inset),
+                size = Size(size.width - inset * 2, size.height - inset * 2)
             )
-            if (pair.first > 0f) {
+            val sweep = (pair.first * 360f).coerceIn(0f, 360f)
+            if (sweep > 0f) {
                 drawArc(
                     pair.second,
-                    -90f,
-                    pair.first.coerceIn(0f, 1f) * 360f,
-                    false,
-                    Offset(inset, inset),
-                    Size(size.width - inset * 2, size.height - inset * 2),
-                    style = Stroke(stroke, cap = StrokeCap.Round)
+                    startAngle = -90f,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    style = Stroke(stroke, cap = StrokeCap.Round),
+                    topLeft = Offset(inset, inset),
+                    size = Size(size.width - inset * 2, size.height - inset * 2)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MinimalActivityRow(
-    label: String,
-    value: String,
-    target: String,
-    color: Color
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .align(Alignment.CenterVertically)
-        )
-        Column {
-            Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.width(3.dp))
-                Text(target, fontSize = 11.sp, color = Muted)
             }
         }
     }

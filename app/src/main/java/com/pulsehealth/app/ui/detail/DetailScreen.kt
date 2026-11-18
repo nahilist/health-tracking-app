@@ -1,6 +1,8 @@
 package com.pulsehealth.app.ui.detail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,11 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -51,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.semantics.contentDescription
@@ -79,6 +84,12 @@ import com.pulsehealth.app.ui.cardio.CardiovascularZonesCard
 import com.pulsehealth.app.ui.insights.HealthInsightCard
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
+import com.pulsehealth.app.ui.components.SmoothSparklineChart
+import com.pulsehealth.app.ui.components.DotMatrixConsistencyChart
+import com.pulsehealth.app.ui.theme.AthleticCyan
+import com.pulsehealth.app.ui.theme.AthleticCyanLight
+import com.pulsehealth.app.ui.theme.AthleticOrange
+import com.pulsehealth.app.ui.theme.DeepCharcoal
 import com.pulsehealth.app.ui.summary.ActivityRings
 import com.pulsehealth.app.ui.summary.LogWorkoutBottomSheet
 import com.pulsehealth.app.ui.summary.RangeSelector
@@ -197,20 +208,87 @@ fun DetailScreen(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Top Header with Back Navigation
+        // Top Header with Back Navigation (Granger / Ultra-Modern Layout)
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Circular White Floating Back Button
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onBack)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-                Spacer(Modifier.width(6.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(metricInfo.title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        if (isDemo) "Demo preview data" else "Source: ${metrics.source.label}",
-                        color = Muted,
-                        fontSize = 12.sp
+                        text = metricInfo.title,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal
                     )
+                    Text(
+                        text = if (isDemo) "Demo preview data" else "Source: ${metrics.source.label}",
+                        color = Muted,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                // Circular White Floating Action Button
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            when (normalizedId) {
+                                "Water" -> showGoalDialog = true
+                                "Blood pressure" -> {
+                                    vitalSheetInitialType = VitalType.BLOOD_PRESSURE
+                                    showLogVitalSheet = true
+                                }
+                                "Heart rate" -> {
+                                    vitalSheetInitialType = VitalType.HEART_RATE
+                                    showLogVitalSheet = true
+                                }
+                                "Exercise", "Activity" -> showWorkoutSheet = true
+                                else -> {}
+                            }
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Log ${metricInfo.title}",
+                            tint = AthleticOrange,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
@@ -318,6 +396,79 @@ fun DetailScreen(
                             strokeCap = StrokeCap.Round
                         )
                     }
+
+                    Spacer(Modifier.height(16.dp))
+                    SmoothSparklineChart(
+                        values = listOf(0.35f, 0.52f, 0.88f, 0.40f, 0.68f, 0.74f, 0.58f),
+                        lineColor = if (color == PulsePink) AthleticOrange else color,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // Modern Consistency & Training Volume Card (matching Image 2)
+        if (normalizedId in listOf("Activity", "Exercise", "Steps")) {
+            item {
+                HealthCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = AthleticCyanLight,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        tint = AthleticCyan,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "Training Consistency",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = DeepCharcoal
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = AthleticCyanLight
+                        ) {
+                            Text(
+                                text = "High Consistency",
+                                color = AthleticCyan,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Text(
+                        text = "Weekly workout volume and movement frequency across 7 days",
+                        fontSize = 12.sp,
+                        color = Muted
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    DotMatrixConsistencyChart(
+                        dailyLevels = listOf(2, 3, 2, 4, 3, 5, 4),
+                        dotColor = AthleticCyan,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }

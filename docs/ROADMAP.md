@@ -270,6 +270,18 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Heart rate `DetailScreen` integration mounting cardiovascular zones and waveform above pulse history
 - [x] Comprehensive test suite (`CardiovascularAnalyticsTest`, `CardiovascularZonesCardComposeTest`)
 
+### PR 41: Ultra-modern athletic & health UI/UX overhaul (Completed)
+
+- [x] Core design system overhaul (`PulseTheme.kt`) with athletic canvas (`#F4F6F8`), vibrant orange (`#FF5E1E`), and deep charcoal (`#111827`)
+- [x] `HealthCard.kt` elevated with `26.dp` luxury rounded corners, soft ambient drop shadow, and subtle `#EEF1F4` border
+- [x] Reusable `SmoothSparklineChart` with cubic bezier curve, subtle dotted grid matrix, and glowing peak highlight dot
+- [x] Reusable `DotMatrixConsistencyChart` with modern vertical bubble/circle grid volume columns
+- [x] `SummaryScreen.kt` brand header ("Pulse"), time-sensitive greeting ("Good Morning"), and scrollable category pills (`All`, `Activity`, `Vitals`, `Heart`, `Sleep`, `Water`, `Meds`)
+- [x] `ActivityCard.kt` giant metric headline (`2,780 Cal`), orange percentage pill (`• 87%`), and embedded sparkline curve
+- [x] `DetailScreen.kt` circular floating back (`←`) and add (`+`) pods, sparkline curves, and training consistency card
+- [x] Curved bottom navigation bar (`PulseBottomBar.kt`) with active orange pill indicators
+- [x] Full test pass: `testDebugUnitTest` (215+ tests), `lintDebug`, `assembleDebug`, and `bundleRelease`
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 41: Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, trigger tags, and lifestyle correlation) or **Nutrition & Macronutrient Meal Logging** (Caloric intake, macro distribution, and hydration synergy).
+Proceed with the next milestone: **Phase 5 PR 42: Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, trigger tags, and lifestyle correlation) or **Nutrition & Macronutrient Meal Logging** (Caloric intake, macro distribution, and hydration synergy).

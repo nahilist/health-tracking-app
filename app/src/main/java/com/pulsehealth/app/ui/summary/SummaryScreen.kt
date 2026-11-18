@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Whatshot
@@ -72,10 +73,14 @@ import com.pulsehealth.app.ui.insights.InsightsSection
 import com.pulsehealth.app.ui.medication.MedicationScheduleCard
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.NetworkStatusPill
+import com.pulsehealth.app.ui.theme.AthleticOrange
+import com.pulsehealth.app.ui.theme.AthleticOrangeLight
+import com.pulsehealth.app.ui.theme.DeepCharcoal
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.PulseTheme
+import com.pulsehealth.app.ui.theme.SoftPillBackground
 import com.pulsehealth.app.ui.theme.WarmOrange
 import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.LocalDate
@@ -103,6 +108,7 @@ fun SummaryScreen(
     onDismissError: () -> Unit
 ) {
     var showHydrationLogger by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("All") }
     val locale = LocalLocale.current.platformLocale
     val sourceLabel = when (state.metrics.source) {
         DataSource.HEALTH_CONNECT -> "Health Connect"
@@ -127,34 +133,63 @@ fun SummaryScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Minimalist Header with Subtle Timestamp and Profile Avatar
+        // Modern Athletic Brand Header & Profile Bar (Granger / Modern Health Layout)
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Brand Logo & Wordmark
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = AthleticOrangeLight,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = null,
+                                tint = AthleticOrange,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d", locale)).uppercase(locale),
-                        color = Muted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
+                        text = "Pulse",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal,
+                        letterSpacing = (-0.5).sp
                     )
-                    Text("Summary", fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                    Text(statusText, color = Muted, fontSize = 12.sp)
                 }
+
+                Spacer(Modifier.weight(1f))
+
+                // Profile Avatar Pod
                 Surface(
                     modifier = Modifier
                         .size(44.dp)
+                        .clip(CircleShape)
                         .clickable(onClick = onProfile)
                         .semantics {
                             role = Role.Button
                             contentDescription = "Open profile and settings"
                         },
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, Color(0xFFEEF1F4))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Person, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+                        val initial = (state.currentUser?.email?.firstOrNull() ?: 'P').uppercaseChar().toString()
+                        Text(
+                            text = if (state.currentUser != null && !state.currentUser.isAnonymous) initial else "A",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = AthleticOrange
+                        )
                         if (state.currentUser != null && !state.currentUser.isAnonymous) {
                             Box(
                                 modifier = Modifier
@@ -165,6 +200,107 @@ fun SummaryScreen(
                                     .background(if (state.isCloudSyncing) WarmOrange else ExerciseGreen)
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // Personalized Greeting Header: "Hi, [Name]" + "Good Morning"
+        item {
+            val hour = remember { java.time.LocalTime.now().hour }
+            val greeting = when (hour) {
+                in 4..11 -> "Good Morning"
+                in 12..16 -> "Good Afternoon"
+                else -> "Good Evening"
+            }
+            val userName = state.currentUser?.displayName
+                ?: state.currentUser?.email?.substringBefore('@')?.replaceFirstChar { it.uppercase() }
+                ?: "Athlete"
+
+            Column(modifier = Modifier.padding(vertical = 2.dp)) {
+                Text(
+                    text = "Hi, $userName",
+                    color = Muted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = greeting,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DeepCharcoal,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Summary",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepCharcoal
+                        )
+                        Text(
+                            text = statusText,
+                            color = Muted,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // Horizontal Category Pill Filter Bar (as in Image 1)
+        item {
+            val categories = listOf("All", "Activity", "Vitals", "Heart", "Sleep", "Water", "Meds")
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Search circle icon button on left
+                item {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
+                        shadowElevation = 1.dp,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .clickable { onDetail("Activity") }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search and Browse Metrics",
+                                tint = DeepCharcoal,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+
+                items(categories.size) { idx ->
+                    val cat = categories[idx]
+                    val isSelected = selectedCategory == cat
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isSelected) DeepCharcoal else Color.White,
+                        border = BorderStroke(1.dp, if (isSelected) DeepCharcoal else Color(0xFFE5E7EB)),
+                        shadowElevation = if (isSelected) 2.dp else 0.5.dp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { selectedCategory = cat }
+                    ) {
+                        Text(
+                            text = cat,
+                            color = if (isSelected) Color.White else DeepCharcoal,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
                     }
                 }
             }
@@ -461,32 +597,33 @@ fun RangeSelector(selected: TimeRange, onRange: (TimeRange) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .padding(3.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(SoftPillBackground)
+            .padding(4.dp)
     ) {
         TimeRange.entries.forEach { range ->
             val isCurrentRange = selected == range
             Surface(
                 modifier = Modifier
                     .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable { onRange(range) }
                     .semantics {
                         role = Role.Tab
                         this.selected = isCurrentRange
                         contentDescription = "${range.label} range"
                     },
-                shape = RoundedCornerShape(10.dp),
-                color = if (isCurrentRange) MaterialTheme.colorScheme.surface else Color.Transparent,
-                shadowElevation = if (isCurrentRange) 0.5.dp else 0.dp
+                shape = RoundedCornerShape(16.dp),
+                color = if (isCurrentRange) Color.White else Color.Transparent,
+                shadowElevation = if (isCurrentRange) 2.dp else 0.dp
             ) {
                 Text(
                     range.label,
-                    Modifier.padding(vertical = 7.dp),
+                    Modifier.padding(vertical = 8.dp),
                     textAlign = TextAlign.Center,
                     fontSize = 13.sp,
-                    fontWeight = if (isCurrentRange) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isCurrentRange) MaterialTheme.colorScheme.onSurface else Muted
+                    fontWeight = if (isCurrentRange) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isCurrentRange) DeepCharcoal else Muted
                 )
             }
         }

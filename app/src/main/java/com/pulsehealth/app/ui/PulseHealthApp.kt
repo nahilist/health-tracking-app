@@ -69,6 +69,9 @@ import com.pulsehealth.app.ui.onboarding.OnboardingScreen
 import com.pulsehealth.app.ui.profile.ProfileScreen
 import com.pulsehealth.app.ui.summary.FavoritesSheet
 import com.pulsehealth.app.ui.summary.SummaryScreen
+import com.pulsehealth.app.ui.theme.AthleticOrange
+import com.pulsehealth.app.ui.theme.AthleticOrangeLight
+import com.pulsehealth.app.ui.theme.DeepCharcoal
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 import kotlinx.coroutines.launch
@@ -471,17 +474,18 @@ fun PulseBottomBar(
     onNavigateToDestination: (TopLevelDestination) -> Unit
 ) {
     Surface(
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEF1F4))
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .height(68.dp)
+                .padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             TopLevelDestination.entries.forEach { item ->
@@ -489,14 +493,14 @@ fun PulseBottomBar(
                 Column(
                     Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .clickable { onNavigateToDestination(item) }
                         .semantics {
                             role = Role.Tab
                             selected = active
                             contentDescription = "${item.label} tab"
                         }
-                        .background(if (active) PulsePink.copy(alpha = 0.08f) else Color.Transparent)
+                        .background(if (active) AthleticOrangeLight else Color.Transparent)
                         .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
@@ -504,15 +508,15 @@ fun PulseBottomBar(
                     Icon(
                         item.icon,
                         contentDescription = null,
-                        tint = if (active) PulsePink else Muted,
+                        tint = if (active) AthleticOrange else Muted,
                         modifier = Modifier.size(22.dp)
                     )
                     androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
                     Text(
                         item.label,
-                        color = if (active) PulsePink else Muted,
+                        color = if (active) AthleticOrange else Muted,
                         fontSize = 11.sp,
-                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
                     )
                 }
             }
