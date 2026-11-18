@@ -75,6 +75,10 @@ import com.pulsehealth.app.data.ShareRelationship
 import com.pulsehealth.app.data.ShareStatus
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.TrustedContact
+import com.pulsehealth.app.data.export.ReportFormat
+import com.pulsehealth.app.data.export.ReportTimeRange
+import com.pulsehealth.app.data.export.ReportSectionConfig
+import com.pulsehealth.app.ui.export.ExportReportBottomSheet
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.theme.ExerciseGreen
 import com.pulsehealth.app.ui.theme.Muted
@@ -94,7 +98,8 @@ fun SharingScreen(
     onRevokeContact: (String) -> Unit,
     onDeleteContact: (String) -> Unit,
     onExportPackage: suspend (String?, Set<String>, TimeRange) -> ExportedHealthPackage,
-    onFormatShareText: (ExportedHealthPackage) -> String
+    onFormatShareText: (ExportedHealthPackage) -> String,
+    onGenerateAndShareReport: (suspend (ReportFormat, ReportTimeRange, ReportSectionConfig, String?) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -102,6 +107,7 @@ fun SharingScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingContact by remember { mutableStateOf<TrustedContact?>(null) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showExecutiveExportSheet by remember { mutableStateOf(false) }
     var previewPackage by remember { mutableStateOf<ExportedHealthPackage?>(null) }
     var previewShareText by remember { mutableStateOf<String?>(null) }
 
@@ -155,7 +161,13 @@ fun SharingScreen(
                 }
 
                 OutlinedButton(
-                    onClick = { showExportDialog = true },
+                    onClick = {
+                        if (onGenerateAndShareReport != null) {
+                            showExecutiveExportSheet = true
+                        } else {
+                            showExportDialog = true
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp)
                 ) {
@@ -239,6 +251,15 @@ fun SharingScreen(
             onSave = { updatedMetrics ->
                 onUpdateMetrics(contact.id, updatedMetrics)
                 editingContact = null
+            }
+        )
+    }
+
+    if (showExecutiveExportSheet && onGenerateAndShareReport != null) {
+        ExportReportBottomSheet(
+            onDismiss = { showExecutiveExportSheet = false },
+            onGenerateAndShare = { format, range, config, doctorNotes ->
+                onGenerateAndShareReport(format, range, config, doctorNotes)
             }
         )
     }

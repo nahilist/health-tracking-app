@@ -205,6 +205,16 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] `InsightsSection` integrated on `SummaryScreen` and contextual metric insights on `DetailScreen`
 - [x] Automated unit and Robolectric Compose UI test suite (`HealthAnomalyDetectorTest`, `InsightsRepositoryTest`, `HealthInsightCardComposeTest`)
 
+### PR 35: Clinical / personal health report PDF & CSV export engine (Completed)
+
+- [x] Android `FileProvider` and `file_paths.xml` configuration for zero-leak sharing
+- [x] Multi-page vector `ClinicalPdfGenerator` using Android `PdfDocument` with A4 page budgeting
+- [x] Structured `HealthCsvGenerator` with multi-table RFC 4180 export
+- [x] `HealthReportService` and `DefaultHealthReportService` aggregating vitals, workouts, sleep, and hydration
+- [x] Executive `ExportReportBottomSheet` with format selector, time range chips, and section toggles
+- [x] Integration with `SharingScreen` and Android Sharesheet `Intent.ACTION_SEND`
+- [x] Automated test suite (`ClinicalPdfGeneratorTest`, `HealthCsvGeneratorTest`, `HealthReportServiceTest`, `ExportReportBottomSheetComposeTest`)
+
 ## 9. Recommended next step
 
-Proceed with the next Phase 5 milestone: **Clinical / Personal Health Report PDF & CSV Export** (generating doctor-ready summaries of vitals, workouts, sleep, and hydration using Android's `PdfDocument` API with zero cloud leaks) or **Medication & Supplement Adherence Tracker**.
+Proceed with the next Phase 5 milestone: **Medication & Supplement Adherence Tracker (PR #36)** (Room database v5 schema migration, dosage schedules, daily checklist cards, and adherence analytics) or **Custom Target & Goal Setting Multi-Step Wizards**.

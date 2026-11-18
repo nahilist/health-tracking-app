@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Clinical & Personal Health Report PDF / CSV Export Engine**:
+  - **Secure Android FileProvider Integration** (`AndroidManifest.xml`, `file_paths.xml`):
+    - Configured `androidx.core.content.FileProvider` granting secure content URI access (`content://...`) for private cache files without leaking filesystem paths.
+  - **Multi-Page Vector Clinical PDF Generator** (`ClinicalPdfGenerator.kt`):
+    - Built using native Android `android.graphics.pdf.PdfDocument` with standard A4 printable dimensions (595 x 842 points).
+    - Executive brand header, generation timestamp, patient reference, and prominent clinical consultation disclaimer.
+    - Comprehensive data sections: Cardiovascular & Vitals (RHR, Blood Pressure table with AHA classification), Physical Activity (steps, active calories, workout sessions table), Sleep Architecture (duration, efficiency %, deep/light/REM/awake breakdown), Hydration Volume & Consistency, Statistical Trends & Anomaly Insights, and Doctor Consultation Notes.
+    - Automatic dynamic page budgeting with clean margins and page footers.
+  - **Enhanced RFC 4180 CSV Bundle Generator** (`HealthCsvGenerator.kt`):
+    - Section-separated structured CSV export covering vitals, workouts, sleep stages, hydration entries, daily aggregates, and insights with RFC 4180 quote escaping.
+  - **Service & Sharing Pipeline** (`HealthReportService.kt`, `AppContainer.kt`, `DashboardViewModel.kt`):
+    - `HealthReportService` and `DefaultHealthReportService` aggregating multi-repository health records into `HealthReportData`.
+    - Writes report files to app-private cache and issues `FileProvider` content `Uri`.
+    - Produces `ACTION_SEND` chooser intents with `FLAG_GRANT_READ_URI_PERMISSION` for zero-leak sharing via the Android Sharesheet.
+  - **Executive Modal Bottom Sheet** (`ExportReportBottomSheet.kt`, `SharingScreen.kt`, `PulseHealthApp.kt`):
+    - Material 3 bottom sheet with format selection (Clinical PDF vs. CSV Bundle), time range chips (7D, 30D, 90D, All), modular section toggle rows, doctor notes input, and "Generate & Share Report" CTA with loading indicator.
+    - Seamlessly integrated into `SharingScreen`.
+  - **Comprehensive Automated Test Suite** (`ClinicalPdfGeneratorTest.kt`, `HealthCsvGeneratorTest.kt`, `HealthReportServiceTest.kt`, `ExportReportBottomSheetComposeTest.kt`):
+    - Automated unit tests validating PDF binary generation, magic bytes `%PDF-`, CSV table structures, content URI emission, and Compose UI sheet interactions under Robolectric.
 - **Health Trends, Baseline Analytics & Anomaly Insights Engine**:
   - **Domain & Baseline Anomaly Models** (`HealthInsightModels.kt`):
     - Added `HealthInsight`, `InsightSeverity` (`POSITIVE`, `INFO`, `ATTENTION`), `InsightCategory` (`CARDIO`, `SLEEP`, `ACTIVITY`, `HYDRATION`, `RECOVERY`), and `InsightType`.

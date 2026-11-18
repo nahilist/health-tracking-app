@@ -45,6 +45,13 @@ import com.pulsehealth.app.data.MeasurementContext
 import com.pulsehealth.app.data.analytics.HealthInsight
 import com.pulsehealth.app.data.analytics.InsightsRepository
 import com.pulsehealth.app.data.analytics.NoOpInsightsRepository
+import com.pulsehealth.app.data.export.HealthReportService
+import com.pulsehealth.app.data.export.NoOpHealthReportService
+import com.pulsehealth.app.data.export.ReportFormat
+import com.pulsehealth.app.data.export.ReportTimeRange
+import com.pulsehealth.app.data.export.ReportSectionConfig
+import android.net.Uri
+import android.content.Intent
 import com.pulsehealth.app.data.local.VitalRecordEntity
 import com.pulsehealth.app.data.local.DailyHealthSummaryEntity
 import com.pulsehealth.app.data.local.HydrationEntryEntity
@@ -86,6 +93,7 @@ class DashboardViewModel(
     val sleepRepository: SleepRepository = NoOpSleepRepository(),
     val vitalsRepository: VitalsRepository = NoOpVitalsRepository(),
     val insightsRepository: InsightsRepository = NoOpInsightsRepository(),
+    val healthReportService: HealthReportService = NoOpHealthReportService(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -642,6 +650,20 @@ class DashboardViewModel(
         return hydrationRepository.exportClinicalSummary()
     }
 
+    suspend fun generateHealthReport(
+        format: ReportFormat,
+        range: ReportTimeRange,
+        config: ReportSectionConfig = ReportSectionConfig(),
+        doctorNotes: String? = null,
+        patientName: String? = null
+    ): Uri {
+        return healthReportService.generateReport(format, range, config, doctorNotes, patientName)
+    }
+
+    fun createShareIntent(uri: Uri, format: ReportFormat): Intent {
+        return healthReportService.createShareIntent(uri, format)
+    }
+
     fun deleteAccount(alsoDeleteLocalData: Boolean = true, onCompleted: (Result<Unit>) -> Unit = {}) = viewModelScope.launch {
         val result = authRepository.deleteAccount()
         if (result.isSuccess) {
@@ -942,6 +964,7 @@ class DashboardViewModel(
                     sleepRepository = app.container.sleepRepository,
                     vitalsRepository = app.container.vitalsRepository,
                     insightsRepository = app.container.insightsRepository,
+                    healthReportService = app.container.healthReportService,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )

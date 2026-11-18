@@ -192,7 +192,12 @@ fun PulseHealthApp(
                         onExportPackage = { name, metrics, range ->
                             viewModel.createExportHealthPackage(name, metrics, range)
                         },
-                        onFormatShareText = viewModel::formatShareText
+                        onFormatShareText = viewModel::formatShareText,
+                        onGenerateAndShareReport = { format, range, config, doctorNotes ->
+                            val uri = viewModel.generateHealthReport(format, range, config, doctorNotes)
+                            val shareIntent = viewModel.createShareIntent(uri, format)
+                            context.startActivity(shareIntent)
+                        }
                     )
                 }
                 composable(PulseDestination.Browse.route) {
