@@ -94,6 +94,7 @@ fun SummaryScreen(
     onSkipMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
     onUndoMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
     onAddMedicationClick: () -> Unit = {},
+    onOpenGoalWizard: () -> Unit = {},
     onEdit: () -> Unit,
     onProfile: () -> Unit,
     onDetail: (String) -> Unit,
@@ -266,6 +267,13 @@ fun SummaryScreen(
                     onSkipDose = onSkipMedicationDose,
                     onUndoDose = onUndoMedicationDose,
                     onAddMedicationClick = onAddMedicationClick
+                )
+            }
+
+            item {
+                com.pulsehealth.app.ui.goals.GoalProgressSummaryCard(
+                    metrics = state.metrics,
+                    onOpenWizard = onOpenGoalWizard
                 )
             }
 

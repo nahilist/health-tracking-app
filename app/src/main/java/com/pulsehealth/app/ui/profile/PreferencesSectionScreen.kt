@@ -207,7 +207,7 @@ fun PreferencesSectionScreen(
         }
 
         if (showGoalEditor) {
-            GoalSettingsDialog(
+            com.pulsehealth.app.ui.goals.GoalWizardBottomSheet(
                 initialWaterGoalLiters = state.metrics.waterGoalLiters,
                 initialStepGoal = state.metrics.stepGoal,
                 initialCalorieGoal = state.metrics.calorieGoal,

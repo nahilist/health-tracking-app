@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Custom Health Targets & Interactive Multi-Step Goal Setting Wizard**:
+  - **Physiological Guideline Presets & Target Models** (`GoalWizardModels.kt`):
+    - Added `GoalCategory` (`STEPS`, `CALORIES`, `WATER`, `SLEEP`) with custom color branding, units, and vector iconography.
+    - Pre-configured physiological guidelines: Step presets (Light: 6,000, Active / WHO standard: 10,000, Conditioning: 14,000, Athlete: 18,000), Calorie burn presets (300, 500, 750, 1,000 kcal), Hydration presets (1.5L, 2.0L, 2.5L, 3.0L), and Sleep duration presets (7h, 8h, 9h).
+    - Calculated metrics: Estimated walking distance (km), walking duration, standard water glasses count (250 mL each), and 90-minute sleep cycle count.
+  - **Interactive 5-Step Goal Setting Modal Wizard** (`GoalWizardBottomSheet.kt`):
+    - Step 1: Daily Movement & Steps (Preset chips, fine-tuning slider, stepper +/- 500 steps, km / minutes estimate).
+    - Step 2: Active Energy Burn (Preset chips, slider, stepper +/- 50 kcal, cardio activity equivalent).
+    - Step 3: Daily Hydration Volume (Preset chips, slider, stepper +/- 250 mL, glasses counter).
+    - Step 4: Sleep Duration & Schedule (Preset chips, slider, stepper +/- 30 mins, sleep cycle counter).
+    - Step 5: Review & Save Summary (Color-coded target cards with previous vs new target comparisons and "Save & Apply Targets" button).
+  - **Executive Dashboard Progress Card** (`GoalProgressSummaryCard.kt`):
+    - 4-pillar compact metric grid showing current achievement vs target for Steps, Active Burn, Water, and Sleep duration with linear progress bars and percentages.
+    - Direct "Adjust" quick trigger button launching `GoalWizardBottomSheet`.
+  - **ViewModel & Screen Integrations** (`DashboardViewModel.kt`, `PreferencesSectionScreen.kt`, `SummaryScreen.kt`, `PulseHealthApp.kt`):
+    - Added `setAllGoals(waterLiters, steps, calories, sleepMinutes)` batch update in `DashboardViewModel`.
+    - Integrated `GoalProgressSummaryCard` into `SummaryScreen` dashboard lazy column.
+    - Upgraded `PreferencesSectionScreen` to launch `GoalWizardBottomSheet` on target adjustment.
+  - **Automated Tests** (`GoalWizardComposeTest.kt`):
+    - Robolectric Compose UI test suite verifying initial step rendering, preset chips, step-by-step navigation through all 5 steps, value update & save callback, and `GoalProgressSummaryCard` progress rendering and action triggers.
 - **Modern Authentication, Brand Visuals & User Profile Flow (Design Spec Alignment)**:
   - **Botanical Health & Vitality Header Artwork** (`AuthHeaderArt.kt`, `PulseTheme.kt`):
     - Created `PulseBrandHeaderArt` vector canvas with curved pastel background blobs (`#FAF9F5`), botanical eucalyptus leaves in deep forest emerald (`#0D5C58`, `#094340`), vitality citrus spheres in golden orange (`#FFA000`, `#E65100`), subtle animated pulse ECG waveforms, and centered brand emblem.

@@ -104,6 +104,7 @@ fun PulseHealthApp(
     val medicationAdherence by viewModel.medicationAdherence.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     var showAddMedicationSheet by remember { mutableStateOf(false) }
+    var showGoalWizardSheet by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = viewModel.healthRepository.permissionContract()
     ) { viewModel.refreshPermissionsAndSync() }
@@ -186,6 +187,7 @@ fun PulseHealthApp(
                             viewModel.removeMedicationDoseLog(medId, time)
                         },
                         onAddMedicationClick = { showAddMedicationSheet = true },
+                        onOpenGoalWizard = { showGoalWizardSheet = true },
                         onEdit = { editing = true },
                         onProfile = { navController.navigate(PulseDestination.Profile.route) },
                         onDetail = { type ->
@@ -412,6 +414,17 @@ fun PulseHealthApp(
                     notes = notes
                 )
             }
+        )
+    }
+
+    if (showGoalWizardSheet) {
+        com.pulsehealth.app.ui.goals.GoalWizardBottomSheet(
+            initialWaterGoalLiters = state.metrics.waterGoalLiters,
+            initialStepGoal = state.metrics.stepGoal,
+            initialCalorieGoal = state.metrics.calorieGoal,
+            initialSleepGoalMinutes = 480L,
+            onSaveGoals = viewModel::setAllGoals,
+            onDismiss = { showGoalWizardSheet = false }
         )
     }
 }

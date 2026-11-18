@@ -653,6 +653,18 @@ class DashboardViewModel(
         preferencesRepository.setSleepGoalMinutes(minutes)
     }
 
+    fun setAllGoals(
+        waterLiters: Double,
+        steps: Long,
+        calories: Long,
+        sleepMinutes: Long
+    ) = viewModelScope.launch {
+        preferencesRepository.setWaterGoalLiters(waterLiters)
+        preferencesRepository.setStepGoal(steps)
+        preferencesRepository.setCalorieGoal(calories)
+        preferencesRepository.setSleepGoalMinutes(sleepMinutes)
+    }
+
     fun setOnboardingCompleted(completed: Boolean) = viewModelScope.launch {
         preferencesRepository.setOnboardingCompleted(completed)
     }

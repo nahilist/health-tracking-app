@@ -239,6 +239,15 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Screen 6: Reset Password Screen (`AuthScreenMode.RESET_PASSWORD`) with password fields, dynamic 3-level strength meter, and "Reset Password" button
 - [x] Comprehensive Robolectric Compose UI test suite (`AuthScreenComposeTest.kt`) covering all 6 screens, hero branding, input labels, error sanitization, and navigation transitions
 
+### PR 38: Custom health targets & multi-step goal setting wizards (Completed)
+
+- [x] Physiological guideline presets & target models (`GoalWizardModels.kt`) for steps, active calories, water, and sleep
+- [x] Interactive 5-step modal wizard (`GoalWizardBottomSheet.kt`) with step indicator, fine-tuning sliders, +/- steppers, and review comparisons
+- [x] Executive dashboard progress card (`GoalProgressSummaryCard.kt`) with 4-pillar mini-pills and progress bars
+- [x] Batch goal persistence (`setAllGoals`) in `DashboardViewModel`
+- [x] Dashboard lazy column and Preferences screen integrations (`SummaryScreen.kt`, `PreferencesSectionScreen.kt`, `PulseHealthApp.kt`)
+- [x] Comprehensive Robolectric Compose UI test suite (`GoalWizardComposeTest.kt`)
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 38: Custom Health Targets & Multi-Step Goal Setting Wizards** (Interactive step, calorie, water, and sleep goal calculators with physiological guideline presets and progress rings) or **Advanced Biometric / Passkey Vault & App Lock Experience**.
+Proceed with the next milestone: **Phase 5 PR 39: Advanced Biometric / Passkey Security & App Lock Experience** (Biometric prompt integration on app resume, auto-lock timeout preferences, and vault security) or **Interactive Heart Rate Zones & ECG Trend Analytics**.
