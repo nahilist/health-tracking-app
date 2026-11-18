@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Advanced Biometric / Passkey Security & Vault App Lock Experience**:
+  - **Auto-Lock Timeout Preferences & Domain Models** (`PreferencesRepository.kt`, `UserPreferencesRepository.kt`, `HealthModels.kt`):
+    - Added DataStore-persisted `biometricLockTimeoutSeconds` preference flow and mutator.
+    - Defined `LockTimeout` enum (`IMMEDIATELY` [0s], `THIRTY_SECONDS` [30s], `ONE_MINUTE` [60s], `FIVE_MINUTES` [300s], `FIFTEEN_MINUTES` [900s]) with human-friendly labels and safe seconds lookup (`fromSeconds`).
+    - Added `biometricLockTimeoutSeconds` to `DashboardUiState` and `PreferencesState`.
+  - **Lifecycle-Aware Auto-Lock Controller** (`DashboardViewModel.kt`, `PulseHealthApp.kt`):
+    - Implemented `onAppBackgrounded()` on `Lifecycle.Event.ON_STOP` tracking `lastBackgroundedEpochMillis`.
+    - Implemented `checkAndApplyLockOnResume()` on `Lifecycle.Event.ON_START` calculating elapsed seconds against user timeout preference to seamlessly auto-lock the app without disrupting brief app switches.
+    - Added `setBiometricLockTimeoutSeconds` mutator in `DashboardViewModel`.
+  - **Executive Vault Lock Screen & Security Styling** (`BiometricLockOverlay.kt`, `BiometricAuthManager.kt`):
+    - Redesigned executive lock overlay with `SoftCreamBackground` (`#FAF9F5`), botanical forest emerald badge emblem (`ForestEmeraldLight` shield and lock icon), and full-width forest emerald CTA button (`54.dp` height, `28.dp` corner radius).
+    - Added fallback notice for Android `DEVICE_CREDENTIAL` (PIN, Pattern, Password) when biometrics are not enrolled or available.
+    - Automatic biometric prompt invocation via `LaunchedEffect(Unit)` upon screen mount.
+    - Clean error handling with non-technical inline warning container.
+    - Upgraded `BiometricStatus` with `description` and `isUsable` flags.
+  - **Privacy Settings & Authentication Quick Login Integration** (`DataPrivacySectionScreen.kt`, `ProfileScreen.kt`, `AuthScreen.kt`, `PulseHealthApp.kt`):
+    - Enhanced Vault Access Control card in `DataPrivacySectionScreen` with live biometric hardware capability badge, enabled switch, and `FilterChip` auto-lock timeout selector (`Immediately`, `30s`, `1m`, `5m`, `15m`).
+    - Integrated Biometric Quick Login in `AuthScreen` (`SocialAuthButtonsRow` fingerprint button) enabling instant authentication on Android devices with biometric/passkey credentials enrolled.
+  - **Automated Tests** (`BiometricVaultLockTest.kt`, `BiometricLockOverlayComposeTest.kt`):
+    - Added unit test suite covering `LockTimeout` parsing, fallback handling, `BiometricStatus` usability flags, and descriptive labels.
+    - Verified `BiometricLockOverlay` rendering and unlock callback triggers under Robolectric.
 - **Custom Health Targets & Interactive Multi-Step Goal Setting Wizard**:
   - **Physiological Guideline Presets & Target Models** (`GoalWizardModels.kt`):
     - Added `GoalCategory` (`STEPS`, `CALORIES`, `WATER`, `SLEEP`) with custom color branding, units, and vector iconography.

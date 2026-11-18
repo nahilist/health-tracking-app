@@ -230,6 +230,7 @@ class DashboardViewModel(
         val onboardingCompleted: Boolean,
         val isDemoMode: Boolean,
         val biometricLockEnabled: Boolean = false,
+        val biometricLockTimeoutSeconds: Long = 0L,
         val isAppUnlocked: Boolean = true,
         val authState: AuthState = AuthState.Loading,
         val currentUser: AuthUser? = null,
@@ -253,6 +254,7 @@ class DashboardViewModel(
         val onboardingCompleted: Boolean,
         val isDemoMode: Boolean,
         val biometricLockEnabled: Boolean,
+        val biometricLockTimeoutSeconds: Long,
         val isAppUnlocked: Boolean
     )
 
@@ -260,9 +262,10 @@ class DashboardViewModel(
         preferencesRepository.onboardingCompleted,
         isDemoModeFlow,
         preferencesRepository.biometricLockEnabled,
+        preferencesRepository.biometricLockTimeoutSeconds,
         _isAppUnlocked
-    ) { onboarding, isDemo, biometricLock, isUnlocked ->
-        AppFlags(onboarding, isDemo, biometricLock, isUnlocked)
+    ) { onboarding, isDemo, biometricLock, timeoutSecs, isUnlocked ->
+        AppFlags(onboarding, isDemo, biometricLock, timeoutSecs, isUnlocked)
     }
 
     private val reminderSettingsFlow = combine(
@@ -310,6 +313,7 @@ class DashboardViewModel(
             onboardingCompleted = flags.onboardingCompleted,
             isDemoMode = flags.isDemoMode,
             biometricLockEnabled = flags.biometricLockEnabled,
+            biometricLockTimeoutSeconds = flags.biometricLockTimeoutSeconds,
             isAppUnlocked = flags.isAppUnlocked,
             authState = account.authState,
             currentUser = account.currentUser,
@@ -413,6 +417,7 @@ class DashboardViewModel(
             trustedContacts = contacts,
             isOnline = pref.isOnline,
             biometricLockEnabled = pref.biometricLockEnabled,
+            biometricLockTimeoutSeconds = pref.biometricLockTimeoutSeconds,
             isAppUnlocked = pref.isAppUnlocked
         )
     }.stateIn(
@@ -430,6 +435,7 @@ class DashboardViewModel(
             weeklyWellnessDigest = if (isDemoModeFlow.value) WeeklyDigestCalculator.calculateDemo() else null,
             isOnline = true,
             biometricLockEnabled = false,
+            biometricLockTimeoutSeconds = 0L,
             isAppUnlocked = true
         )
     )
@@ -464,6 +470,29 @@ class DashboardViewModel(
         if (uiState.value.biometricLockEnabled) {
             _isAppUnlocked.value = false
         }
+    }
+
+    private var lastBackgroundedEpochMillis: Long = 0L
+
+    fun onAppBackgrounded() {
+        lastBackgroundedEpochMillis = System.currentTimeMillis()
+    }
+
+    fun checkAndApplyLockOnResume() {
+        if (!uiState.value.biometricLockEnabled) return
+        val timeoutSeconds = uiState.value.biometricLockTimeoutSeconds
+        if (timeoutSeconds == 0L) {
+            _isAppUnlocked.value = false
+            return
+        }
+        val elapsedSeconds = (System.currentTimeMillis() - lastBackgroundedEpochMillis) / 1000L
+        if (elapsedSeconds >= timeoutSeconds) {
+            _isAppUnlocked.value = false
+        }
+    }
+
+    fun setBiometricLockTimeoutSeconds(seconds: Long) = viewModelScope.launch {
+        preferencesRepository.setBiometricLockTimeoutSeconds(seconds)
     }
 
     fun setBiometricLockEnabled(enabled: Boolean) = viewModelScope.launch {

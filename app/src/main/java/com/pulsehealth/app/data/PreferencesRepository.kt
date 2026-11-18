@@ -15,6 +15,7 @@ interface PreferencesRepository {
     val quietHoursStartHour: Flow<Int>
     val quietHoursEndHour: Flow<Int>
     val biometricLockEnabled: Flow<Boolean>
+    val biometricLockTimeoutSeconds: Flow<Long>
 
     suspend fun toggleCard(id: String)
     suspend fun setWaterGoalLiters(goalLiters: Double)
@@ -27,5 +28,6 @@ interface PreferencesRepository {
     suspend fun setReminderIntervalHours(hours: Int)
     suspend fun setQuietHours(startHour: Int, endHour: Int)
     suspend fun setBiometricLockEnabled(enabled: Boolean)
+    suspend fun setBiometricLockTimeoutSeconds(seconds: Long)
     suspend fun clearAllPreferences()
 }

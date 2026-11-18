@@ -115,6 +115,7 @@ data class DashboardUiState(
     val trustedContacts: List<TrustedContact> = emptyList(),
     val isOnline: Boolean = true,
     val biometricLockEnabled: Boolean = false,
+    val biometricLockTimeoutSeconds: Long = 0L,
     val isAppUnlocked: Boolean = true
 ) {
     val healthConnectAvailable: Boolean
@@ -176,5 +177,18 @@ data class DashboardUiState(
                 }
             }
         }
+    }
+}
+
+enum class LockTimeout(val seconds: Long, val label: String) {
+    IMMEDIATELY(0L, "Immediately"),
+    THIRTY_SECONDS(30L, "30s"),
+    ONE_MINUTE(60L, "1m"),
+    FIVE_MINUTES(300L, "5m"),
+    FIFTEEN_MINUTES(900L, "15m");
+
+    companion object {
+        fun fromSeconds(seconds: Long): LockTimeout =
+            entries.firstOrNull { it.seconds == seconds } ?: IMMEDIATELY
     }
 }

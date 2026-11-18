@@ -117,6 +117,7 @@ fun AuthScreen(
     onVerifyOtp: (email: String, otp: String, onResult: (Boolean, String?) -> Unit) -> Unit,
     onUpdatePassword: (newPassword: String, onResult: (Boolean, String?) -> Unit) -> Unit,
     onSignInAsGuest: () -> Unit,
+    onBiometricSignIn: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var mode by remember { mutableStateOf(initialMode) }
@@ -373,6 +374,7 @@ fun AuthScreen(
                                         }
                                     },
                                     onGuestClick = onSignInAsGuest,
+                                    onBiometricClick = onBiometricSignIn,
                                     onNavigateToSignUp = {
                                         rawErrorMessage = null
                                         successMessage = null
@@ -417,6 +419,7 @@ fun AuthScreen(
                                         }
                                     },
                                     onGuestClick = onSignInAsGuest,
+                                    onBiometricClick = onBiometricSignIn,
                                     onNavigateToSignIn = {
                                         rawErrorMessage = null
                                         successMessage = null
@@ -691,6 +694,7 @@ private fun SignInContent(
     onForgotPasswordClick: () -> Unit,
     onSignInSubmit: () -> Unit,
     onGuestClick: () -> Unit,
+    onBiometricClick: () -> Unit = {},
     onNavigateToSignUp: () -> Unit
 ) {
     Column(
@@ -842,7 +846,7 @@ private fun SignInContent(
         // Social / Alternative Auth Buttons Row
         SocialAuthButtonsRow(
             onGoogleClick = { /* Handled via Google Auth / IDP */ },
-            onBiometricClick = { /* Biometric / Passkey */ },
+            onBiometricClick = onBiometricClick,
             onGuestClick = onGuestClick
         )
 
@@ -911,6 +915,7 @@ private fun SignUpContent(
     fieldColors: androidx.compose.material3.TextFieldColors,
     onSignUpSubmit: () -> Unit,
     onGuestClick: () -> Unit,
+    onBiometricClick: () -> Unit = {},
     onNavigateToSignIn: () -> Unit
 ) {
     Column(
@@ -1060,7 +1065,7 @@ private fun SignUpContent(
 
         SocialAuthButtonsRow(
             onGoogleClick = { /* Google sign up */ },
-            onBiometricClick = { /* Biometric */ },
+            onBiometricClick = onBiometricClick,
             onGuestClick = onGuestClick
         )
 

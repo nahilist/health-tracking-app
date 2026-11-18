@@ -73,6 +73,7 @@ class DashboardViewModelNetworkTest {
         override val quietHoursStartHour: Flow<Int> = MutableStateFlow(22)
         override val quietHoursEndHour: Flow<Int> = MutableStateFlow(8)
         override val biometricLockEnabled: Flow<Boolean> = MutableStateFlow(false)
+        override val biometricLockTimeoutSeconds: Flow<Long> = MutableStateFlow(0L)
 
         override suspend fun toggleCard(id: String) {}
         override suspend fun setWaterGoalLiters(goalLiters: Double) {}
@@ -85,6 +86,7 @@ class DashboardViewModelNetworkTest {
         override suspend fun setReminderIntervalHours(hours: Int) {}
         override suspend fun setQuietHours(startHour: Int, endHour: Int) {}
         override suspend fun setBiometricLockEnabled(enabled: Boolean) {}
+        override suspend fun setBiometricLockTimeoutSeconds(seconds: Long) {}
         override suspend fun clearAllPreferences() {}
     }
 

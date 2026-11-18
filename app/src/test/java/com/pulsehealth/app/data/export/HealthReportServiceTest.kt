@@ -167,6 +167,7 @@ private class FakePreferencesRepo : com.pulsehealth.app.data.PreferencesReposito
     override val quietHoursStartHour: Flow<Int> = flowOf(22)
     override val quietHoursEndHour: Flow<Int> = flowOf(8)
     override val biometricLockEnabled: Flow<Boolean> = flowOf(false)
+    override val biometricLockTimeoutSeconds: Flow<Long> = flowOf(0L)
 
     override suspend fun toggleCard(id: String) {}
     override suspend fun setWaterGoalLiters(goalLiters: Double) {}
@@ -179,5 +180,6 @@ private class FakePreferencesRepo : com.pulsehealth.app.data.PreferencesReposito
     override suspend fun setReminderIntervalHours(hours: Int) {}
     override suspend fun setQuietHours(startHour: Int, endHour: Int) {}
     override suspend fun setBiometricLockEnabled(enabled: Boolean) {}
+    override suspend fun setBiometricLockTimeoutSeconds(seconds: Long) {}
     override suspend fun clearAllPreferences() {}
 }

@@ -87,6 +87,7 @@ fun ProfileScreen(
     onSendTestReminder: () -> Unit = {},
     onSaveGoals: (waterLiters: Double, steps: Long, calories: Long, sleepMinutes: Long) -> Unit = { _, _, _, _ -> },
     onToggleBiometricLock: (Boolean) -> Unit = {},
+    onSetBiometricLockTimeoutSeconds: (Long) -> Unit = {},
     onOpenAuth: (() -> Unit)? = null
 ) {
     var selectedSection by remember { mutableStateOf<ProfileSection?>(null) }
@@ -145,7 +146,9 @@ fun ProfileScreen(
             ProfileSection.DATA_PRIVACY -> {
                 DataPrivacySectionScreen(
                     biometricLockEnabled = state.biometricLockEnabled,
+                    biometricLockTimeoutSeconds = state.biometricLockTimeoutSeconds,
                     onToggleBiometricLock = onToggleBiometricLock,
+                    onSetLockTimeoutSeconds = onSetBiometricLockTimeoutSeconds,
                     onBack = { selectedSection = null },
                     onExportData = onExportData,
                     onExportCsv = onExportDataCsv,

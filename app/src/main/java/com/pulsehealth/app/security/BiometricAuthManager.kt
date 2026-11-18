@@ -9,11 +9,29 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
 sealed interface BiometricStatus {
-    data object Available : BiometricStatus
-    data object NoHardware : BiometricStatus
-    data object HardwareUnavailable : BiometricStatus
-    data object NoneEnrolled : BiometricStatus
-    data object Unsupported : BiometricStatus
+    val description: String
+    val isUsable: Boolean
+
+    data object Available : BiometricStatus {
+        override val description: String = "Biometrics & Device Lock Ready"
+        override val isUsable: Boolean = true
+    }
+    data object NoHardware : BiometricStatus {
+        override val description: String = "No Biometric Hardware Detected"
+        override val isUsable: Boolean = false
+    }
+    data object HardwareUnavailable : BiometricStatus {
+        override val description: String = "Biometric Sensor Temporarily Unavailable"
+        override val isUsable: Boolean = false
+    }
+    data object NoneEnrolled : BiometricStatus {
+        override val description: String = "No Biometrics Enrolled (Device PIN Active)"
+        override val isUsable: Boolean = true
+    }
+    data object Unsupported : BiometricStatus {
+        override val description: String = "Biometric Security Not Supported"
+        override val isUsable: Boolean = false
+    }
 }
 
 sealed interface BiometricAuthResult {

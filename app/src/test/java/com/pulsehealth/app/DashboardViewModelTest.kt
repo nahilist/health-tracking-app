@@ -150,6 +150,9 @@ class DashboardViewModelTest {
         private val _biometricLock = MutableStateFlow(false)
         override val biometricLockEnabled: Flow<Boolean> = _biometricLock.asStateFlow()
 
+        private val _biometricTimeout = MutableStateFlow(0L)
+        override val biometricLockTimeoutSeconds: Flow<Long> = _biometricTimeout.asStateFlow()
+
         override suspend fun toggleCard(id: String) {
             val current = _hidden.value.toMutableSet()
             if (!current.add(id)) current.remove(id)
@@ -197,6 +200,10 @@ class DashboardViewModelTest {
             _biometricLock.value = enabled
         }
 
+        override suspend fun setBiometricLockTimeoutSeconds(seconds: Long) {
+            _biometricTimeout.value = seconds
+        }
+
         override suspend fun clearAllPreferences() {
             _hidden.value = emptySet()
             _goal.value = 2.0
@@ -207,6 +214,7 @@ class DashboardViewModelTest {
             _quietStart.value = 22
             _quietEnd.value = 8
             _biometricLock.value = false
+            _biometricTimeout.value = 0L
         }
     }
 

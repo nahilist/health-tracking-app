@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
@@ -47,12 +48,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import com.pulsehealth.app.data.LockTimeout
+import com.pulsehealth.app.security.BiometricAuthManager
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.theme.ExerciseGreen
+import com.pulsehealth.app.ui.theme.ForestEmerald
+import com.pulsehealth.app.ui.theme.ForestEmeraldDark
+import com.pulsehealth.app.ui.theme.ForestEmeraldLight
 import com.pulsehealth.app.ui.theme.Muted
 import com.pulsehealth.app.ui.theme.PulsePink
 
@@ -60,7 +69,9 @@ import com.pulsehealth.app.ui.theme.PulsePink
 fun DataPrivacySectionScreen(
     onBack: () -> Unit,
     biometricLockEnabled: Boolean = false,
+    biometricLockTimeoutSeconds: Long = 0L,
     onToggleBiometricLock: (Boolean) -> Unit = {},
+    onSetLockTimeoutSeconds: (Long) -> Unit = {},
     onExportData: ((String) -> Unit) -> Unit,
     onExportCsv: ((String) -> Unit) -> Unit = {},
     onExportClinicalSummary: ((String) -> Unit) -> Unit = {},
@@ -144,17 +155,19 @@ fun DataPrivacySectionScreen(
             )
 
             HealthCard(Modifier.fillMaxWidth()) {
+                val biometricStatus = remember(context) { BiometricAuthManager.getBiometricStatus(context) }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = CircleShape,
-                        color = PulsePink.copy(alpha = 0.12f),
+                        color = ForestEmeraldLight,
                         modifier = Modifier.size(54.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Default.Fingerprint,
                                 contentDescription = null,
-                                tint = PulsePink,
+                                tint = ForestEmerald,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -163,11 +176,11 @@ fun DataPrivacySectionScreen(
                     Spacer(Modifier.width(16.dp))
 
                     Column(Modifier.weight(1f)) {
-                        Text("Biometric Vault Lock", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text("Biometric Vault Lock", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = ForestEmeraldDark)
                         Spacer(Modifier.height(3.dp))
                         StatusDotBadge(
                             label = if (biometricLockEnabled) "App Lock Active" else "Screen Lock Disabled",
-                            color = if (biometricLockEnabled) PulsePink else Muted
+                            color = if (biometricLockEnabled) ForestEmerald else Muted
                         )
                     }
 
@@ -177,8 +190,8 @@ fun DataPrivacySectionScreen(
                             onToggleBiometricLock(targetState)
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = PulsePink,
-                            checkedTrackColor = PulsePink.copy(alpha = 0.5f)
+                            checkedThumbColor = ForestEmerald,
+                            checkedTrackColor = ForestEmerald.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -190,6 +203,71 @@ fun DataPrivacySectionScreen(
                     fontSize = 12.sp,
                     lineHeight = 17.sp
                 )
+
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFF0F4F2),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = ForestEmerald,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = biometricStatus.description,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = ForestEmeraldDark
+                        )
+                    }
+                }
+
+                if (biometricLockEnabled) {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        text = "AUTO-LOCK TIMEOUT",
+                        color = Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.6.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LockTimeout.entries.forEach { timeout ->
+                            val selected = biometricLockTimeoutSeconds == timeout.seconds
+                            FilterChip(
+                                selected = selected,
+                                onClick = { onSetLockTimeoutSeconds(timeout.seconds) },
+                                label = { Text(timeout.label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ForestEmeraldLight,
+                                    selectedLabelColor = ForestEmeraldDark
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selected,
+                                    borderColor = if (selected) ForestEmerald else Color(0xFFD4E0DC)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
             }
         }
 

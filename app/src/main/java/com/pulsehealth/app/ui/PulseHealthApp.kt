@@ -85,7 +85,9 @@ fun PulseHealthApp(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
-                viewModel.lockApp()
+                viewModel.onAppBackgrounded()
+            } else if (event == Lifecycle.Event.ON_START) {
+                viewModel.checkAndApplyLockOnResume()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -119,9 +121,11 @@ fun PulseHealthApp(
     val isTopLevelDestination = TopLevelDestination.entries.any { it.route == currentRoute }
 
     val fragmentActivity = context as? FragmentActivity
+    var biometricErrorMessage by remember { mutableStateOf<String?>(null) }
 
     if (state.biometricLockEnabled && !state.isAppUnlocked) {
         BiometricLockOverlay(
+            errorMessage = biometricErrorMessage,
             onTriggerUnlock = {
                 if (fragmentActivity != null) {
                     BiometricAuthManager.authenticate(
@@ -129,8 +133,20 @@ fun PulseHealthApp(
                         title = "Unlock Pulse Health",
                         subtitle = "Verify your identity to access health records"
                     ) { result ->
-                        if (result is BiometricAuthResult.Success) {
-                            viewModel.unlockApp()
+                        when (result) {
+                            is BiometricAuthResult.Success -> {
+                                biometricErrorMessage = null
+                                viewModel.unlockApp()
+                            }
+                            is BiometricAuthResult.Error -> {
+                                biometricErrorMessage = result.errString.toString()
+                            }
+                            is BiometricAuthResult.Failed -> {
+                                biometricErrorMessage = "Authentication failed. Please try again."
+                            }
+                            is BiometricAuthResult.UserCanceled -> {
+                                // User canceled system prompt
+                            }
                         }
                     }
                 } else {
@@ -332,6 +348,7 @@ fun PulseHealthApp(
                             viewModel.setSleepGoalMinutes(sleep)
                         },
                         onToggleBiometricLock = viewModel::setBiometricLockEnabled,
+                        onSetBiometricLockTimeoutSeconds = viewModel::setBiometricLockTimeoutSeconds,
                         onOpenAuth = { navController.navigate(PulseDestination.Auth.route) }
                     )
                 }
@@ -387,6 +404,25 @@ fun PulseHealthApp(
                         onSignInAsGuest = {
                             viewModel.signInAsGuest {
                                 navController.navigateUp()
+                            }
+                        },
+                        onBiometricSignIn = {
+                            if (fragmentActivity != null) {
+                                BiometricAuthManager.authenticate(
+                                    activity = fragmentActivity,
+                                    title = "Sign In to Pulse Health",
+                                    subtitle = "Verify your identity using biometrics or screen lock"
+                                ) { result ->
+                                    if (result is BiometricAuthResult.Success) {
+                                        viewModel.signInAsGuest {
+                                            navController.navigateUp()
+                                        }
+                                    }
+                                }
+                            } else {
+                                viewModel.signInAsGuest {
+                                    navController.navigateUp()
+                                }
                             }
                         }
                     )

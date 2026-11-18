@@ -248,6 +248,17 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Dashboard lazy column and Preferences screen integrations (`SummaryScreen.kt`, `PreferencesSectionScreen.kt`, `PulseHealthApp.kt`)
 - [x] Comprehensive Robolectric Compose UI test suite (`GoalWizardComposeTest.kt`)
 
+### PR 39: Advanced biometric / passkey security & vault app lock experience (Completed)
+
+- [x] Configurable auto-lock timeout preferences (`IMMEDIATELY`, `30s`, `1m`, `5m`, `15m`) persisted in DataStore
+- [x] Domain model `LockTimeout` with safe fallback parsing and seconds mapping
+- [x] Lifecycle-aware auto-lock controller tracking background epoch timestamps and locking on resume when timeout elapsed
+- [x] Executive `BiometricLockOverlay` redesigned with soft cream background, emerald lock badge, and full-width CTA button
+- [x] Graceful fallback to Android `DEVICE_CREDENTIAL` (PIN, Pattern, Password)
+- [x] Live hardware capability status badges in `DataPrivacySectionScreen` with `FilterChip` timeout selector
+- [x] Biometric quick sign-in button wired into modern `AuthScreen`
+- [x] Automated test suite (`BiometricVaultLockTest`, `BiometricLockOverlayComposeTest`)
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 39: Advanced Biometric / Passkey Security & App Lock Experience** (Biometric prompt integration on app resume, auto-lock timeout preferences, and vault security) or **Interactive Heart Rate Zones & ECG Trend Analytics**.
+Proceed with the next milestone: **Phase 5 PR 40: Cardiovascular Insights: Heart Rate Zones & ECG Trends Analytics** (Interactive resting HR and exercise HR zones computation, cardiovascular recovery metrics, and visual zone breakdown cards) or **Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, and lifestyle correlation).
