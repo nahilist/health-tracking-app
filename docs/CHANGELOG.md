@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cardiovascular Insights: Heart Rate Zones & Sinus Cadence Analytics**:
+  - **Physiological 5-Tier Heart Rate Zones & Tanaka Max HR Models** (`CardiovascularModels.kt`):
+    - Added `HeartRateZone` enum defining the standard 5 exercise intensity tiers:
+      - Zone 1: Active Recovery (50%–60% HRmax, cellular waste clearance).
+      - Zone 2: Aerobic Base (60%–70% HRmax, mitochondrial density and fat oxidation).
+      - Zone 3: Aerobic Fitness (70%–80% HRmax, stroke volume and capillary density).
+      - Zone 4: Anaerobic Threshold (80%–90% HRmax, lactate tolerance and fast-twitch recruitment).
+      - Zone 5: Peak Output (90%–100% HRmax, VO2 peak and supreme sprint power).
+    - Implemented validated Tanaka formula: `HRmax = 208 - (0.7 × Age)` with safe boundary clamping.
+    - Added `HeartRateAnalyticsCalculator` computing contiguous BPM zone boundaries, multi-zone distribution breakdowns, and estimated active calories per zone.
+    - Added `CardioRecoveryStatus` classifying post-exercise 1-minute BPM recovery drops (`EXCELLENT` [>=30 BPM], `GOOD` [20..29 BPM], `FAIR` [12..19 BPM], `DELAYED` [<12 BPM]).
+    - Added `RhrStabilityMetrics` computing sample variance, standard deviation, and rolling 0–100 resting stability scores.
+  - **Executive Cardiovascular Zones & Pulse Analytics Card** (`CardiovascularZonesCard.kt`):
+    - Multi-segment stacked horizontal intensity bar color-coded by zone tiers.
+    - Interactive Tanaka Max HR drawer with live age increment/decrement adjustment and automatic recalculation.
+    - Interactive Zone selector tabs (Z1–Z5) showcasing BPM range pills, active minutes, estimated calories burned, and evidence-based physiological benefits.
+    - Sinus Cadence ECG canvas visualizer rendering procedural P-Q-R-S-T cardiac depolarization waveforms with smooth rounded curves and forest emerald styling.
+    - Resting pulse cadence stability pill banner displaying real-time stability score and clinical status label.
+  - **Heart Rate Detail Screen Integration** (`DetailScreen.kt`):
+    - Seamlessly mounted `CardiovascularZonesCard` directly on the Heart Rate metric view above historical pulse records, dynamically feeding current resting BPM, active exercise duration, and recorded pulse values.
+  - **Automated Test Suite** (`CardiovascularAnalyticsTest.kt`, `CardiovascularZonesCardComposeTest.kt`):
+    - Unit tests covering Tanaka formula calculations, zone boundary classification, multi-zone distribution sums, recovery status drops, and statistical stability variance.
+    - Compose UI tests verifying header rendering, Tanaka age adjuster drawer interactions, zone switching details, and waveform visualizer rendering under Robolectric.
 - **Advanced Biometric / Passkey Security & Vault App Lock Experience**:
   - **Auto-Lock Timeout Preferences & Domain Models** (`PreferencesRepository.kt`, `UserPreferencesRepository.kt`, `HealthModels.kt`):
     - Added DataStore-persisted `biometricLockTimeoutSeconds` preference flow and mutator.

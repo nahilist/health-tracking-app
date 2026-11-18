@@ -75,6 +75,7 @@ import com.pulsehealth.app.data.MeasurementContext
 import com.pulsehealth.app.data.BloodPressureClassification
 import com.pulsehealth.app.data.HeartRateClassification
 import com.pulsehealth.app.data.analytics.HealthInsight
+import com.pulsehealth.app.ui.cardio.CardiovascularZonesCard
 import com.pulsehealth.app.ui.insights.HealthInsightCard
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.MetricTrendChart
@@ -934,6 +935,21 @@ fun DetailScreen(
         // Heart Rate Readings History
         if (normalizedId == "Heart rate") {
             val hrRecords = vitalRecords.filter { it.vitalType == VitalType.HEART_RATE.name }
+            val latestBpm: Int = hrRecords.firstOrNull()?.heartRateBpm ?: metrics.heartRate?.toInt() ?: 68
+            val readingValues = hrRecords.mapNotNull { it.heartRateBpm }
+
+            item {
+                CardiovascularZonesCard(
+                    currentRestingBpm = latestBpm,
+                    activeMinutesToday = metrics.exerciseMinutes?.toInt() ?: 30,
+                    recentHeartRateReadings = readingValues
+                )
+            }
+
+            item {
+                Spacer(Modifier.height(8.dp))
+            }
+
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(

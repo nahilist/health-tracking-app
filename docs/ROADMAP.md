@@ -259,6 +259,17 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Biometric quick sign-in button wired into modern `AuthScreen`
 - [x] Automated test suite (`BiometricVaultLockTest`, `BiometricLockOverlayComposeTest`)
 
+### PR 40: Cardiovascular insights: heart rate zones & ECG sinus cadence analytics (Completed)
+
+- [x] Physiological 5-tier heart rate zone models (`ZONE_1_RECOVERY` to `ZONE_5_MAXIMUM`) with color tokens and physiological descriptions
+- [x] Validated Tanaka formula (`208 - 0.7 * Age`) with safe age boundary clamping
+- [x] `HeartRateAnalyticsCalculator` computing contiguous BPM zone boundaries, multi-zone distribution breakdowns, and calorie expenditure estimates
+- [x] `CardioRecoveryStatus` classifying post-exercise 1-minute BPM recovery drops
+- [x] `RhrStabilityMetrics` computing sample variance, standard deviation, and rolling stability scores
+- [x] Executive `CardiovascularZonesCard` with stacked intensity bar, Tanaka age adjuster drawer, interactive zone details, and procedural ECG sinus cadence canvas
+- [x] Heart rate `DetailScreen` integration mounting cardiovascular zones and waveform above pulse history
+- [x] Comprehensive test suite (`CardiovascularAnalyticsTest`, `CardiovascularZonesCardComposeTest`)
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 40: Cardiovascular Insights: Heart Rate Zones & ECG Trends Analytics** (Interactive resting HR and exercise HR zones computation, cardiovascular recovery metrics, and visual zone breakdown cards) or **Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, and lifestyle correlation).
+Proceed with the next milestone: **Phase 5 PR 41: Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, trigger tags, and lifestyle correlation) or **Nutrition & Macronutrient Meal Logging** (Caloric intake, macro distribution, and hydration synergy).
