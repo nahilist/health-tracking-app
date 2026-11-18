@@ -10,6 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Medication & Supplement Adherence Tracker**:
+  - **Room Database Schema v5 Migration** (`PulseDatabase.kt`, `MedicationEntity.kt`, `MedicationLogEntity.kt`, `MedicationDao.kt`, `schemas/.../5.json`):
+    - Added `medications` entity with unique UUID, name, dosage, dosage unit (`mg`, `mcg`, `ml`, `tablets`, `capsules`), frequency (`ONCE_DAILY`, `TWICE_DAILY`, `THREE_TIMES_DAILY`, `WEEKLY`, `AS_NEEDED`), scheduled times list, instructions, color hex tag, active flag, creation timestamp, and notes.
+    - Added `medication_logs` entity tracking individual dose events with foreign key cascading delete on medication deletion, scheduled timestamp, logged timestamp, status (`TAKEN`, `SKIPPED`), and notes.
+    - Added `MedicationDao` with reactive Flow queries for active and all medications, date range log queries, upsert operations, and dose log deletions.
+    - Implemented and verified `MIGRATION_4_5` preserving existing data across versions 1-4.
+  - **Domain Architecture & Adherence Analytics** (`MedicationModels.kt`, `MedicationRepository.kt`, `DefaultMedicationRepository`, `NoOpMedicationRepository`):
+    - Reactive schedule calculation mapping medication frequencies to daily dose time slots (`ScheduledDoseItem`).
+    - 30-day rolling adherence calculation `(takenDoses / totalScheduledDoses) * 100` and consecutive day adherence streak tracking.
+    - Support for logging doses as `TAKEN` or `SKIPPED`, plus undoing logged doses.
+  - **Dependency Injection & Dashboard ViewModel** (`AppContainer.kt`, `DashboardViewModel.kt`):
+    - Injected `MedicationRepository` into `AppContainer` and `DefaultAppContainer`.
+    - Exposed `todayMedicationSchedule`, `medicationAdherence`, and `activeMedications` flows in `DashboardViewModel`.
+    - Added dose action handlers (`logMedicationDose`, `removeMedicationDoseLog`, `addMedication`, `deleteMedication`).
+  - **Executive UI Components & Screen Integration** (`MedicationScheduleCard.kt`, `AddMedicationBottomSheet.kt`, `SummaryScreen.kt`, `PulseHealthApp.kt`):
+    - `MedicationScheduleCard`: Material 3 daily schedule checklist featuring adherence percentage badge, streak counter, one-tap "Take" / "Skip" dose buttons, status badges with undo capability, and "+ Add Medication" shortcut.
+    - `AddMedicationBottomSheet`: Modal bottom sheet with medication name input, dosage value, unit chips, frequency selector, instruction suggestions ("Take with food", "Before bedtime", etc.), color tag picker, and non-clinical disclaimer.
+    - Integrated into primary `SummaryScreen` lazy column feed.
+  - **Automated Tests** (`RoomMigration4To5Test.kt`, `MedicationRepositoryTest.kt`, `MedicationScheduleCardComposeTest.kt`):
+    - Verified database migration integrity from v4 to v5 under Robolectric.
+    - Repository unit tests validating daily schedule generation, adherence %, streak computation, and dose logging/undoing.
+    - Compose UI test verifying checklist items, empty state, dose action click, and undo callbacks.
 - **Clinical & Personal Health Report PDF / CSV Export Engine**:
   - **Secure Android FileProvider Integration** (`AndroidManifest.xml`, `file_paths.xml`):
     - Configured `androidx.core.content.FileProvider` granting secure content URI access (`content://...`) for private cache files without leaking filesystem paths.

@@ -215,6 +215,18 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Integration with `SharingScreen` and Android Sharesheet `Intent.ACTION_SEND`
 - [x] Automated test suite (`ClinicalPdfGeneratorTest`, `HealthCsvGeneratorTest`, `HealthReportServiceTest`, `ExportReportBottomSheetComposeTest`)
 
+### PR 36: Medication & supplement adherence tracker (Completed)
+
+- [x] Room database version 5 schema migration (`MIGRATION_4_5`) and exported schema `5.json`
+- [x] `MedicationEntity`, `MedicationLogEntity`, and `MedicationDao` supporting active medication queries and dose logs with foreign key cascade
+- [x] Domain `MedicationRepository` & `DefaultMedicationRepository` cleanly injected via `AppContainer`
+- [x] Daily dose schedule calculation mapping medication frequencies (`ONCE_DAILY`, `TWICE_DAILY`, `THREE_TIMES_DAILY`, `WEEKLY`, `AS_NEEDED`)
+- [x] 30-day rolling adherence rate calculation and consecutive day streak tracking
+- [x] Executive `MedicationScheduleCard` daily checklist with "Take" / "Skip" actions, adherence badge, and undo support
+- [x] `AddMedicationBottomSheet` with dosage, units, frequencies, time slots, instruction chips, and color tag picker
+- [x] Summary screen dashboard integration
+- [x] Room migration unit tests (`RoomMigration4To5Test`), `MedicationRepositoryTest`, and `MedicationScheduleCardComposeTest`
+
 ## 9. Recommended next step
 
-Proceed with the next Phase 5 milestone: **Medication & Supplement Adherence Tracker (PR #36)** (Room database v5 schema migration, dosage schedules, daily checklist cards, and adherence analytics) or **Custom Target & Goal Setting Multi-Step Wizards**.
+Proceed with the next milestone: **Phase 5 PR 37: Modern Authentication & User Profile System** (Custom UI/UX matching the mobile design system from user spec: Brand Splash, Sign In, Create Account, Forgot Password, Verification Code / OTP, and Reset Password with secure token/credentials storage, offline fallback, and profile personalization) or **Custom Target & Goal Setting Multi-Step Wizards**.

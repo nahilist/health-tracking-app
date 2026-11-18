@@ -100,7 +100,10 @@ fun PulseHealthApp(
     val todaySleep by viewModel.todaySleepSession.collectAsStateWithLifecycle()
     val vitalRecords by viewModel.vitalRecords.collectAsStateWithLifecycle()
     val insights by viewModel.insights.collectAsStateWithLifecycle()
+    val todayMedications by viewModel.todayMedicationSchedule.collectAsStateWithLifecycle()
+    val medicationAdherence by viewModel.medicationAdherence.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
+    var showAddMedicationSheet by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = viewModel.healthRepository.permissionContract()
     ) { viewModel.refreshPermissionsAndSync() }
@@ -169,8 +172,20 @@ fun PulseHealthApp(
                         state = state,
                         contentPadding = padding,
                         insights = insights,
+                        medicationSchedule = todayMedications,
+                        medicationAdherence = medicationAdherence,
                         onRange = viewModel::selectRange,
                         onWater = viewModel::addWater,
+                        onTakeMedicationDose = { medId, time ->
+                            viewModel.logMedicationDose(medId, time, com.pulsehealth.app.data.medication.DoseStatus.TAKEN)
+                        },
+                        onSkipMedicationDose = { medId, time ->
+                            viewModel.logMedicationDose(medId, time, com.pulsehealth.app.data.medication.DoseStatus.SKIPPED)
+                        },
+                        onUndoMedicationDose = { medId, time ->
+                            viewModel.removeMedicationDoseLog(medId, time)
+                        },
+                        onAddMedicationClick = { showAddMedicationSheet = true },
                         onEdit = { editing = true },
                         onProfile = { navController.navigate(PulseDestination.Profile.route) },
                         onDetail = { type ->
@@ -380,6 +395,24 @@ fun PulseHealthApp(
 
     if (editing) {
         FavoritesSheet(state.hiddenCards, viewModel::toggleCard) { editing = false }
+    }
+
+    if (showAddMedicationSheet) {
+        com.pulsehealth.app.ui.medication.AddMedicationBottomSheet(
+            onDismissRequest = { showAddMedicationSheet = false },
+            onSaveMedication = { name, dosage, unit, frequency, scheduledTimes, instructions, colorHex, notes ->
+                viewModel.addMedication(
+                    name = name,
+                    dosage = dosage,
+                    unit = unit,
+                    frequency = frequency,
+                    scheduledTimes = scheduledTimes,
+                    instructions = instructions,
+                    colorHex = colorHex,
+                    notes = notes
+                )
+            }
+        )
     }
 }
 

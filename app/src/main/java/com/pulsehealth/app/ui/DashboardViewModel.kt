@@ -50,6 +50,12 @@ import com.pulsehealth.app.data.export.NoOpHealthReportService
 import com.pulsehealth.app.data.export.ReportFormat
 import com.pulsehealth.app.data.export.ReportTimeRange
 import com.pulsehealth.app.data.export.ReportSectionConfig
+import com.pulsehealth.app.data.MedicationRepository
+import com.pulsehealth.app.data.NoOpMedicationRepository
+import com.pulsehealth.app.data.medication.ScheduledDoseItem
+import com.pulsehealth.app.data.medication.MedicationAdherenceSummary
+import com.pulsehealth.app.data.medication.DoseStatus
+import com.pulsehealth.app.data.local.MedicationEntity
 import android.net.Uri
 import android.content.Intent
 import com.pulsehealth.app.data.local.VitalRecordEntity
@@ -94,6 +100,7 @@ class DashboardViewModel(
     val vitalsRepository: VitalsRepository = NoOpVitalsRepository(),
     val insightsRepository: InsightsRepository = NoOpInsightsRepository(),
     val healthReportService: HealthReportService = NoOpHealthReportService(),
+    val medicationRepository: MedicationRepository = NoOpMedicationRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -136,6 +143,18 @@ class DashboardViewModel(
 
     val insights: StateFlow<List<HealthInsight>> =
         insightsRepository.observeInsights()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val todayMedicationSchedule: StateFlow<List<ScheduledDoseItem>> =
+        medicationRepository.observeDailySchedule()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val medicationAdherence: StateFlow<MedicationAdherenceSummary> =
+        medicationRepository.observeAdherenceSummary(30)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MedicationAdherenceSummary(0, 0, 0, 100, 0))
+
+    val activeMedications: StateFlow<List<MedicationEntity>> =
+        medicationRepository.observeActiveMedications()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val isCloudSyncing: StateFlow<Boolean> = syncRepository.isSyncing
@@ -942,6 +961,48 @@ class DashboardViewModel(
         return sharingRepository.formatShareText(pkg)
     }
 
+    fun logMedicationDose(medicationId: String, scheduledTimeEpochMillis: Long, status: DoseStatus) {
+        viewModelScope.launch {
+            medicationRepository.logDose(medicationId, scheduledTimeEpochMillis, status)
+        }
+    }
+
+    fun removeMedicationDoseLog(medicationId: String, scheduledTimeEpochMillis: Long) {
+        viewModelScope.launch {
+            medicationRepository.removeDoseLog(medicationId, scheduledTimeEpochMillis)
+        }
+    }
+
+    fun addMedication(
+        name: String,
+        dosage: Double,
+        unit: String,
+        frequency: String,
+        scheduledTimes: List<String>,
+        instructions: String? = null,
+        colorHex: String = "#0D5C58",
+        notes: String? = null
+    ) {
+        viewModelScope.launch {
+            medicationRepository.saveMedication(
+                name = name,
+                dosage = dosage,
+                unit = unit,
+                frequency = frequency,
+                scheduledTimes = scheduledTimes,
+                instructions = instructions,
+                colorHex = colorHex,
+                notes = notes
+            )
+        }
+    }
+
+    fun deleteMedication(id: String) {
+        viewModelScope.launch {
+            medicationRepository.deleteMedication(id)
+        }
+    }
+
     companion object {
         const val KEY_SELECTED_RANGE = "selected_range"
         const val KEY_IS_DEMO_MODE = "is_demo_mode"
@@ -965,6 +1026,7 @@ class DashboardViewModel(
                     vitalsRepository = app.container.vitalsRepository,
                     insightsRepository = app.container.insightsRepository,
                     healthReportService = app.container.healthReportService,
+                    medicationRepository = app.container.medicationRepository,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )

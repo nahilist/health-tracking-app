@@ -66,7 +66,10 @@ import com.pulsehealth.app.data.DataSource
 import com.pulsehealth.app.data.FavoriteCardId
 import com.pulsehealth.app.data.TimeRange
 import com.pulsehealth.app.data.analytics.HealthInsight
+import com.pulsehealth.app.data.medication.MedicationAdherenceSummary
+import com.pulsehealth.app.data.medication.ScheduledDoseItem
 import com.pulsehealth.app.ui.insights.InsightsSection
+import com.pulsehealth.app.ui.medication.MedicationScheduleCard
 import com.pulsehealth.app.ui.components.HealthCard
 import com.pulsehealth.app.ui.components.NetworkStatusPill
 import com.pulsehealth.app.ui.theme.ExerciseGreen
@@ -83,8 +86,14 @@ fun SummaryScreen(
     state: DashboardUiState,
     contentPadding: PaddingValues,
     insights: List<HealthInsight> = emptyList(),
+    medicationSchedule: List<ScheduledDoseItem> = emptyList(),
+    medicationAdherence: MedicationAdherenceSummary = MedicationAdherenceSummary(0, 0, 0, 100, 0),
     onRange: (TimeRange) -> Unit,
     onWater: (Int) -> Unit = {},
+    onTakeMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
+    onSkipMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
+    onUndoMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
+    onAddMedicationClick: () -> Unit = {},
     onEdit: () -> Unit,
     onProfile: () -> Unit,
     onDetail: (String) -> Unit,
@@ -247,6 +256,17 @@ fun SummaryScreen(
                         }
                     )
                 }
+            }
+
+            item {
+                MedicationScheduleCard(
+                    schedule = medicationSchedule,
+                    adherence = medicationAdherence,
+                    onTakeDose = onTakeMedicationDose,
+                    onSkipDose = onSkipMedicationDose,
+                    onUndoDose = onUndoMedicationDose,
+                    onAddMedicationClick = onAddMedicationClick
+                )
             }
 
             if (state.weeklyWellnessDigest != null) {

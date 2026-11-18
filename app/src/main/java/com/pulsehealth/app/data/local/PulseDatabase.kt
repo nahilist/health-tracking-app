@@ -14,9 +14,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WorkoutSessionEntity::class,
         SleepSessionEntity::class,
         SleepStageEntity::class,
-        VitalRecordEntity::class
+        VitalRecordEntity::class,
+        MedicationEntity::class,
+        MedicationLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class PulseDatabase : RoomDatabase() {
@@ -25,6 +27,7 @@ abstract class PulseDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun sleepDao(): SleepDao
     abstract fun vitalRecordDao(): VitalRecordDao
+    abstract fun medicationDao(): MedicationDao
 
     companion object {
         @Volatile private var instance: PulseDatabase? = null
@@ -131,13 +134,56 @@ abstract class PulseDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `medications` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `dosage` REAL NOT NULL,
+                        `unit` TEXT NOT NULL,
+                        `frequency` TEXT NOT NULL,
+                        `scheduledTimes` TEXT NOT NULL,
+                        `instructions` TEXT,
+                        `colorHex` TEXT NOT NULL,
+                        `isActive` INTEGER NOT NULL,
+                        `createdAtEpochMillis` INTEGER NOT NULL,
+                        `notes` TEXT,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `medication_logs` (
+                        `id` TEXT NOT NULL,
+                        `medicationId` TEXT NOT NULL,
+                        `scheduledTimeEpochMillis` INTEGER NOT NULL,
+                        `loggedAtEpochMillis` INTEGER NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `notes` TEXT,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`medicationId`) REFERENCES `medications`(`id`) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_medication_logs_medicationId` ON `medication_logs` (`medicationId`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_medication_logs_scheduledTimeEpochMillis` ON `medication_logs` (`scheduledTimeEpochMillis`)"
+                )
+            }
+        }
+
         fun get(context: Context): PulseDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 PulseDatabase::class.java,
                 "pulse_health.db"
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
             .also { instance = it }
         }
