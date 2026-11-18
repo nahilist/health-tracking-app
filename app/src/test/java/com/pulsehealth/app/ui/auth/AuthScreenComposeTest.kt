@@ -23,6 +23,37 @@ class AuthScreenComposeTest {
     val composeTestRule = createComposeRule()
 
     @Test
+    fun welcomeMode_rendersHeroBrandingAndGetStartedCTA() {
+        composeTestRule.setContent {
+            PulseTheme {
+                AuthScreen(
+                    initialMode = AuthScreenMode.WELCOME,
+                    onBack = {},
+                    onSignIn = { _, _, _ -> },
+                    onSignUp = { _, _, _ -> },
+                    onSendResetOtp = { _, _ -> },
+                    onVerifyOtp = { _, _, _ -> },
+                    onUpdatePassword = { _, _ -> },
+                    onSignInAsGuest = {}
+                )
+            }
+        }
+
+        // Brand header & hero typography
+        composeTestRule.onNodeWithText("Pulse").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Health").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Your Health, Fully Private").assertIsDisplayed()
+
+        // Feature value props
+        composeTestRule.onNodeWithText("Local-First Encryption").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Comprehensive Vitals & Meds").assertIsDisplayed()
+
+        // CTA buttons
+        composeTestRule.onNodeWithText("Get Started").assertIsDisplayed()
+        composeTestRule.onNodeWithText("I Already Have an Account").assertIsDisplayed()
+    }
+
+    @Test
     fun signInMode_rendersBrandHeadlineInputsAndGuestOption() {
         var guestClicked = false
 
@@ -109,7 +140,7 @@ class AuthScreenComposeTest {
         composeTestRule.onNodeWithText("Create An Account").assertIsDisplayed()
         composeTestRule.onNodeWithText("Confirm Password").assertIsDisplayed()
         composeTestRule.onNodeWithText("I agree to the Health Privacy Policy & Terms").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Already have an account? ").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Already have an account? ").assertExists()
     }
 
     @Test

@@ -227,6 +227,18 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Summary screen dashboard integration
 - [x] Room migration unit tests (`RoomMigration4To5Test`), `MedicationRepositoryTest`, and `MedicationScheduleCardComposeTest`
 
+### PR 37: Modern authentication, brand visuals & user profile flow (Completed)
+
+- [x] Custom botanical health & vitality header artwork vector canvas (`AuthHeaderArt.kt`) with soft background curves, eucalyptus leaves, citrus vitality accents, and pulse ECG line
+- [x] Executive design system color tokens (`ForestEmerald`, `ForestEmeraldDark`, `ForestEmeraldLight`, `WarmAccent`, `SoftCreamBackground`)
+- [x] Screen 1: Brand Welcome & Value Proposition Screen (`AuthScreenMode.WELCOME`) with "Get Started", "I Already Have an Account", and value proposition highlights
+- [x] Screen 2: Sign In Screen (`AuthScreenMode.SIGN_IN`) with curved white card sheet, pill inputs, "Remember me" checkmark, "Forgot Password?" link, forest emerald button, divider, and social auth buttons (Google, Biometric/Passkey, Local-Only Guest)
+- [x] Screen 3: Create An Account Screen (`AuthScreenMode.SIGN_UP`) with email, password, confirm password, privacy agreement checkbox, and forest emerald "Sign Up" button
+- [x] Screen 4: Forgot Password Screen (`AuthScreenMode.FORGOT_PASSWORD`) with email input, instructions, and "Send Code" / "Send OTP" button
+- [x] Screen 5: Verification Code Screen (`AuthScreenMode.VERIFY_OTP`) with 6 rounded square digit boxes, emerald border highlight, automatic cursor advance, and "Resend" link
+- [x] Screen 6: Reset Password Screen (`AuthScreenMode.RESET_PASSWORD`) with password fields, dynamic 3-level strength meter, and "Reset Password" button
+- [x] Comprehensive Robolectric Compose UI test suite (`AuthScreenComposeTest.kt`) covering all 6 screens, hero branding, input labels, error sanitization, and navigation transitions
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 37: Modern Authentication & User Profile System** (Custom UI/UX matching the mobile design system from user spec: Brand Splash, Sign In, Create Account, Forgot Password, Verification Code / OTP, and Reset Password with secure token/credentials storage, offline fallback, and profile personalization) or **Custom Target & Goal Setting Multi-Step Wizards**.
+Proceed with the next milestone: **Phase 5 PR 38: Custom Health Targets & Multi-Step Goal Setting Wizards** (Interactive step, calorie, water, and sleep goal calculators with physiological guideline presets and progress rings) or **Advanced Biometric / Passkey Vault & App Lock Experience**.

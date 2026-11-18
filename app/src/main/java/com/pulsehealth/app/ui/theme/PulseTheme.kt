@@ -18,6 +18,14 @@ val AppBackground = Color(0xFFF8F9FA)
 val Ink = Color(0xFF111216)
 val Muted = Color(0xFF8E8E93)
 
+// Executive Forest Emerald & Warm Accent Palette (Design Spec Alignment)
+val ForestEmerald = Color(0xFF0D5C58)
+val ForestEmeraldDark = Color(0xFF094340)
+val ForestEmeraldLight = Color(0xFFE8F3F2)
+val WarmAccent = Color(0xFFE65100)
+val WarmAccentLight = Color(0xFFFFF3E0)
+val SoftCreamBackground = Color(0xFFFAF9F5)
+
 // Minimalist Brushes
 val ActivityGradient = Brush.linearGradient(listOf(PulsePink, WarmOrange))
 val ExerciseGradient = Brush.linearGradient(listOf(ExerciseGreen, StandCyan))

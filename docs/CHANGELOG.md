@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Modern Authentication, Brand Visuals & User Profile Flow (Design Spec Alignment)**:
+  - **Botanical Health & Vitality Header Artwork** (`AuthHeaderArt.kt`, `PulseTheme.kt`):
+    - Created `PulseBrandHeaderArt` vector canvas with curved pastel background blobs (`#FAF9F5`), botanical eucalyptus leaves in deep forest emerald (`#0D5C58`, `#094340`), vitality citrus spheres in golden orange (`#FFA000`, `#E65100`), subtle animated pulse ECG waveforms, and centered brand emblem.
+    - Added design system color tokens (`ForestEmerald`, `ForestEmeraldDark`, `ForestEmeraldLight`, `WarmAccent`, `WarmAccentLight`, `SoftCreamBackground`).
+  - **Unified 6-Screen Executive Mobile Authentication Suite** (`AuthScreen.kt`):
+    - **Screen 1: Brand Welcome & Value Proposition Screen (`AuthScreenMode.WELCOME`)**: Hero branding, privacy value proposition cards ("Local-First Encryption", "Comprehensive Vitals & Meds"), primary "Get Started" and secondary "I Already Have an Account" CTAs, and offline guest mode option.
+    - **Screen 2: Sign In (`AuthScreenMode.SIGN_IN`)**: Curved white card sheet container (`36.dp` radius), "Sign in Your Account" heading, rounded pill input textfields (`24.dp` radius) with leading mail/lock icons, custom "Remember me" checkmark, bold "Forgot Password?" link, full-width forest emerald CTA button, "Or sign in with" divider, and social buttons (Google, Biometric/Passkey, Local-Only Guest).
+    - **Screen 3: Create An Account (`AuthScreenMode.SIGN_UP`)**: Email, password, confirm password, privacy agreement checkbox row with clickable terms, forest emerald "Sign Up" button, social login buttons, and navigation switch to Sign In.
+    - **Screen 4: Forgot Password (`AuthScreenMode.FORGOT_PASSWORD`)**: Email input, instructional subtitle, forest emerald "Send Code" / "Send OTP" button, and back link to Sign In.
+    - **Screen 5: Verification Code (`AuthScreenMode.VERIFY_OTP`)**: 6 rounded square digit boxes (`14.dp` radius) with emerald focused border highlight, automatic cursor advance and backspace handling, forest emerald "Verify" button, and "Resend" link.
+    - **Screen 6: Reset Password (`AuthScreenMode.RESET_PASSWORD`)**: New password and confirm password fields, dynamic 3-level password strength meter (Weak, Fair, Strong), and forest emerald "Reset Password" button.
+  - **Automated Tests** (`AuthScreenComposeTest.kt`):
+    - Comprehensive Robolectric Compose UI test suite validating all 6 auth screens, hero branding, input labels, error sanitization, and navigation transitions.
 - **Medication & Supplement Adherence Tracker**:
   - **Room Database Schema v5 Migration** (`PulseDatabase.kt`, `MedicationEntity.kt`, `MedicationLogEntity.kt`, `MedicationDao.kt`, `schemas/.../5.json`):
     - Added `medications` entity with unique UUID, name, dosage, dosage unit (`mg`, `mcg`, `ml`, `tablets`, `capsules`), frequency (`ONCE_DAILY`, `TWICE_DAILY`, `THREE_TIMES_DAILY`, `WEEKLY`, `AS_NEEDED`), scheduled times list, instructions, color hex tag, active flag, creation timestamp, and notes.
