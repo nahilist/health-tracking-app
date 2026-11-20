@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.cardio.CardiovascularZoneBreakdown
@@ -143,12 +144,16 @@ fun CardiovascularZonesCard(
                     text = "Cardiovascular Zones & Pulse",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = ForestEmeraldDark
+                    color = ForestEmeraldDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "5-Tier HR Training & Sinus Cadence",
                     color = Muted,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -176,7 +181,8 @@ fun CardiovascularZonesCard(
                         text = "$maxHr BPM Max",
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
-                        color = ForestEmeraldDark
+                        color = ForestEmeraldDark,
+                        maxLines = 1
                     )
                 }
             }

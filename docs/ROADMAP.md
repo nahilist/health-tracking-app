@@ -282,6 +282,17 @@ Phase gate: reminders are opt-in, sharing is explicitly authorized, and telemetr
 - [x] Curved bottom navigation bar (`PulseBottomBar.kt`) with active orange pill indicators
 - [x] Full test pass: `testDebugUnitTest` (215+ tests), `lintDebug`, `assembleDebug`, and `bundleRelease`
 
+### PR 42: Comprehensive UI/UX layout and responsiveness audit (Completed)
+
+- [x] Adaptive navigation bar container hardening (`PulseBottomBar.kt`) with outer safe-area padding and centered inner row bounded by `widthIn(max = 640.dp).height(64.dp)`
+- [x] Tablet & desktop container width constraints (`widthIn(max = 840.dp)`, `wrapContentWidth(Alignment.CenterHorizontally)`) across all main screens (`SummaryScreen`, `DetailScreen`, `BrowseScreen`, `SharingScreen`, and Profile section screens)
+- [x] Horizontal overflow fixes on compact viewports (`w320dp`): equal `weight(1f)` columns on `ActivityCard` 3-column breakdown and responsive 6-digit OTP verification boxes in `AuthScreen`
+- [x] Keyboard (`imePadding()`), navigation bar (`navigationBarsPadding()`), and landscape scroll (`verticalScroll(rememberScrollState())`) protection across all 7 bottom sheets, dialogs, and biometric lock overlay
+- [x] Typography truncation guardrails (`maxLines = 1`, `TextOverflow.Ellipsis`, `Modifier.weight(1f, fill = false)`) preventing text clipping under dynamic font scaling
+- [x] Fixed `MiniBars` height filling logic (`.fillMaxHeight(value.coerceIn(0.1f, 1.0f))`) in `MetricCards.kt`
+- [x] Automated responsive test suite (`ResponsiveLayoutAuditTest.kt`) covering compact phone, tablet, and landscape layouts across screens and modals
+- [x] Verification pass: `testDebugUnitTest` (221 tests passing), `lintDebug`, `assembleDebug`, and `bundleRelease`
+
 ## 9. Recommended next step
 
-Proceed with the next milestone: **Phase 5 PR 42: Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, trigger tags, and lifestyle correlation) or **Nutrition & Macronutrient Meal Logging** (Caloric intake, macro distribution, and hydration synergy).
+Proceed with the next milestone: **Phase 5 PR 43: Symptom & Mood Journaling System** (Local Room schema migration, severity tracking, trigger tags, and lifestyle correlation) or **Nutrition & Macronutrient Meal Logging** (Caloric intake, macro distribution, and hydration synergy).

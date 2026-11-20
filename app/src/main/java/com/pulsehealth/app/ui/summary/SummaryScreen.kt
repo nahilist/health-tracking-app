@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +60,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,7 +127,10 @@ fun SummaryScreen(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .widthIn(max = 840.dp),
         contentPadding = PaddingValues(
             start = 20.dp,
             end = 20.dp,
@@ -222,29 +228,40 @@ fun SummaryScreen(
                     text = "Hi, $userName",
                     color = Muted,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
                         text = greeting,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = DeepCharcoal,
-                        letterSpacing = (-0.5).sp
+                        letterSpacing = (-0.5).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "Summary",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = DeepCharcoal
+                            color = DeepCharcoal,
+                            maxLines = 1
                         )
                         Text(
                             text = statusText,
                             color = Muted,
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -299,6 +316,8 @@ fun SummaryScreen(
                             color = if (isSelected) Color.White else DeepCharcoal,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                             fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         )
                     }

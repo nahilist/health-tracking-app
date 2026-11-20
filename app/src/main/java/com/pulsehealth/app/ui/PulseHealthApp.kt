@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Groups
@@ -478,46 +480,55 @@ fun PulseBottomBar(
         shadowElevation = 8.dp,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEF1F4))
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEEF1F4)),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(68.dp)
-                .padding(horizontal = 20.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+                .navigationBarsPadding(),
+            contentAlignment = Alignment.Center
         ) {
-            TopLevelDestination.entries.forEach { item ->
-                val active = currentRoute == item.route
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable { onNavigateToDestination(item) }
-                        .semantics {
-                            role = Role.Tab
-                            selected = active
-                            contentDescription = "${item.label} tab"
-                        }
-                        .background(if (active) AthleticOrangeLight else Color.Transparent)
-                        .padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        item.icon,
-                        contentDescription = null,
-                        tint = if (active) AthleticOrange else Muted,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
-                    Text(
-                        item.label,
-                        color = if (active) AthleticOrange else Muted,
-                        fontSize = 11.sp,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                    )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 640.dp)
+                    .height(64.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TopLevelDestination.entries.forEach { item ->
+                    val active = currentRoute == item.route
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { onNavigateToDestination(item) }
+                            .semantics {
+                                role = Role.Tab
+                                selected = active
+                                contentDescription = "${item.label} tab"
+                            }
+                            .background(if (active) AthleticOrangeLight else Color.Transparent)
+                            .padding(vertical = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            item.icon,
+                            contentDescription = null,
+                            tint = if (active) AthleticOrange else Muted,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
+                        Text(
+                            item.label,
+                            color = if (active) AthleticOrange else Muted,
+                            fontSize = 11.sp,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

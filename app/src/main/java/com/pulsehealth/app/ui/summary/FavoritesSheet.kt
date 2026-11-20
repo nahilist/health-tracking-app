@@ -8,7 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -37,7 +42,12 @@ fun FavoritesSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .widthIn(max = 600.dp)
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState())
                 .padding(bottom = 36.dp)
         ) {
             Text("Edit favorites", fontSize = 22.sp, fontWeight = FontWeight.Bold)

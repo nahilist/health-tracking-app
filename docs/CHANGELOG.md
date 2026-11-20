@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comprehensive UI/UX Layout & Responsiveness Audit Across All Screens and Components**:
+  - **Adaptive Viewport & Safe-Area Inset Hardening** (`PulseBottomBar.kt`, `PulseHealthApp.kt`):
+    - Redesigned bottom navigation bar container with outer `navigationBarsPadding()` and centered inner row bounded by `widthIn(max = 640.dp).height(64.dp)`. Resolves 3-button navigation bar content clipping where 48dp system insets previously compressed navigation buttons, while preventing excessive stretching on tablets and foldables.
+  - **Large Viewport Centering & Constraint Bounds** (`SummaryScreen.kt`, `DetailScreen.kt`, `BrowseScreen.kt`, `SharingScreen.kt`, `ProfileScreen.kt`, Section Screens):
+    - Enforced responsive container width bounds (`wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 840.dp)`) across all primary LazyColumns and profile section screens, ensuring visual hierarchy and card aspect ratios remain balanced on tablets (`w800dp+`) and desktop windows.
+  - **Horizontal Overflow & Narrow Screen Resilience** (`ActivityCard.kt`, `MetricCards.kt`, `AuthScreen.kt`):
+    - Replaced fixed dimensions in `ActivityCard` 3-column breakdown with symmetric `Modifier.weight(1f)` columns, eliminating text collision and horizontal overflow on compact viewports (`w320dp`).
+    - Replaced fixed OTP digit box widths in `AuthScreen` with responsive `Modifier.weight(1f)` and `Arrangement.spacedBy(6.dp)` so all 6 verification digits fit comfortably without clipping on narrow screens.
+    - Fixed bar height calculation in `MiniBars` using `.fillMaxHeight(value.coerceIn(0.1f, 1.0f))` to guarantee stable bar rendering.
+  - **Dynamic Inset & Soft Keyboard Resilience for Modals & Bottom Sheets**:
+    - Added `imePadding()`, `navigationBarsPadding()`, `verticalScroll(rememberScrollState())`, and `widthIn(max = 600.dp)` across all 7 bottom sheets and dialogs (`LogHydrationBottomSheet`, `LogWorkoutBottomSheet`, `LogVitalBottomSheet`, `AddMedicationBottomSheet`, `GoalWizardBottomSheet`, `ExportReportBottomSheet`, `FavoritesSheet`, `BiometricLockOverlay`, `GoalSettingsDialog`).
+    - Ensured form inputs and primary action buttons remain fully visible and clickable when the on-screen keyboard appears or when the device is rotated to landscape mode (`w900dp-h400dp`).
+  - **Typography & Label Truncation Guardrails**:
+    - Applied `maxLines = 1, overflow = TextOverflow.Ellipsis` with flexible weights across headers, greetings, category pills, card titles, badges, and metric values to prevent text clipping under 200% dynamic font scaling or compact widths.
+  - **Automated Responsive Test Suite** (`ResponsiveLayoutAuditTest.kt`):
+    - Added comprehensive multi-form-factor Robolectric Compose tests verifying compact phone (`w320dp-h640dp`), tablet (`w800dp-h1280dp`), and landscape (`w900dp-h400dp`) layouts across `SummaryScreen`, `DetailScreen`, `PulseBottomBar`, `BiometricLockOverlay`, and bottom sheets.
 - **Ultra-Modern Athletic & Health UI/UX Overhaul (Granger / High-Performance Aesthetics)**:
   - **Modern Athletic Design Tokens & Palette** (`PulseTheme.kt`):
     - Added high-energy athletic color tokens: `AthleticOrange` (`#FF5E1E`), `AthleticOrangeLight` (`#FFF0EB`), `AthleticCyan` (`#00ACC1`), `AthleticCyanLight` (`#E0F7FA`), `DeepCharcoal` (`#111827`), `SoftPillBackground` (`#F0F3F6`), and `CanvasBackground` (`#F4F6F8`).

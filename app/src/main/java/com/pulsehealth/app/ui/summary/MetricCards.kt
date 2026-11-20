@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +44,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardMetrics
@@ -112,17 +114,17 @@ fun SleepCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     MetricCard("Sleep", Icons.Default.NightsStay, SleepPurple, onClick, description) {
         if (sleep != null) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("${sleep / 60}", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(" hr ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp))
-                Text("${sleep % 60}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
+                Text("${sleep / 60}", fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(" hr ", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp), maxLines = 1)
+                Text("${sleep % 60}", fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(" min", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp), maxLines = 1)
             }
-            Text("Sleep duration", color = Muted, fontSize = 11.sp)
+            Text("Sleep duration", color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(6.dp))
             SleepBlocks()
         } else {
             Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
-            Text("No sleep recorded", color = Muted, fontSize = 11.sp)
+            Text("No sleep recorded", color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             EmptyMetricPlaceholder()
         }
     }
@@ -134,10 +136,10 @@ fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit)
     val description = "Water: ${String.format(locale, "%.1f", metrics.waterLiters)} of ${metrics.waterGoalLiters.toInt()} liters daily goal"
     MetricCard("Water", Icons.Default.LocalDrink, WaterBlue, onClick, description) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp))
+            Text(String.format(locale, "%.1f", metrics.waterLiters), fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(" L", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 3.dp), maxLines = 1)
         }
-        Text("of ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L goal", color = Muted, fontSize = 11.sp)
+        Text("of ${String.format(locale, "%.1f", metrics.waterGoalLiters)} L goal", color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             val progress by animateFloatAsState(
@@ -163,8 +165,7 @@ fun WaterCard(metrics: DashboardMetrics, onAdd: () -> Unit, onClick: () -> Unit)
             IconButton(
                 onClick = onAdd,
                 modifier = Modifier
-                    .size(40.dp)
-                    .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                    .size(36.dp)
                     .semantics { contentDescription = "Quick add 250 milliliters of water" }
             ) {
                 Surface(
@@ -208,7 +209,15 @@ fun MetricCard(
         ) {
             Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text(title, color = color, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                title,
+                color = color,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
         }
         Spacer(Modifier.height(8.dp))
         content()
@@ -245,7 +254,7 @@ fun MiniBars(color: Color, values: List<Float>) {
             Box(
                 Modifier
                     .weight(1f)
-                    .fillMaxSize(value)
+                    .fillMaxHeight(value.coerceIn(0.1f, 1.0f))
                     .background(
                         color.copy(alpha = if (i > values.lastIndex - 3) 0.95f else 0.35f),
                         RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)

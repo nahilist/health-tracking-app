@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pulsehealth.app.data.DashboardMetrics
@@ -95,7 +96,9 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
                     text = "Activity",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = DeepCharcoal
+                    color = DeepCharcoal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -119,7 +122,8 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
                         text = "$percentage%",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 1
                     )
                 }
             }
@@ -132,22 +136,30 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = String.format(java.util.Locale.getDefault(), "%,d", calories),
-                fontSize = 34.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = DeepCharcoal,
-                letterSpacing = (-1).sp
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = "Cal",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                color = Muted,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            Spacer(Modifier.weight(1f))
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                Text(
+                    text = String.format(java.util.Locale.getDefault(), "%,d", calories),
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = DeepCharcoal,
+                    letterSpacing = (-1).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Cal",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Muted,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    maxLines = 1
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             // Embedded Activity Rings
             ActivityRings(metrics, Modifier.size(48.dp))
         }
@@ -156,7 +168,9 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             text = if (percentage >= 100) "Daily target achieved! Outstanding consistency" else "You improved overall well-being",
             fontSize = 12.sp,
             color = Muted,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
 
         Spacer(Modifier.height(10.dp))
@@ -175,49 +189,85 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFFF9FAFB), RoundedCornerShape(14.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(CircleShape).background(AthleticOrange))
                     Spacer(Modifier.width(5.dp))
-                    Text("Move", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Move",
+                        fontSize = 11.sp,
+                        color = Muted,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Text(
                     text = "${metrics.activeCalories ?: 0} Cal",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = DeepCharcoal
+                    color = DeepCharcoal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(CircleShape).background(ExerciseGreen))
                     Spacer(Modifier.width(5.dp))
-                    Text("Exercise", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Exercise",
+                        fontSize = 11.sp,
+                        color = Muted,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Text(
                     text = "${metrics.exerciseMinutes ?: 0} min",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = DeepCharcoal
+                    color = DeepCharcoal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Column {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(CircleShape).background(AthleticCyan))
                     Spacer(Modifier.width(5.dp))
-                    Text("Stand", fontSize = 11.sp, color = Muted, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Stand",
+                        fontSize = 11.sp,
+                        color = Muted,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Text(
                     text = "${metrics.standHours ?: 0} hr",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = DeepCharcoal
+                    color = DeepCharcoal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -190,6 +192,8 @@ fun AuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .widthIn(max = 520.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -1251,7 +1255,7 @@ private fun VerifyOtpContent(
         // 6-digit OTP Box Inputs (Rounded Square Boxes)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 0 until 6) {
@@ -1268,7 +1272,7 @@ private fun VerifyOtpContent(
                         }
                     },
                     modifier = Modifier
-                        .width(48.dp)
+                        .weight(1f)
                         .height(58.dp)
                         .focusRequester(focusRequesters[i])
                         .onKeyEvent { keyEvent ->
