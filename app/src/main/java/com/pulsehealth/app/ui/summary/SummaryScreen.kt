@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -135,7 +136,7 @@ fun SummaryScreen(
             start = 20.dp,
             end = 20.dp,
             top = contentPadding.calculateTopPadding() + 14.dp,
-            bottom = contentPadding.calculateBottomPadding() + 20.dp
+            bottom = contentPadding.calculateBottomPadding() + 40.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -268,39 +269,40 @@ fun SummaryScreen(
             }
         }
 
-        // Horizontal Category Pill Filter Bar (as in Image 1)
+        // Responsive Category Pill Filter Bar (Wraps cleanly without clipping or showing half in display)
         item {
             val categories = listOf("All", "Activity", "Vitals", "Heart", "Sleep", "Water", "Meds")
-            androidx.compose.foundation.lazy.LazyRow(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Search circle icon button on left
-                item {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
-                        shadowElevation = 1.dp,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .clickable { onDetail("Activity") }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search and Browse Metrics",
-                                tint = DeepCharcoal,
-                                modifier = Modifier.size(17.dp)
-                            )
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White,
+                    border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
+                    shadowElevation = 1.dp,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .clickable { onDetail("Activity") }
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Search and Browse Metrics"
                         }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = DeepCharcoal,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
                 }
 
-                items(categories.size) { idx ->
-                    val cat = categories[idx]
+                categories.forEach { cat ->
                     val isSelected = selectedCategory == cat
                     Surface(
                         shape = RoundedCornerShape(20.dp),
@@ -310,6 +312,11 @@ fun SummaryScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .clickable { selectedCategory = cat }
+                            .semantics {
+                                role = Role.Tab
+                                selected = isSelected
+                                contentDescription = "$cat category filter"
+                            }
                     ) {
                         Text(
                             text = cat,
@@ -318,7 +325,7 @@ fun SummaryScreen(
                             fontSize = 12.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
                         )
                     }
                 }
@@ -360,15 +367,26 @@ fun SummaryScreen(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Favorites", Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Edit",
-                        Modifier
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFF0F4F2),
+                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable(onClick = onEdit)
-                            .padding(vertical = 4.dp, horizontal = 8.dp),
-                        color = Color(0xFF0A84FF),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Edit favorite cards"
+                            }
+                    ) {
+                        Text(
+                            "Edit",
+                            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            color = AthleticOrange,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -638,9 +656,11 @@ fun RangeSelector(selected: TimeRange, onRange: (TimeRange) -> Unit) {
             ) {
                 Text(
                     range.label,
-                    Modifier.padding(vertical = 8.dp),
+                    Modifier.padding(vertical = 9.dp),
                     textAlign = TextAlign.Center,
                     fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     fontWeight = if (isCurrentRange) FontWeight.Bold else FontWeight.Medium,
                     color = if (isCurrentRange) DeepCharcoal else Muted
                 )

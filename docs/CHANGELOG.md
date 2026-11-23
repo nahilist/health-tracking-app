@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Responsive Button Layouts & Scroll Inset Hardening Across All Screens**:
+  - **Front Hero Page Category Filter Bar** (`SummaryScreen.kt`): Replaced single-row horizontal clipping `LazyRow` with fully responsive `FlowRow` with symmetric 8dp gaps. Eliminates button half-display and text cutoffs on phone screens, cleanly wrapping all category pills (`All`, `Activity`, `Vitals`, `Heart`, `Sleep`, `Water`, `Meds`) and the search button.
+  - **Browse Screen Category Filter Chips** (`BrowseScreen.kt`): Replaced `horizontalScroll` Row with adaptive `FlowRow` and tab semantics, ensuring every category pill is completely visible and reachable without horizontal scroll slicing.
+  - **Safe-Area Navigation Bar & Bottom Scroll Insets** (`DetailScreen.kt`, `AuthScreen.kt`, `OnboardingScreen.kt`):
+    - Added `navigationBarsPadding()` and generous bottom clearances (40dp–48dp) across `DetailScreen`, `AuthScreen`, and `OnboardingScreen`. Completely resolves buttons showing half in display at the bottom of the viewport when scrolling over 3-button or gesture navigation insets.
+    - Extended bottom padding on `SummaryScreen`, `SharingScreen`, `ProfileScreen`, and all profile section screens to eliminate bottom navigation bar overlap when scrolling to the end of cards.
+  - **Medication Schedule Dose Action Buttons** (`MedicationScheduleCard.kt`): Added `maxLines = 1` and `TextOverflow.Ellipsis` to medication name and instructions, preserving dedicated 34dp height and touch targets for "Take" and "Skip" buttons without squeeze or overflow.
+  - **Favorites Action Button** (`SummaryScreen.kt`): Upgraded "Edit" text action into an accessible rounded pill button with full touch target and semantic button role.
+  - **Automated Test Coverage** (`ResponsiveLayoutAuditTest.kt`): Added `compactPhone_categoryFilterPills_allRenderWithoutClipping` verifying all 7 category filters render simultaneously without clipping on compact devices.
+
 ### Added
 - **Comprehensive UI/UX Layout & Responsiveness Audit Across All Screens and Components**:
   - **Adaptive Viewport & Safe-Area Inset Hardening** (`PulseBottomBar.kt`, `PulseHealthApp.kt`):

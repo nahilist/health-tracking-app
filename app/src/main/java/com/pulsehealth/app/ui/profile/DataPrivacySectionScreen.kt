@@ -413,6 +413,8 @@ fun DataPrivacySectionScreen(
                 }
             }
         }
+
+        Spacer(Modifier.height(36.dp))
     }
 
     if (showDeleteConfirmDialog) {

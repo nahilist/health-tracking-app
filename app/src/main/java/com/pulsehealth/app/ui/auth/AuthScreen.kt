@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -187,6 +188,7 @@ fun AuthScreen(
             .fillMaxSize()
             .background(SoftCreamBackground)
             .statusBarsPadding()
+            .navigationBarsPadding()
             .imePadding()
     ) {
         Column(
@@ -251,7 +253,8 @@ fun AuthScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 28.dp, bottom = 48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Inline Error Notice (Zero technical leak guaranteed)

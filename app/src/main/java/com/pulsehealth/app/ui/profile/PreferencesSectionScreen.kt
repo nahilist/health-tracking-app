@@ -212,6 +212,8 @@ fun PreferencesSectionScreen(
             }
         }
 
+        Spacer(Modifier.height(36.dp))
+
         if (showGoalEditor) {
             com.pulsehealth.app.ui.goals.GoalWizardBottomSheet(
                 initialWaterGoalLiters = state.metrics.waterGoalLiters,

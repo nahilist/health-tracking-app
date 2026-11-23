@@ -182,4 +182,38 @@ class ResponsiveLayoutAuditTest {
         composeTestRule.onNodeWithText("Cup").assertIsDisplayed()
         composeTestRule.onNodeWithText("Glass").assertIsDisplayed()
     }
+
+    @Test
+    @Config(sdk = [35], qualifiers = "w360dp-h800dp")
+    fun compactPhone_categoryFilterPills_allRenderWithoutClipping() {
+        val state = DashboardUiState(
+            metrics = DashboardMetrics.demo(),
+            selectedRange = TimeRange.TODAY,
+            isOnline = true
+        )
+
+        composeTestRule.setContent {
+            PulseTheme {
+                SummaryScreen(
+                    state = state,
+                    contentPadding = PaddingValues(0.dp),
+                    onRange = {},
+                    onEdit = {},
+                    onProfile = {},
+                    onDetail = {},
+                    onExitDemo = {},
+                    onRetry = {},
+                    onDismissError = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("All category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Activity category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Vitals category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Heart category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Sleep category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Water category filter").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Meds category filter").assertIsDisplayed()
+    }
 }

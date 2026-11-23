@@ -295,5 +295,7 @@ fun RemindersSectionScreen(
                 }
             }
         }
+
+        Spacer(Modifier.height(36.dp))
     }
 }

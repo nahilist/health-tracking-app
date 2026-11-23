@@ -435,6 +435,6 @@ private fun ProfileHubContent(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(40.dp))
     }
 }

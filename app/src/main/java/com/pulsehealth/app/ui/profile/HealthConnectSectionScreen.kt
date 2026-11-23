@@ -312,5 +312,7 @@ fun HealthConnectSectionScreen(
                 }
             }
         }
+
+        Spacer(Modifier.height(36.dp))
     }
 }

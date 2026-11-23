@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,7 +45,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,7 +88,7 @@ fun BrowseScreen(
             start = 20.dp,
             top = padding.calculateTopPadding() + 18.dp,
             end = 20.dp,
-            bottom = padding.calculateBottomPadding() + 16.dp
+            bottom = padding.calculateBottomPadding() + 40.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -131,11 +135,10 @@ fun BrowseScreen(
         }
 
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val isAll = selectedCategory == null
                 Surface(
@@ -145,6 +148,11 @@ fun BrowseScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { selectedCategory = null }
+                        .semantics {
+                            role = Role.Tab
+                            selected = isAll
+                            contentDescription = "All categories"
+                        }
                 ) {
                     Text(
                         "All",
@@ -163,6 +171,11 @@ fun BrowseScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { selectedCategory = if (isCatSelected) null else cat }
+                            .semantics {
+                                role = Role.Tab
+                                selected = isCatSelected
+                                contentDescription = "${cat.label} category"
+                            }
                     ) {
                         Text(
                             cat.label,

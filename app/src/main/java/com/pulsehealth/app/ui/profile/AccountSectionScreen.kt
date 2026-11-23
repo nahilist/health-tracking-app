@@ -359,6 +359,8 @@ fun AccountSectionScreen(
                 }
             }
         }
+
+        Spacer(Modifier.height(36.dp))
     }
 
     if (showDeleteAccountDialog) {
