@@ -16,9 +16,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SleepStageEntity::class,
         VitalRecordEntity::class,
         MedicationEntity::class,
-        MedicationLogEntity::class
+        MedicationLogEntity::class,
+        MealLogEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class PulseDatabase : RoomDatabase() {
@@ -28,6 +29,7 @@ abstract class PulseDatabase : RoomDatabase() {
     abstract fun sleepDao(): SleepDao
     abstract fun vitalRecordDao(): VitalRecordDao
     abstract fun medicationDao(): MedicationDao
+    abstract fun mealDao(): MealDao
 
     companion object {
         @Volatile private var instance: PulseDatabase? = null
@@ -177,13 +179,41 @@ abstract class PulseDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `meal_logs` (
+                        `id` TEXT NOT NULL,
+                        `mealType` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `calories` INTEGER NOT NULL,
+                        `proteinGrams` REAL NOT NULL,
+                        `carbsGrams` REAL NOT NULL,
+                        `fatGrams` REAL NOT NULL,
+                        `loggedAtEpochMillis` INTEGER NOT NULL,
+                        `notes` TEXT,
+                        `syncState` TEXT NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_meal_logs_loggedAtEpochMillis` ON `meal_logs` (`loggedAtEpochMillis`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_meal_logs_mealType` ON `meal_logs` (`mealType`)"
+                )
+            }
+        }
+
         fun get(context: Context): PulseDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 PulseDatabase::class.java,
                 "pulse_health.db"
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
             .also { instance = it }
         }

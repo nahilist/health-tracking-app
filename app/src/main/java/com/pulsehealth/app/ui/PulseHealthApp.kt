@@ -109,6 +109,7 @@ fun PulseHealthApp(
     val insights by viewModel.insights.collectAsStateWithLifecycle()
     val todayMedications by viewModel.todayMedicationSchedule.collectAsStateWithLifecycle()
     val medicationAdherence by viewModel.medicationAdherence.collectAsStateWithLifecycle()
+    val todayNutrition by viewModel.todayNutritionSummary.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf(false) }
     var showAddMedicationSheet by remember { mutableStateOf(false) }
     var showGoalWizardSheet by remember { mutableStateOf(false) }
@@ -198,6 +199,9 @@ fun PulseHealthApp(
                         insights = insights,
                         medicationSchedule = todayMedications,
                         medicationAdherence = medicationAdherence,
+                        nutritionSummary = todayNutrition,
+                        onLogMeal = viewModel::logMeal,
+                        onDeleteMeal = viewModel::deleteMeal,
                         onRange = viewModel::selectRange,
                         onWater = viewModel::addWater,
                         onTakeMedicationDose = { medId, time ->

@@ -67,7 +67,7 @@ class ResponsiveLayoutAuditTest {
     }
 
     @Test
-    @Config(sdk = [35], qualifiers = "w800dp-h1280dp")
+    @Config(sdk = [35], qualifiers = "w800dp-h1600dp")
     fun tablet_summaryScreen_rendersAdaptiveColumns() {
         val state = DashboardUiState(
             metrics = DashboardMetrics.demo(),

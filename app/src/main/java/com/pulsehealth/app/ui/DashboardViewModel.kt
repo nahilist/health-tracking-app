@@ -52,6 +52,12 @@ import com.pulsehealth.app.data.export.ReportTimeRange
 import com.pulsehealth.app.data.export.ReportSectionConfig
 import com.pulsehealth.app.data.MedicationRepository
 import com.pulsehealth.app.data.NoOpMedicationRepository
+import com.pulsehealth.app.data.nutrition.NutritionRepository
+import com.pulsehealth.app.data.nutrition.NoOpNutritionRepository
+import com.pulsehealth.app.data.nutrition.DailyNutritionSummary
+import com.pulsehealth.app.data.nutrition.MealType
+import com.pulsehealth.app.data.nutrition.MealLog
+import com.pulsehealth.app.data.nutrition.DefaultNutritionRepository
 import com.pulsehealth.app.data.medication.ScheduledDoseItem
 import com.pulsehealth.app.data.medication.MedicationAdherenceSummary
 import com.pulsehealth.app.data.medication.DoseStatus
@@ -101,6 +107,7 @@ class DashboardViewModel(
     val insightsRepository: InsightsRepository = NoOpInsightsRepository(),
     val healthReportService: HealthReportService = NoOpHealthReportService(),
     val medicationRepository: MedicationRepository = NoOpMedicationRepository(),
+    val nutritionRepository: NutritionRepository = NoOpNutritionRepository(),
     val networkMonitor: NetworkMonitor = NoOpNetworkMonitor(),
     val applicationContext: Context? = null
 ) : ViewModel() {
@@ -439,6 +446,20 @@ class DashboardViewModel(
             isAppUnlocked = true
         )
     )
+
+    val todayNutritionSummary: StateFlow<DailyNutritionSummary> =
+        combine(
+            nutritionRepository.observeMealsForDate(java.time.LocalDate.now()),
+            uiState
+        ) { meals, state ->
+            val activeBurned = (state.metrics.activeCalories ?: 0L).toInt()
+            val goal = state.metrics.calorieGoal.toInt()
+            DefaultNutritionRepository.calculateSummary(
+                meals = meals,
+                activeCaloriesBurned = activeBurned,
+                calorieGoal = goal
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DailyNutritionSummary())
 
     init {
         refreshPermissionsAndSync()
@@ -1044,6 +1065,34 @@ class DashboardViewModel(
         }
     }
 
+    fun logMeal(
+        mealType: MealType,
+        name: String,
+        calories: Int,
+        proteinGrams: Double,
+        carbsGrams: Double,
+        fatGrams: Double,
+        notes: String? = null
+    ) {
+        viewModelScope.launch {
+            nutritionRepository.logMeal(
+                mealType = mealType,
+                name = name,
+                calories = calories,
+                proteinGrams = proteinGrams,
+                carbsGrams = carbsGrams,
+                fatGrams = fatGrams,
+                notes = notes
+            )
+        }
+    }
+
+    fun deleteMeal(id: String) {
+        viewModelScope.launch {
+            nutritionRepository.deleteMeal(id)
+        }
+    }
+
     companion object {
         const val KEY_SELECTED_RANGE = "selected_range"
         const val KEY_IS_DEMO_MODE = "is_demo_mode"
@@ -1068,6 +1117,7 @@ class DashboardViewModel(
                     insightsRepository = app.container.insightsRepository,
                     healthReportService = app.container.healthReportService,
                     medicationRepository = app.container.medicationRepository,
+                    nutritionRepository = app.container.nutritionRepository,
                     networkMonitor = app.container.networkMonitor,
                     applicationContext = app.applicationContext
                 )

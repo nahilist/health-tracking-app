@@ -24,6 +24,8 @@ import com.pulsehealth.app.data.export.HealthReportService
 import com.pulsehealth.app.data.export.DefaultHealthReportService
 import com.pulsehealth.app.data.MedicationRepository
 import com.pulsehealth.app.data.DefaultMedicationRepository
+import com.pulsehealth.app.data.nutrition.NutritionRepository
+import com.pulsehealth.app.data.nutrition.DefaultNutritionRepository
 import com.pulsehealth.app.data.local.PulseDatabase
 import com.pulsehealth.app.data.sync.SupabaseSyncRepository
 import com.pulsehealth.app.data.sync.SyncRepository
@@ -51,6 +53,7 @@ interface AppContainer {
     val insightsRepository: InsightsRepository
     val healthReportService: HealthReportService
     val medicationRepository: MedicationRepository
+    val nutritionRepository: NutritionRepository
     val networkMonitor: NetworkMonitor
     val clock: Clock
     val zoneId: ZoneId
@@ -164,6 +167,15 @@ class DefaultAppContainer(private val applicationContext: Context) : AppContaine
             medicationDao = database.medicationDao(),
             clock = clock,
             zoneId = zoneId
+        )
+    }
+
+    override val nutritionRepository: NutritionRepository by lazy {
+        DefaultNutritionRepository(
+            mealDao = database.mealDao(),
+            clock = clock,
+            zoneId = zoneId,
+            ioDispatcher = ioDispatcher
         )
     }
 

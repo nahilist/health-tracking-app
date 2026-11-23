@@ -87,6 +87,10 @@ import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.PulseTheme
 import com.pulsehealth.app.ui.theme.SoftPillBackground
 import com.pulsehealth.app.ui.theme.WarmOrange
+import com.pulsehealth.app.data.nutrition.DailyNutritionSummary
+import com.pulsehealth.app.data.nutrition.MealType
+import com.pulsehealth.app.ui.nutrition.DailyNutritionCard
+import com.pulsehealth.app.ui.nutrition.LogMealBottomSheet
 import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -100,6 +104,9 @@ fun SummaryScreen(
     insights: List<HealthInsight> = emptyList(),
     medicationSchedule: List<ScheduledDoseItem> = emptyList(),
     medicationAdherence: MedicationAdherenceSummary = MedicationAdherenceSummary(0, 0, 0, 100, 0),
+    nutritionSummary: DailyNutritionSummary = DailyNutritionSummary(),
+    onLogMeal: (MealType, String, Int, Double, Double, Double, String?) -> Unit = { _, _, _, _, _, _, _ -> },
+    onDeleteMeal: (String) -> Unit = {},
     onRange: (TimeRange) -> Unit,
     onWater: (Int) -> Unit = {},
     onTakeMedicationDose: (medicationId: String, scheduledTimeEpochMillis: Long) -> Unit = { _, _ -> },
@@ -115,6 +122,8 @@ fun SummaryScreen(
     onDismissError: () -> Unit
 ) {
     var showHydrationLogger by remember { mutableStateOf(false) }
+    var showMealLogger by remember { mutableStateOf(false) }
+    var selectedMealTypeForLogging by remember { mutableStateOf(MealType.LUNCH) }
     var selectedCategory by remember { mutableStateOf("All") }
     val locale = LocalLocale.current.platformLocale
     val configuration = LocalConfiguration.current
@@ -378,30 +387,71 @@ fun SummaryScreen(
                 LoadingStateCard()
             }
         } else {
+            item {
+                Text(
+                    text = "DAILY ACTIVITY",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                )
+            }
             item { ActivityCard(state.metrics) { onDetail("Activity") } }
 
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Favorites", Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0F4F2),
-                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable(onClick = onEdit)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Edit favorite cards"
-                            }
-                    ) {
-                        Text(
-                            "Edit",
-                            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = AthleticOrange,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                Text(
+                    text = "NUTRITION & MACROS",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+                )
+            }
+            item {
+                DailyNutritionCard(
+                    summary = nutritionSummary,
+                    onAddMealClick = { type ->
+                        selectedMealTypeForLogging = type
+                        showMealLogger = true
+                    },
+                    onDeleteMealClick = onDeleteMeal
+                )
+            }
+
+            item {
+                Column {
+                    Text(
+                        text = "PINNED FAVORITES",
+                        color = Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 4.dp)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Favorites", Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF0F4F2),
+                            border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable(onClick = onEdit)
+                                .semantics {
+                                    role = Role.Button
+                                    contentDescription = "Edit favorite cards"
+                                }
+                        ) {
+                            Text(
+                                "Edit",
+                                Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                color = AthleticOrange,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -445,6 +495,16 @@ fun SummaryScreen(
             }
 
             item {
+                Text(
+                    text = "SCHEDULED CARE",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+                )
+            }
+            item {
                 MedicationScheduleCard(
                     schedule = medicationSchedule,
                     adherence = medicationAdherence,
@@ -455,6 +515,16 @@ fun SummaryScreen(
                 )
             }
 
+            item {
+                Text(
+                    text = "HEALTH GOALS",
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+                )
+            }
             item {
                 com.pulsehealth.app.ui.goals.GoalProgressSummaryCard(
                     metrics = state.metrics,
@@ -480,6 +550,16 @@ fun SummaryScreen(
                 onWater(amountMl)
             },
             onDismiss = { showHydrationLogger = false }
+        )
+    }
+
+    if (showMealLogger) {
+        LogMealBottomSheet(
+            initialMealType = selectedMealTypeForLogging,
+            onLogMeal = { type, name, cal, p, c, f, notes ->
+                onLogMeal(type, name, cal, p, c, f, notes)
+            },
+            onDismiss = { showMealLogger = false }
         )
     }
 }
