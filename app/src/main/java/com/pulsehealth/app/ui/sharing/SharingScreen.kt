@@ -122,7 +122,7 @@ fun SharingScreen(
             start = 20.dp,
             top = padding.calculateTopPadding() + 18.dp,
             end = 20.dp,
-            bottom = padding.calculateBottomPadding() + 40.dp
+            bottom = 28.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

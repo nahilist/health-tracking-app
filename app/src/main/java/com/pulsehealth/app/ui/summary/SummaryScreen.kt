@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -90,6 +91,8 @@ import com.pulsehealth.app.ui.theme.WaterBlue
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+private val FilterCategories = listOf("All", "Activity", "Vitals", "Heart", "Sleep", "Water", "Meds")
+
 @Composable
 fun SummaryScreen(
     state: DashboardUiState,
@@ -114,17 +117,27 @@ fun SummaryScreen(
     var showHydrationLogger by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("All") }
     val locale = LocalLocale.current.platformLocale
-    val sourceLabel = when (state.metrics.source) {
-        DataSource.HEALTH_CONNECT -> "Health Connect"
-        DataSource.LOCAL -> "Local records"
-        DataSource.DEMO -> "Demo sample data"
-        DataSource.NONE -> if (state.hasHealthPermissions) "Health Connect connected" else "No sources connected"
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
+    val columns = if (isTablet) 4 else 2
+    val sourceLabel = remember(state.metrics.source, state.hasHealthPermissions) {
+        when (state.metrics.source) {
+            DataSource.HEALTH_CONNECT -> "Health Connect"
+            DataSource.LOCAL -> "Local records"
+            DataSource.DEMO -> "Demo sample data"
+            DataSource.NONE -> if (state.hasHealthPermissions) "Health Connect connected" else "No sources connected"
+        }
     }
     val freshness = state.freshnessLabel
-    val statusText = if (freshness != null && state.metrics.source != DataSource.NONE) {
-        "$sourceLabel · $freshness"
-    } else {
-        sourceLabel
+    val statusText = remember(sourceLabel, freshness, state.metrics.source) {
+        if (freshness != null && state.metrics.source != DataSource.NONE) {
+            "$sourceLabel · $freshness"
+        } else {
+            sourceLabel
+        }
+    }
+    val visibleCards = remember(state.hiddenCards) {
+        FavoriteCardId.ALL.filterNot { state.isCardHidden(it) }
     }
 
     LazyColumn(
@@ -136,9 +149,9 @@ fun SummaryScreen(
             start = 20.dp,
             end = 20.dp,
             top = contentPadding.calculateTopPadding() + 14.dp,
-            bottom = contentPadding.calculateBottomPadding() + 40.dp
+            bottom = 28.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Modern Athletic Brand Header & Profile Bar (Granger / Modern Health Layout)
         item {
@@ -215,14 +228,18 @@ fun SummaryScreen(
         // Personalized Greeting Header: "Hi, [Name]" + "Good Morning"
         item {
             val hour = remember { java.time.LocalTime.now().hour }
-            val greeting = when (hour) {
-                in 4..11 -> "Good Morning"
-                in 12..16 -> "Good Afternoon"
-                else -> "Good Evening"
+            val greeting = remember(hour) {
+                when (hour) {
+                    in 4..11 -> "Good Morning"
+                    in 12..16 -> "Good Afternoon"
+                    else -> "Good Evening"
+                }
             }
-            val userName = state.currentUser?.displayName
-                ?: state.currentUser?.email?.substringBefore('@')?.replaceFirstChar { it.uppercase() }
-                ?: "Athlete"
+            val userName = remember(state.currentUser) {
+                state.currentUser?.displayName
+                    ?: state.currentUser?.email?.substringBefore('@')?.replaceFirstChar { it.uppercase() }
+                    ?: "Athlete"
+            }
 
             Column(modifier = Modifier.padding(vertical = 2.dp)) {
                 Text(
@@ -271,11 +288,10 @@ fun SummaryScreen(
 
         // Responsive Category Pill Filter Bar (Wraps cleanly without clipping or showing half in display)
         item {
-            val categories = listOf("All", "Activity", "Vitals", "Heart", "Sleep", "Water", "Meds")
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Search circle icon button on left
                 Surface(
@@ -284,7 +300,7 @@ fun SummaryScreen(
                     border = BorderStroke(1.dp, Color(0xFFEEF1F4)),
                     shadowElevation = 1.dp,
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .clickable { onDetail("Activity") }
                         .semantics {
@@ -297,12 +313,12 @@ fun SummaryScreen(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
                             tint = DeepCharcoal,
-                            modifier = Modifier.size(17.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
 
-                categories.forEach { cat ->
+                FilterCategories.forEach { cat ->
                     val isSelected = selectedCategory == cat
                     Surface(
                         shape = RoundedCornerShape(20.dp),
@@ -325,7 +341,7 @@ fun SummaryScreen(
                             fontSize = 12.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -391,30 +407,26 @@ fun SummaryScreen(
             }
 
             item {
-                val visibleCards = FavoriteCardId.ALL.filterNot { state.isCardHidden(it) }
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val columns = if (maxWidth >= 600.dp) 4 else 2
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        visibleCards.chunked(columns).forEach { rowCards ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                rowCards.forEach { card ->
-                                    Box(Modifier.weight(1f)) {
-                                        when (card) {
-                                            FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                            FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                            FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
-                                            FavoriteCardId.WATER -> WaterCard(
-                                                metrics = state.metrics,
-                                                onAdd = { showHydrationLogger = true },
-                                                onClick = { onDetail(card.metricRegistryId) }
-                                            )
-                                        }
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    visibleCards.chunked(columns).forEach { rowCards ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            rowCards.forEach { card ->
+                                Box(Modifier.weight(1f)) {
+                                    when (card) {
+                                        FavoriteCardId.STEPS -> StepsCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.HEART_RATE -> HeartCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.SLEEP -> SleepCard(state.metrics) { onDetail(card.metricRegistryId) }
+                                        FavoriteCardId.WATER -> WaterCard(
+                                            metrics = state.metrics,
+                                            onAdd = { showHydrationLogger = true },
+                                            onClick = { onDetail(card.metricRegistryId) }
+                                        )
                                     }
                                 }
-                                val emptySlots = columns - rowCards.size
-                                repeat(emptySlots) {
-                                    Spacer(Modifier.weight(1f))
-                                }
+                            }
+                            val emptySlots = columns - rowCards.size
+                            repeat(emptySlots) {
+                                Spacer(Modifier.weight(1f))
                             }
                         }
                     }

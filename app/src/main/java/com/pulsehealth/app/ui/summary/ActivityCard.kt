@@ -53,6 +53,8 @@ import com.pulsehealth.app.ui.theme.PulsePink
 import com.pulsehealth.app.ui.theme.StandCyan
 import kotlin.math.roundToInt
 
+private val ActivitySparklinePoints = listOf(0.35f, 0.48f, 0.88f, 0.42f, 0.65f, 0.72f, 0.55f)
+
 @Composable
 fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     val calories = metrics.activeCalories ?: 450
@@ -177,7 +179,7 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 
         // Ultra-Modern Smooth Curved Sparkline with Dotted Grid Lines & Glowing Peak
         SmoothSparklineChart(
-            values = listOf(0.35f, 0.48f, 0.88f, 0.42f, 0.65f, 0.72f, 0.55f),
+            values = ActivitySparklinePoints,
             lineColor = AthleticOrange,
             modifier = Modifier.fillMaxWidth()
         )
@@ -276,11 +278,20 @@ fun ActivityCard(metrics: DashboardMetrics, onClick: () -> Unit) {
 
 @Composable
 fun ActivityRings(metrics: DashboardMetrics, modifier: Modifier = Modifier) {
-    val progresses = listOf(
-        (metrics.activeCalories?.toFloat()?.div(metrics.calorieGoal) ?: 0f) to AthleticOrange,
-        (metrics.exerciseMinutes?.toFloat()?.div(metrics.exerciseGoalMinutes) ?: 0f) to ExerciseGreen,
-        (metrics.standHours?.toFloat()?.div(metrics.standGoalHours) ?: 0f) to AthleticCyan
-    )
+    val progresses = remember(
+        metrics.activeCalories,
+        metrics.calorieGoal,
+        metrics.exerciseMinutes,
+        metrics.exerciseGoalMinutes,
+        metrics.standHours,
+        metrics.standGoalHours
+    ) {
+        listOf(
+            (metrics.activeCalories?.toFloat()?.div(metrics.calorieGoal) ?: 0f) to AthleticOrange,
+            (metrics.exerciseMinutes?.toFloat()?.div(metrics.exerciseGoalMinutes) ?: 0f) to ExerciseGreen,
+            (metrics.standHours?.toFloat()?.div(metrics.standGoalHours) ?: 0f) to AthleticCyan
+        )
+    }
     Canvas(modifier.semantics { contentDescription = "Activity progress rings" }) {
         val stroke = size.minDimension * 0.105f
         progresses.forEachIndexed { index, pair ->

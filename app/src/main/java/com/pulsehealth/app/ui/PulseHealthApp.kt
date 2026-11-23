@@ -187,7 +187,9 @@ fun PulseHealthApp(
             NavHost(
                 navController = navController,
                 startDestination = PulseDestination.Summary.route,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = padding.calculateBottomPadding())
             ) {
                 composable(PulseDestination.Summary.route) {
                     SummaryScreen(

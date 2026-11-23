@@ -55,6 +55,10 @@ import com.pulsehealth.app.ui.theme.SleepPurple
 import com.pulsehealth.app.ui.theme.WarmOrange
 import com.pulsehealth.app.ui.theme.WaterBlue
 
+private val StepsSampleBars = listOf(.25f, .4f, .33f, .7f, .5f, .86f, .65f, .48f, .72f, .55f, .9f, .61f, 1f)
+private val HeartSampleSparkline = listOf(.25f, .35f, .28f, .52f, .39f, .34f, .66f, .45f, .58f, .4f, .5f, .7f, .61f, .76f)
+private val SleepSampleBlocks = listOf(0.65f, 0.42f, 0.8f, 0.55f, 0.88f, 0.7f, 0.38f, 0.74f, 0.58f)
+
 @Composable
 fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
     val locale = LocalLocale.current.platformLocale
@@ -69,7 +73,7 @@ fun StepsCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             Text(String.format(locale, "%,d", steps), fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text("of ${String.format(locale, "%,d", metrics.stepGoal)} steps", color = Muted, fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
-            MiniBars(WarmOrange, listOf(.25f, .4f, .33f, .7f, .5f, .86f, .65f, .48f, .72f, .55f, .9f, .61f, 1f))
+            MiniBars(WarmOrange, StepsSampleBars)
         } else {
             Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
             Text("No steps recorded", color = Muted, fontSize = 11.sp)
@@ -94,7 +98,7 @@ fun HeartCard(metrics: DashboardMetrics, onClick: () -> Unit) {
             }
             Text("Resting", color = Muted, fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
-            Sparkline(PulsePink, listOf(.25f, .35f, .28f, .52f, .39f, .34f, .66f, .45f, .58f, .4f, .5f, .7f, .61f, .76f))
+            Sparkline(PulsePink, HeartSampleSparkline)
         } else {
             Text("—", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Muted)
             Text("No reading available", color = Muted, fontSize = 11.sp)
@@ -196,7 +200,7 @@ fun MetricCard(
     HealthCard(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 150.dp)
+            .defaultMinSize(minHeight = 132.dp)
             .clickable(onClick = onClick)
             .semantics {
                 role = Role.Button
@@ -267,10 +271,14 @@ fun MiniBars(color: Color, values: List<Float>) {
 @Composable
 fun Sparkline(color: Color, values: List<Float>) {
     Canvas(Modifier.fillMaxWidth().height(32.dp).padding(top = 8.dp)) {
-        values.zipWithNext().forEachIndexed { index, pair ->
-            val x1 = index * size.width / (values.size - 1)
-            val x2 = (index + 1) * size.width / (values.size - 1)
-            drawLine(color, Offset(x1, size.height * (1 - pair.first)), Offset(x2, size.height * (1 - pair.second)), strokeWidth = 2f)
+        if (values.size < 2) return@Canvas
+        val step = size.width / (values.size - 1)
+        for (i in 0 until values.size - 1) {
+            val x1 = i * step
+            val x2 = (i + 1) * step
+            val y1 = size.height * (1f - values[i])
+            val y2 = size.height * (1f - values[i + 1])
+            drawLine(color, Offset(x1, y1), Offset(x2, y2), strokeWidth = 2f)
         }
     }
 }
@@ -282,7 +290,7 @@ fun SleepBlocks() {
         horizontalArrangement = Arrangement.spacedBy(2.5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        listOf(0.65f, 0.42f, 0.8f, 0.55f, 0.88f, 0.7f, 0.38f, 0.74f, 0.58f).forEach { value ->
+        SleepSampleBlocks.forEach { value ->
             Box(
                 Modifier
                     .weight(1f)

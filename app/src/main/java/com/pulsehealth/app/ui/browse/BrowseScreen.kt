@@ -79,6 +79,12 @@ fun BrowseScreen(
         }
     }
 
+    val metricsByCategory = remember {
+        HealthCategory.entries.associateWith { category ->
+            MetricRegistry.allMetrics.filter { it.category == category }
+        }
+    }
+
     LazyColumn(
         Modifier
             .fillMaxSize()
@@ -88,7 +94,7 @@ fun BrowseScreen(
             start = 20.dp,
             top = padding.calculateTopPadding() + 18.dp,
             end = 20.dp,
-            bottom = padding.calculateBottomPadding() + 40.dp
+            bottom = 28.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -137,8 +143,8 @@ fun BrowseScreen(
         item {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val isAll = selectedCategory == null
                 Surface(
@@ -159,7 +165,7 @@ fun BrowseScreen(
                         color = if (isAll) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         fontWeight = if (isAll) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
                 HealthCategory.entries.forEach { cat ->
@@ -182,7 +188,7 @@ fun BrowseScreen(
                             color = if (isCatSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
                             fontSize = 12.sp,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -228,7 +234,7 @@ fun BrowseScreen(
             }
         } else {
             HealthCategory.entries.forEach { category ->
-                val categoryMetrics = MetricRegistry.allMetrics.filter { it.category == category }
+                val categoryMetrics = metricsByCategory[category].orEmpty()
                 if (categoryMetrics.isNotEmpty()) {
                     item {
                         Text(

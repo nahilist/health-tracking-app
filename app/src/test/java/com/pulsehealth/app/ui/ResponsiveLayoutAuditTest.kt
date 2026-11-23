@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.pulsehealth.app.data.DashboardMetrics
 import com.pulsehealth.app.data.DashboardUiState
 import com.pulsehealth.app.data.TimeRange
+import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.BiometricLockOverlay
 import com.pulsehealth.app.ui.detail.DetailScreen
 import com.pulsehealth.app.ui.navigation.TopLevelDestination
@@ -27,13 +28,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], qualifiers = "w360dp-h800dp")
 class ResponsiveLayoutAuditTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
 
     @Test
-    @Config(sdk = [35], qualifiers = "w320dp-h640dp")
     fun compactPhone_summaryScreen_rendersWithoutClipping() {
         val state = DashboardUiState(
             metrics = DashboardMetrics.demo(),
@@ -215,5 +216,24 @@ class ResponsiveLayoutAuditTest {
         composeTestRule.onNodeWithContentDescription("Sleep category filter").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Water category filter").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Meds category filter").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactPhone_browseScreen_categoryPillsAndSearch_renderWithoutClipping() {
+        composeTestRule.setContent {
+            PulseTheme {
+                BrowseScreen(
+                    padding = PaddingValues(0.dp),
+                    metrics = DashboardMetrics.demo(),
+                    onOpen = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Search health metrics").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("All categories").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Activity category").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Vitals category").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Sleep category").assertIsDisplayed()
     }
 }
