@@ -16,6 +16,7 @@ import com.pulsehealth.app.ui.browse.BrowseScreen
 import com.pulsehealth.app.ui.components.BiometricLockOverlay
 import com.pulsehealth.app.ui.detail.DetailScreen
 import com.pulsehealth.app.ui.navigation.TopLevelDestination
+import com.pulsehealth.app.ui.sharing.AddTrustedRecipientContent
 import com.pulsehealth.app.ui.summary.LogHydrationBottomSheet
 import com.pulsehealth.app.ui.summary.SummaryScreen
 import com.pulsehealth.app.ui.theme.PulseTheme
@@ -235,5 +236,23 @@ class ResponsiveLayoutAuditTest {
         composeTestRule.onNodeWithContentDescription("Activity category").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Vitals category").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Sleep category").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(sdk = [35], qualifiers = "w360dp-h800dp")
+    fun compactPhone_addTrustedRecipientContent_rendersWithoutClipping() {
+        composeTestRule.setContent {
+            PulseTheme {
+                AddTrustedRecipientContent(
+                    onDismiss = {},
+                    onConfirm = { _, _, _, _, _ -> }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Share Health Data").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Share with Someone").assertIsDisplayed()
+        composeTestRule.onNodeWithText("RECIPIENT").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Authorize and save trusted recipient").assertIsDisplayed()
     }
 }

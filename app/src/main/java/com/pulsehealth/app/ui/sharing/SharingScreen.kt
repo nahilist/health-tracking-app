@@ -36,19 +36,14 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -240,7 +235,7 @@ fun SharingScreen(
     }
 
     if (showAddDialog) {
-        AddContactDialog(
+        AddTrustedRecipientBottomSheet(
             onDismiss = { showAddDialog = false },
             onConfirm = { name, rel, contactId, metrics, duration ->
                 onAddContact(name, rel, contactId, metrics, duration)
@@ -250,7 +245,7 @@ fun SharingScreen(
     }
 
     editingContact?.let { contact ->
-        EditMetricsDialog(
+        EditMetricsBottomSheet(
             contact = contact,
             onDismiss = { editingContact = null },
             onSave = { updatedMetrics ->
@@ -438,144 +433,14 @@ fun ContactCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContactDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, ShareRelationship, String, Set<String>, ShareDuration) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var relationship by remember { mutableStateOf(ShareRelationship.DOCTOR) }
-    var contactId by remember { mutableStateOf("") }
-    var duration by remember { mutableStateOf(ShareDuration.ONE_MONTH) }
-    var selectedMetrics by remember {
-        mutableStateOf(setOf("Steps", "Heart rate", "Sleep", "Water"))
-    }
-    var expandedDropdown by remember { mutableStateOf(false) }
-
-    val allMetricKeys = listOf("Activity", "Steps", "Active calories", "Exercise", "Stand", "Heart rate", "Sleep", "Water")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Trusted Recipient") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Recipient Name *") },
-                    placeholder = { Text("e.g. Dr. Sarah Smith") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                ExposedDropdownMenuBox(
-                    expanded = expandedDropdown,
-                    onExpandedChange = { expandedDropdown = !expandedDropdown }
-                ) {
-                    OutlinedTextField(
-                        value = relationship.label,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Relationship") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDropdown) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedDropdown,
-                        onDismissRequest = { expandedDropdown = false }
-                    ) {
-                        ShareRelationship.entries.forEach { rel ->
-                            DropdownMenuItem(
-                                text = { Text(rel.label) },
-                                onClick = {
-                                    relationship = rel
-                                    expandedDropdown = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = contactId,
-                    onValueChange = { contactId = it },
-                    label = { Text("Email or Contact Info") },
-                    placeholder = { Text("e.g. clinic@health.org") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Authorized Metrics:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                allMetricKeys.chunked(2).forEach { rowKeys ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        rowKeys.forEach { key ->
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        selectedMetrics = if (key in selectedMetrics) {
-                                            selectedMetrics - key
-                                        } else {
-                                            selectedMetrics + key
-                                        }
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = key in selectedMetrics,
-                                    onCheckedChange = { isChecked ->
-                                        selectedMetrics = if (isChecked) selectedMetrics + key else selectedMetrics - key
-                                    }
-                                )
-                                Text(key, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-
-                Text("Sharing Duration:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                ShareDuration.entries.forEach { dur ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { duration = dur },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = duration == dur,
-                            onClick = { duration = dur }
-                        )
-                        Text(dur.label, fontSize = 13.sp)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank() && selectedMetrics.isNotEmpty()) {
-                        onConfirm(name, relationship, contactId, selectedMetrics, duration)
-                    }
-                },
-                enabled = name.isNotBlank() && selectedMetrics.isNotEmpty()
-            ) {
-                Text("Authorize & Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+    AddTrustedRecipientBottomSheet(
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
     )
 }
 
@@ -585,50 +450,10 @@ fun EditMetricsDialog(
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit
 ) {
-    var selectedMetrics by remember { mutableStateOf(contact.sharedMetrics) }
-    val allMetricKeys = listOf("Activity", "Steps", "Active calories", "Exercise", "Stand", "Heart rate", "Sleep", "Water")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Shared Metrics") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Select which health metrics ${contact.name} is authorized to access:", fontSize = 12.sp, color = Muted)
-                Spacer(Modifier.height(4.dp))
-                allMetricKeys.forEach { key ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedMetrics = if (key in selectedMetrics) selectedMetrics - key else selectedMetrics + key
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = key in selectedMetrics,
-                            onCheckedChange = { isChecked ->
-                                selectedMetrics = if (isChecked) selectedMetrics + key else selectedMetrics - key
-                            }
-                        )
-                        Text(key, fontSize = 14.sp)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onSave(selectedMetrics) },
-                enabled = selectedMetrics.isNotEmpty()
-            ) {
-                Text("Save Permissions")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+    EditMetricsBottomSheet(
+        contact = contact,
+        onDismiss = onDismiss,
+        onSave = onSave
     )
 }
 

@@ -25,7 +25,7 @@ interface NutritionRepository {
         carbsGrams: Double,
         fatGrams: Double,
         notes: String? = null,
-        epochMillis: Long = System.currentTimeMillis()
+        epochMillis: Long? = null
     ): MealLog
     suspend fun deleteMeal(id: String)
     suspend fun deleteAllMeals()
@@ -67,8 +67,9 @@ class DefaultNutritionRepository(
         carbsGrams: Double,
         fatGrams: Double,
         notes: String?,
-        epochMillis: Long
+        epochMillis: Long?
     ): MealLog = withContext(ioDispatcher) {
+        val actualEpoch = epochMillis ?: clock.millis()
         val id = UUID.randomUUID().toString()
         val entity = MealLogEntity(
             id = id,
@@ -78,7 +79,7 @@ class DefaultNutritionRepository(
             proteinGrams = proteinGrams.coerceAtLeast(0.0),
             carbsGrams = carbsGrams.coerceAtLeast(0.0),
             fatGrams = fatGrams.coerceAtLeast(0.0),
-            loggedAtEpochMillis = epochMillis,
+            loggedAtEpochMillis = actualEpoch,
             notes = notes?.trim()
         )
         mealDao.upsertMeal(entity)
@@ -152,8 +153,18 @@ class NoOpNutritionRepository : NutritionRepository {
         carbsGrams: Double,
         fatGrams: Double,
         notes: String?,
-        epochMillis: Long
-    ): MealLog = MealLog(UUID.randomUUID().toString(), mealType, name, calories, proteinGrams, carbsGrams, fatGrams, epochMillis, notes)
+        epochMillis: Long?
+    ): MealLog = MealLog(
+        UUID.randomUUID().toString(),
+        mealType,
+        name,
+        calories,
+        proteinGrams,
+        carbsGrams,
+        fatGrams,
+        epochMillis ?: System.currentTimeMillis(),
+        notes
+    )
     override suspend fun deleteMeal(id: String) {}
     override suspend fun deleteAllMeals() {}
 }
